@@ -1,8 +1,12 @@
-use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IfExpr, LitExpr, LitExprTy, UnaryExpr, UnaryOp};
+use crate::ast::expr::{
+    BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, LitExprTy,
+    UnaryExpr, UnaryOp,
+};
 use crate::ast::function::Function;
 use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
 use crate::visitor::visitor::Visitor;
+use either::Either;
 
 pub struct EmitVisitor {
     output: String,
@@ -39,11 +43,26 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &InitLocalStmt) {
-        self.output.push_str(&format!("let {}: ", stmt.name));
+        self.output.push_str(&format!(
+            "{}let {}: ",
+            " ".repeat(self.curr_indent),
+            stmt.name
+        ));
         self.visit_type(&stmt.ty);
         self.output.push_str(" = ");
         self.visit_expr(&stmt.rhs);
         self.output.push_str(";")
+    }
+
+    fn visit_semi_stmt(&mut self, stmt: &SemiStmt) {
+        self.output.push_str(&" ".repeat(self.curr_indent));
+        self.visit_expr(&stmt.expr);
+        self.output.push_str(";");
+    }
+
+    fn visit_expr_stmt(&mut self, stmt: &ExprStmt) {
+        self.output.push_str(&" ".repeat(self.curr_indent));
+        self.visit_expr(&stmt.expr);
     }
 
     fn visit_literal_expr(&mut self, expr: &LitExpr) {
@@ -51,6 +70,7 @@ impl Visitor for EmitVisitor {
             LitExpr::Str(str) => str.to_string(),
             LitExpr::Byte(byte) => byte.to_string(),
             LitExpr::Char(char) => char.to_string(),
+            // TODO: Tidy this logic up
             LitExpr::Int(u128, int_type) => {
                 let to_emit: String = match int_type {
                     LitExprTy::Signed(t) => {
@@ -75,7 +95,8 @@ impl Visitor for EmitVisitor {
                         };
                         format!("{}_{}", uint_str, Ty::UInt(*t).to_string()).to_string()
                     }
-                    LitExprTy::Unsuffixed => u128.to_string(),
+                    // Unsuffixed defaults to i32
+                    LitExprTy::Unsuffixed => (*u128 as i32).to_string(),
                 };
                 to_emit
             }
@@ -89,8 +110,8 @@ impl Visitor for EmitVisitor {
         self.output.push_str("{\n");
         self.curr_indent += self.indentation;
         for stmt in &expr.stmts {
-            self.output
-                .push_str(&format!("{}", " ".repeat(self.curr_indent)));
+            // self.output
+            //     .push_str(&format!("{}", " ".repeat(self.curr_indent)));
             self.visit_stmt(stmt);
             self.output.push_str("\n");
         }
@@ -98,8 +119,48 @@ impl Visitor for EmitVisitor {
         self.output.push_str("}");
     }
 
-    fn visit_semi_stmt(&mut self, stmt: &SemiStmt) {
-        self.visit_expr(&stmt.expr);
-        self.output.push_str(";");
+    fn visit_if_expr(&mut self, expr: &IfExpr) {
+        self.output.push_str("if ");
+        self.visit_expr(&expr.condition);
+        self.output.push_str(" {\n");
+        self.curr_indent += self.indentation;
+        self.visit_stmt(&expr.then);
+        self.curr_indent -= self.indentation;
+        self.output
+            .push_str(&format!("\n{}}}", " ".repeat(self.curr_indent)));
+        if let Some(otherwise) = &expr.otherwise {
+            self.output.push_str(&format!(" else {{\n"));
+            self.curr_indent += self.indentation;
+            self.visit_stmt(otherwise);
+            self.curr_indent -= self.indentation;
+            self.output
+                .push_str(&format!("\n{}}}", " ".repeat(self.curr_indent)));
+        }
+    }
+
+    fn visit_binary_expr(&mut self, expr: &BinaryExpr) {
+        self.output.push_str("(");
+        self.visit_expr(&expr.lhs);
+        self.output.push_str(" ");
+        self.visit_binary_op(&expr.op);
+        self.output.push_str(" ");
+        self.visit_expr(&expr.rhs);
+        self.output.push_str(")");
+    }
+
+    fn visit_binary_op(&mut self, op: &BinaryOp) {
+        let op = match op {
+            BinaryOp::Add => "+",
+            BinaryOp::Sub => "-",
+            BinaryOp::Mul => "*",
+            BinaryOp::Div => "/",
+            BinaryOp::And => "&&",
+            BinaryOp::Or => "||",
+        };
+        self.output.push_str(&op)
+    }
+
+    fn visit_ident_expr(&mut self, expr: &IdentExpr) {
+        self.output.push_str(&expr.name)
     }
 }

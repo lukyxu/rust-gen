@@ -2,7 +2,7 @@ use crate::Context;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
     Bool,
     Char,
@@ -70,13 +70,13 @@ impl ToString for Ty {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FloatTy {
     F32,
     F64,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum IntTy {
     ISize,
     I8,
@@ -100,7 +100,7 @@ impl IntTy {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum UIntTy {
     USize,
     U8,

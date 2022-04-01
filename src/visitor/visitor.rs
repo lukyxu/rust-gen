@@ -1,5 +1,5 @@
 use crate::ast::expr::{
-    BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IfExpr, LitExpr, UnaryExpr, UnaryOp,
+    BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, UnaryExpr, UnaryOp,
 };
 use crate::ast::function::Function;
 use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
@@ -48,6 +48,9 @@ pub trait Visitor: Sized {
     }
     fn visit_block_expr(&mut self, expr: &BlockExpr) {
         walk_block_expr(self, expr)
+    }
+    fn visit_ident_expr(&mut self, expr: &IdentExpr) {
+        walk_ident_expr(self, expr)
     }
 
     // Operations
@@ -102,6 +105,7 @@ fn walk_expr<V: Visitor>(visitor: &mut V, expr: &Expr) {
         Expr::Cast(cast_expr) => visitor.visit_cast_expr(cast_expr),
         Expr::If(if_expr) => visitor.visit_if_expr(if_expr),
         Expr::Block(block_expr) => visitor.visit_block_expr(block_expr),
+        Expr::Ident(ident_expr) => visitor.visit_ident_expr(ident_expr),
     }
 }
 
@@ -140,4 +144,9 @@ fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &BlockExpr)
     for stmt in stmts {
         visitor.visit_stmt(stmt)
     }
+}
+
+fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name, ty }: &IdentExpr) {
+    visitor.visit_type(ty);
+    visitor.visit_name(name)
 }

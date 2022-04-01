@@ -1,4 +1,4 @@
-use crate::ast::expr::Expr;
+use crate::ast::expr::{Expr, IdentExpr};
 use crate::ast::ty::Ty;
 use crate::Context;
 
@@ -20,17 +20,18 @@ impl Stmt {
         match ctx.choose_stmt_kind() {
             StmtKind::Local => {
                 // TODO: Decl statements
-                Stmt::Local(LocalStmt::Init(InitLocalStmt {
-                    name: ctx.create_var_name(),
+                let name = ctx.create_var_name();
+                let stmt: Stmt = Stmt::Local(LocalStmt::Init(InitLocalStmt {
+                    name: name.clone(),
                     ty: ty.clone(),
-                    rhs: Expr::generate_expr(ctx, &ty),
-                }))
+                    rhs: Expr::generate_expr_safe(ctx, &ty),
+                }));
+                ctx.type_symbol_table.add_var(name, ty);
+                stmt
             }
-            StmtKind::Semi => {
-                Stmt::Semi(SemiStmt {
-                    expr: Expr::generate_expr(ctx, &ty)
-                })
-            }
+            StmtKind::Semi => Stmt::Semi(SemiStmt {
+                expr: Expr::generate_expr_safe(ctx, &ty),
+            }),
             StmtKind::Expr => {
                 panic!()
             }
@@ -39,7 +40,7 @@ impl Stmt {
 
     pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Stmt {
         Stmt::Expr(ExprStmt {
-            expr: Expr::generate_expr(ctx, &res_type)
+            expr: Expr::generate_expr_safe(ctx, &res_type),
         })
     }
 }
