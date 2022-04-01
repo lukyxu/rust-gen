@@ -45,16 +45,16 @@ impl Visitor for ExprVisitor {
             BinaryOp::Sub => {expr.op = BinaryOp::Add}
             BinaryOp::Mul => {
                 expr.op = if let EvalExprError::ZeroDiv = error {
-                    BinaryOp::Mul
-                } else {
                     BinaryOp::Sub
+                } else {
+                    BinaryOp::Div
                 }
             }
             BinaryOp::Div => {
                 expr.op = if let EvalExprError::MinMulOverflow = error {
-                    BinaryOp::Sub
+                    BinaryOp::Mul
                 } else {
-                    BinaryOp::Div
+                    BinaryOp::Sub
                 }
             }
             _ => panic!()
