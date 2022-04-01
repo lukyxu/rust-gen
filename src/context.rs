@@ -14,6 +14,7 @@ pub struct Context {
     pub type_symbol_table: TypeSymbolTable,
     pub rng: ThreadRng,
     pub if_else_depth: u32,
+    pub arith_depth: u32,
 }
 
 fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut ThreadRng) -> T {
@@ -55,6 +56,10 @@ impl Context {
 
     pub fn choose_unsuffixed_int(&mut self) -> bool {
         self.rng.gen_bool(self.policy.unsuffixed_int_prob)
+    }
+
+    pub fn choose_boolean_true(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.bool_true_prob)
     }
 
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
@@ -110,7 +115,10 @@ impl TypeSymbolTable {
         self.var_type_mapping
             .iter()
             .filter(|&(_k, v)| *v == *ty)
-            .map(|(name, ty)| IdentExpr { name: name.clone(), ty: ty.clone() })
+            .map(|(name, ty)| IdentExpr {
+                name: name.clone(),
+                ty: ty.clone(),
+            })
             .collect()
     }
 }

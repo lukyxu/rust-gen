@@ -1,12 +1,12 @@
-use std::{isize, u32, usize};
 use crate::ast::expr::EvalExprError::{MinMulOverflow, Overflow, ZeroDiv};
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
-use crate::ast::stmt::{Stmt};
-use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
+use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::*;
-use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::Ty::{Int, UInt};
+use crate::ast::ty::UIntTy::*;
+use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
+use std::{isize, u32, usize};
 
 pub enum Expr {
     /// Literal such as `1`, `"foo"`
@@ -37,6 +37,7 @@ impl Expr {
                 ExprKind::If => IfExpr::generate_expr(ctx, res_type),
                 ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type),
+                ExprKind::Block => Some(BlockExpr::generate_expr(ctx, res_type).into()),
                 _ => panic!(),
             };
             num_failed_attempts += 1
@@ -75,7 +76,7 @@ impl LitExpr {
         match res_type {
             Ty::Bool => {
                 // TODO(1): Add boolean
-                Some(LitExpr::Bool(true).into())
+                Some(LitExpr::Bool(ctx.choose_boolean_true()).into())
             }
             Ty::Int(t) => {
                 let val = t.rand_val(ctx);
@@ -125,21 +126,44 @@ pub struct BinaryExpr {
 
 impl BinaryExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if ctx.arith_depth + 1 > ctx.policy.max_arith_depth {
+            return None;
+        }
+        ctx.arith_depth += 1;
         // Binary op depth
-        match res_type {
-            Ty::Bool => None,
-            Ty::Int(t) => {
-                let op = ctx.choose_binary_int_op();
+        let res = match res_type {
+            Ty::Bool => {
+                let op = ctx.choose_binary_bool_op();
                 let lhs = Expr::generate_expr(ctx, res_type);
                 let lhs = if let Some(expr) = lhs {
                     Box::new(expr)
                 } else {
+                    ctx.arith_depth -= 1;
                     return None;
                 };
                 let rhs = Expr::generate_expr(ctx, res_type);
                 let rhs = if let Some(expr) = rhs {
                     Box::new(expr)
                 } else {
+                    ctx.arith_depth -= 1;
+                    return None;
+                };
+                Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
+            }
+            Ty::Int(t) => {
+                let op = ctx.choose_binary_int_op();
+                let lhs = Expr::generate_expr(ctx, res_type);
+                let lhs = if let Some(expr) = lhs {
+                    Box::new(expr)
+                } else {
+                    ctx.arith_depth -= 1;
+                    return None;
+                };
+                let rhs = Expr::generate_expr(ctx, res_type);
+                let rhs = if let Some(expr) = rhs {
+                    Box::new(expr)
+                } else {
+                    ctx.arith_depth -= 1;
                     return None;
                 };
                 Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
@@ -149,7 +173,9 @@ impl BinaryExpr {
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
             }
             _ => panic!(),
-        }
+        };
+        ctx.arith_depth -= 1;
+        res
     }
 }
 
@@ -163,11 +189,16 @@ pub enum BinaryOp {
     Or,
 }
 
-
 macro_rules! apply_int {
     ($fn_name: ident, $op_name: ident) => {
-        fn $fn_name(self, lhs_u128: u128, lhs: LitExprTy, rhs_u128: u128, rhs:LitExprTy) -> Result<LitExpr, EvalExprError> {
-            match(&lhs, &rhs) {
+        fn $fn_name(
+            self,
+            lhs_u128: u128,
+            lhs: LitExprTy,
+            rhs_u128: u128,
+            rhs: LitExprTy,
+        ) -> Result<LitExpr, EvalExprError> {
+            match (&lhs, &rhs) {
                 (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
                 (Signed(I16), Signed(I16)) => i16::$op_name(lhs_u128 as i16, rhs_u128 as i16),
                 (Signed(I32), Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
@@ -175,70 +206,72 @@ macro_rules! apply_int {
                 (Unsuffixed, Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
                 (Signed(I64), Signed(I64)) => i64::$op_name(lhs_u128 as i64, rhs_u128 as i64),
                 (Signed(I128), Signed(I128)) => i128::$op_name(lhs_u128 as i128, rhs_u128 as i128),
-                (Signed(ISize), Signed(ISize)) => isize::$op_name(lhs_u128 as isize, rhs_u128 as isize),
+                (Signed(ISize), Signed(ISize)) => {
+                    isize::$op_name(lhs_u128 as isize, rhs_u128 as isize)
+                }
                 (Unsigned(U8), Unsigned(U8)) => u8::$op_name(lhs_u128 as u8, rhs_u128 as u8),
                 (Unsigned(U16), Unsigned(U16)) => u16::$op_name(lhs_u128 as u16, rhs_u128 as u16),
                 (Unsigned(U32), Unsigned(U32)) => u32::$op_name(lhs_u128 as u32, rhs_u128 as u32),
                 (Unsigned(U64), Unsigned(U64)) => u64::$op_name(lhs_u128 as u64, rhs_u128 as u64),
-                (Unsigned(U128), Unsigned(U128)) => u128::$op_name(lhs_u128 as u128, rhs_u128 as u128),
-                (Unsigned(USize), Unsigned(USize)) => usize::$op_name(lhs_u128 as usize, rhs_u128 as usize),
-                (Unsuffixed, Unsuffixed)  => (i32::$op_name(lhs_u128 as i32, rhs_u128 as i32)),
-                _ => panic!()
+                (Unsigned(U128), Unsigned(U128)) => {
+                    u128::$op_name(lhs_u128 as u128, rhs_u128 as u128)
+                }
+                (Unsigned(USize), Unsigned(USize)) => {
+                    usize::$op_name(lhs_u128 as usize, rhs_u128 as usize)
+                }
+                (Unsuffixed, Unsuffixed) => (i32::$op_name(lhs_u128 as i32, rhs_u128 as i32)),
+                _ => panic!(),
             }
         }
-    }
+    };
 }
 
 impl BinaryOp {
     pub fn apply(self, lhs: LitExpr, rhs: LitExpr) -> Result<LitExpr, EvalExprError> {
         use LitExpr::*;
-        use LitExprTy::*;
         match (lhs, rhs) {
             (Int(lhs_u128, lhs_ty), Int(rhs_u128, rhs_ty)) => {
                 self.apply_int(lhs_u128, lhs_ty, rhs_u128, rhs_ty)
-            },
-            (Bool(lhs), Bool(rhs)) => {
-                Ok(self.apply_bool(lhs, rhs))
             }
-            _ => panic!("Non integer/booleans")
+            (Bool(lhs), Bool(rhs)) => Ok(self.apply_bool(lhs, rhs)),
+            _ => panic!("Non integer/booleans"),
         }
     }
     apply_int!(apply_add, expr_add);
     apply_int!(apply_sub, expr_sub);
     apply_int!(apply_mul, expr_mul);
     apply_int!(apply_div, expr_div);
-    fn apply_int(self, lhs_u128: u128, lhs: LitExprTy, rhs_u128: u128, rhs:LitExprTy) -> Result<LitExpr, EvalExprError> {
+    fn apply_int(
+        self,
+        lhs_u128: u128,
+        lhs: LitExprTy,
+        rhs_u128: u128,
+        rhs: LitExprTy,
+    ) -> Result<LitExpr, EvalExprError> {
         match self {
             BinaryOp::Add => self.apply_add(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Sub => self.apply_sub(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Mul => self.apply_mul(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Div => self.apply_div(lhs_u128, lhs, rhs_u128, rhs),
-            _ => panic!("Undefined operation on ints")
+            _ => panic!("Undefined operation on ints"),
         }
     }
 
-
-
     fn apply_bool(self, lhs: bool, rhs: bool) -> LitExpr {
         match self {
-            BinaryOp::And => {
-                LitExpr::Bool(lhs && rhs)
-            }
-            BinaryOp::Or => {
-                LitExpr::Bool(lhs || rhs)
-            }
-            _ => panic!()
+            BinaryOp::And => LitExpr::Bool(lhs && rhs),
+            BinaryOp::Or => LitExpr::Bool(lhs || rhs),
+            _ => panic!(),
         }
     }
 }
 
-trait Literal<T>  {
+trait Literal<T> {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
-
 
 macro_rules! literal {
     ($rust_ty: ident, $ty: expr) => {
@@ -264,7 +297,10 @@ macro_rules! literal {
                     Ok(LitExpr::Int(res as u128, $ty))
                 } else {
                     let is_signed = $rust_ty::MIN < 0;
-                    if is_signed && (((lhs == $rust_ty::MIN) && rhs + 1 == 0) || (rhs == $rust_ty::MIN && lhs + 1 == 0)) {
+                    if is_signed
+                        && (((lhs == $rust_ty::MIN) && rhs + 1 == 0)
+                            || (rhs == $rust_ty::MIN && lhs + 1 == 0))
+                    {
                         Err(MinMulOverflow)
                     } else {
                         Err(Overflow)
@@ -284,7 +320,7 @@ macro_rules! literal {
                 }
             }
         }
-    }
+    };
 }
 
 literal!(i8, Signed(I8));
@@ -299,7 +335,6 @@ literal!(u32, Unsigned(U32));
 literal!(u64, Unsigned(U64));
 literal!(u128, Unsigned(U128));
 literal!(usize, Unsigned(USize));
-
 
 pub struct UnaryExpr {
     pub expr: Box<Expr>,
@@ -330,6 +365,7 @@ impl IfExpr {
         if ctx.if_else_depth + 1 > ctx.policy.max_if_else_depth {
             return None;
         }
+        let outer_symbol_table = ctx.type_symbol_table.clone();
         ctx.if_else_depth += 1;
         let cond = Expr::generate_expr(ctx, &Ty::Bool);
         let if_expr = match cond {
@@ -355,6 +391,7 @@ impl IfExpr {
                 }))
             }
         };
+        ctx.type_symbol_table = outer_symbol_table;
         ctx.if_else_depth -= 1;
         if_expr
     }
@@ -365,8 +402,10 @@ pub struct BlockExpr {
 }
 
 impl BlockExpr {
+    // TODO: Make this return an optional
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> BlockExpr {
         let mut stmts: Vec<Stmt> = Vec::new();
+        let outer_symbol_table = ctx.type_symbol_table.clone();
         let mut num_stmts = ctx.choose_num_stmts();
         if !res_type.is_unit() {
             num_stmts -= 1
@@ -378,6 +417,7 @@ impl BlockExpr {
         if !res_type.is_unit() {
             stmts.push(Stmt::generate_expr_stmt(ctx, res_type));
         }
+        ctx.type_symbol_table = outer_symbol_table;
         BlockExpr { stmts }
     }
 }
@@ -419,5 +459,5 @@ pub enum ExprKind {
 pub enum EvalExprError {
     Overflow,
     MinMulOverflow,
-    ZeroDiv
+    ZeroDiv,
 }

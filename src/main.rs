@@ -1,11 +1,11 @@
 extern crate core;
 
-use rand::rngs::ThreadRng;
 use crate::ast::function::Function;
 use crate::context::Context;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 use crate::visitor::visitor::Visitor;
+use rand::rngs::ThreadRng;
 
 mod ast;
 mod context;

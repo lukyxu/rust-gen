@@ -14,8 +14,11 @@ pub struct Policy {
 
     pub unsuffixed_int_prob: f64,
     pub otherwise_if_stmt_prob: f64,
+    pub bool_true_prob: f64,
 
     pub max_if_else_depth: u32,
+    // pub max_block_depth: u32,
+    pub max_arith_depth: u32,
     pub max_expr_attempts: u32,
 }
 
@@ -42,9 +45,11 @@ impl Default for Policy {
             ],
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
-                // (ExprKind::If, 1.0),
+                (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
-                // (ExprKind::Ident, 2.0)
+                (ExprKind::Ident, 2.0),
+                (ExprKind::Block, 0.5),
+                // (ExprKind::Unary, 1.0),
             ],
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
@@ -56,8 +61,12 @@ impl Default for Policy {
             num_stmt_dist: Uniform::new_inclusive(5, 10),
             unsuffixed_int_prob: 0.5,
             otherwise_if_stmt_prob: 0.5,
+            bool_true_prob: 0.5,
 
             max_if_else_depth: 3,
+            // TODO: Add max block depth
+            // max_block_depth: 4,
+            max_arith_depth: 5,
             max_expr_attempts: 50,
         }
     }
