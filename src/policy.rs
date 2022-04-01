@@ -42,9 +42,9 @@ impl Default for Policy {
             ],
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
-                (ExprKind::If, 1.0),
+                // (ExprKind::If, 1.0),
                 (ExprKind::Binary, 2.0),
-                (ExprKind::Ident, 2.0)
+                // (ExprKind::Ident, 2.0)
             ],
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),

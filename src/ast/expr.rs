@@ -1,8 +1,12 @@
-use crate::ast::stmt::{ExprStmt, Stmt};
+use std::{isize, u32, usize};
+use crate::ast::expr::EvalExprError::{MinMulOverflow, Overflow, ZeroDiv};
+use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
+use crate::ast::stmt::{Stmt};
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
+use crate::ast::ty::IntTy::*;
+use crate::ast::ty::UIntTy::*;
+use crate::ast::ty::Ty::{Int, UInt};
 use crate::Context;
-use either::Either;
-use rand::Rng;
 
 pub enum Expr {
     /// Literal such as `1`, `"foo"`
@@ -159,6 +163,144 @@ pub enum BinaryOp {
     Or,
 }
 
+
+macro_rules! apply_int {
+    ($fn_name: ident, $op_name: ident) => {
+        fn $fn_name(self, lhs_u128: u128, lhs: LitExprTy, rhs_u128: u128, rhs:LitExprTy) -> Result<LitExpr, EvalExprError> {
+            match(&lhs, &rhs) {
+                (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
+                (Signed(I16), Signed(I16)) => i16::$op_name(lhs_u128 as i16, rhs_u128 as i16),
+                (Signed(I32), Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
+                (Signed(I32), Unsuffixed) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
+                (Unsuffixed, Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
+                (Signed(I64), Signed(I64)) => i64::$op_name(lhs_u128 as i64, rhs_u128 as i64),
+                (Signed(I128), Signed(I128)) => i128::$op_name(lhs_u128 as i128, rhs_u128 as i128),
+                (Signed(ISize), Signed(ISize)) => isize::$op_name(lhs_u128 as isize, rhs_u128 as isize),
+                (Unsigned(U8), Unsigned(U8)) => u8::$op_name(lhs_u128 as u8, rhs_u128 as u8),
+                (Unsigned(U16), Unsigned(U16)) => u16::$op_name(lhs_u128 as u16, rhs_u128 as u16),
+                (Unsigned(U32), Unsigned(U32)) => u32::$op_name(lhs_u128 as u32, rhs_u128 as u32),
+                (Unsigned(U64), Unsigned(U64)) => u64::$op_name(lhs_u128 as u64, rhs_u128 as u64),
+                (Unsigned(U128), Unsigned(U128)) => u128::$op_name(lhs_u128 as u128, rhs_u128 as u128),
+                (Unsigned(USize), Unsigned(USize)) => usize::$op_name(lhs_u128 as usize, rhs_u128 as usize),
+                (Unsuffixed, Unsuffixed)  => (i32::$op_name(lhs_u128 as i32, rhs_u128 as i32)),
+                _ => panic!()
+            }
+        }
+    }
+}
+
+impl BinaryOp {
+    pub fn apply(self, lhs: LitExpr, rhs: LitExpr) -> Result<LitExpr, EvalExprError> {
+        use LitExpr::*;
+        use LitExprTy::*;
+        match (lhs, rhs) {
+            (Int(lhs_u128, lhs_ty), Int(rhs_u128, rhs_ty)) => {
+                self.apply_int(lhs_u128, lhs_ty, rhs_u128, rhs_ty)
+            },
+            (Bool(lhs), Bool(rhs)) => {
+                Ok(self.apply_bool(lhs, rhs))
+            }
+            _ => panic!("Non integer/booleans")
+        }
+    }
+    apply_int!(apply_add, expr_add);
+    apply_int!(apply_sub, expr_sub);
+    apply_int!(apply_mul, expr_mul);
+    apply_int!(apply_div, expr_div);
+    fn apply_int(self, lhs_u128: u128, lhs: LitExprTy, rhs_u128: u128, rhs:LitExprTy) -> Result<LitExpr, EvalExprError> {
+        match self {
+            BinaryOp::Add => self.apply_add(lhs_u128, lhs, rhs_u128, rhs),
+            BinaryOp::Sub => self.apply_sub(lhs_u128, lhs, rhs_u128, rhs),
+            BinaryOp::Mul => self.apply_mul(lhs_u128, lhs, rhs_u128, rhs),
+            BinaryOp::Div => self.apply_div(lhs_u128, lhs, rhs_u128, rhs),
+            _ => panic!("Undefined operation on ints")
+        }
+    }
+
+
+
+    fn apply_bool(self, lhs: bool, rhs: bool) -> LitExpr {
+        match self {
+            BinaryOp::And => {
+                LitExpr::Bool(lhs && rhs)
+            }
+            BinaryOp::Or => {
+                LitExpr::Bool(lhs || rhs)
+            }
+            _ => panic!()
+        }
+    }
+}
+
+trait Literal<T>  {
+    fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+}
+
+
+macro_rules! literal {
+    ($rust_ty: ident, $ty: expr) => {
+        impl Literal<$rust_ty> for $rust_ty {
+            fn expr_add(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
+                if let Some(res) = lhs.checked_add(rhs) {
+                    Ok(LitExpr::Int(res as u128, $ty))
+                } else {
+                    Err(Overflow)
+                }
+            }
+
+            fn expr_sub(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
+                if let Some(res) = lhs.checked_sub(rhs) {
+                    Ok(LitExpr::Int(res as u128, $ty))
+                } else {
+                    Err(Overflow)
+                }
+            }
+
+            fn expr_mul(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
+                if let Some(res) = lhs.checked_mul(rhs) {
+                    Ok(LitExpr::Int(res as u128, $ty))
+                } else {
+                    let is_signed = $rust_ty::MIN < 0;
+                    if is_signed && (((lhs == $rust_ty::MIN) && rhs + 1 == 0) || (rhs == $rust_ty::MIN && lhs + 1 == 0)) {
+                        Err(MinMulOverflow)
+                    } else {
+                        Err(Overflow)
+                    }
+                }
+            }
+
+            fn expr_div(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
+                if let Some(res) = lhs.checked_div(rhs) {
+                    Ok(LitExpr::Int(res as u128, $ty))
+                } else {
+                    if rhs == 0 {
+                        Err(ZeroDiv)
+                    } else {
+                        Err(Overflow)
+                    }
+                }
+            }
+        }
+    }
+}
+
+literal!(i8, Signed(I8));
+literal!(i16, Signed(I16));
+literal!(i32, Signed(I32));
+literal!(i64, Signed(I64));
+literal!(i128, Signed(I128));
+literal!(isize, Signed(ISize));
+literal!(u8, Unsigned(U8));
+literal!(u16, Unsigned(U16));
+literal!(u32, Unsigned(U32));
+literal!(u64, Unsigned(U64));
+literal!(u128, Unsigned(U128));
+literal!(usize, Unsigned(USize));
+
+
 pub struct UnaryExpr {
     pub expr: Box<Expr>,
     pub op: UnaryOp,
@@ -271,4 +413,11 @@ pub enum ExprKind {
     If,
     Block,
     Ident,
+}
+
+#[derive(Copy, Clone)]
+pub enum EvalExprError {
+    Overflow,
+    MinMulOverflow,
+    ZeroDiv
 }
