@@ -2,22 +2,38 @@ use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::Ty;
 use crate::policy::Policy;
-use rand::prelude::{Distribution, SliceRandom, ThreadRng};
-use rand::Rng;
+use rand::prelude::{Distribution, SliceRandom, StdRng, ThreadRng};
+use rand::{Rng, SeedableRng, thread_rng};
 use std::collections::HashMap;
 
-
-#[derive(Default)]
 pub struct Context {
     pub policy: Policy,
     pub name_handler: NameHandler,
     pub type_symbol_table: TypeSymbolTable,
-    pub rng: ThreadRng,
+    pub rng: StdRng,
     pub if_else_depth: u32,
     pub arith_depth: u32,
 }
 
-fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut ThreadRng) -> T {
+impl Context {
+    pub fn new(seed: Option<u64>) -> Context {
+        let rng = if let Some(seed) = seed {
+            StdRng::seed_from_u64(seed)
+        } else {
+            StdRng::seed_from_u64(thread_rng().gen())
+        };
+        Context {
+            policy: Default::default(),
+            name_handler: Default::default(),
+            type_symbol_table: Default::default(),
+            rng,
+            if_else_depth: 0,
+            arith_depth: 0
+        }
+    }
+}
+
+fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> T {
     dist.choose_weighted(rng, |item| item.1).unwrap().0.clone()
 }
 

@@ -13,9 +13,13 @@ mod visitor;
 
 fn main() {
     // TODO: Parse configuation files as generation policies
-    let mut ctx = Context::default();
+    run_generator(None)
+}
+
+fn run_generator(seed: Option<u64>) {
+    let mut ctx = Context::new(seed);
     let mut main = Function::create_main_fn(&mut ctx);
-    print_output(&mut main);
+    // print_output(&mut main);
     // Make program compilable
     let mut expr_visitor = ExprVisitor::default();
     // Make sure there is no runtime errors
@@ -29,4 +33,11 @@ fn print_output(main: &mut Function) {
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_function(main);
     println!("{}", emit_visitor.output());
+}
+
+#[test]
+fn test() {
+    for i in 1..100 {
+        run_generator(Some(i))
+    }
 }
