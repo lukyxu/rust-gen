@@ -48,7 +48,7 @@ impl Default for Policy {
                 (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
                 (ExprKind::Ident, 2.0),
-                (ExprKind::Block, 0.5),
+                (ExprKind::Block, 0.0),
                 // (ExprKind::Unary, 1.0),
             ],
             binary_int_op_dist: vec![
