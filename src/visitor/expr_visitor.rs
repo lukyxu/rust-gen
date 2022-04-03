@@ -24,18 +24,22 @@ impl ExprVisitor {
         self.symbol_table.add_expr(key.clone(), value.clone());
         self.local_symbol_table.add_expr(key.clone(), value.clone());
     }
+}
 
+impl Visitor for ExprVisitor {
     fn enter_scope(&mut self) {
         self.prev_local_symbol_table
             .push(self.local_symbol_table.clone());
         self.local_symbol_table = ExprSymbolTable::default();
     }
+
     fn exit_scope(&mut self) {
         self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap()
     }
-}
-
-impl Visitor for ExprVisitor {
+    fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
+        let expr = self.safe_expr_visit(&mut stmt.rhs);
+        self.add_expr(&stmt.name, &expr);
+    }
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
         self.expr = Some((*expr).clone())
     }
@@ -74,6 +78,7 @@ impl Visitor for ExprVisitor {
         }
         self.visit_binary_expr(expr)
     }
+
     // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
     //     walk_unary_expr(self, expr)
     // }
@@ -86,7 +91,9 @@ impl Visitor for ExprVisitor {
         if !matches!(lit, LitExpr::Bool(_)) {
             panic!()
         }
+        self.enter_scope();
         self.visit_stmt(&mut expr.then);
+        self.exit_scope();
         if let Some(otherwise) = &mut expr.otherwise {
             self.visit_stmt(otherwise)
         }
@@ -100,11 +107,6 @@ impl Visitor for ExprVisitor {
         } else {
             panic!("Expression not in symbol table")
         }
-    }
-
-    fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
-        let expr = self.safe_expr_visit(&mut stmt.rhs);
-        self.add_expr(&stmt.name, &expr);
     }
 }
 

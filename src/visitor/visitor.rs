@@ -6,15 +6,18 @@ use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiSt
 use crate::ast::ty::Ty;
 
 pub trait Visitor: Sized {
+    fn enter_scope(&mut self) {}
+    fn exit_scope(&mut self) {}
+
     fn visit_function(&mut self, function: &mut Function) {
-        walk_function(self, function)
+        walk_function(self, function);
     }
     fn visit_name(&mut self, _name: &String) {}
     fn visit_type(&mut self, _ty: &Ty) {}
 
     // Statements
     fn visit_stmt(&mut self, stmt: &mut Stmt) {
-        walk_stmt(self, stmt)
+        walk_stmt(self, stmt);
     }
     fn visit_local_decl_stmt(&mut self, stmt: &mut DeclLocalStmt) {
         walk_decl_local_stmt(self, stmt)
@@ -134,16 +137,22 @@ fn walk_if_expr<V: Visitor>(
     }: &mut IfExpr,
 ) {
     visitor.visit_expr(condition);
+    visitor.enter_scope();
     visitor.visit_stmt(then);
+    visitor.exit_scope();
     if let Some(x) = otherwise {
-        visitor.visit_stmt(x)
+        visitor.enter_scope();
+        visitor.visit_stmt(x);
+        visitor.exit_scope();
     }
 }
 
 fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockExpr) {
+    visitor.enter_scope();
     for stmt in stmts {
         visitor.visit_stmt(stmt)
     }
+    visitor.exit_scope();
 }
 
 fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name, ty }: &IdentExpr) {

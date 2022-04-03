@@ -353,7 +353,8 @@ pub struct CastExpr {
     pub ty: Ty,
 }
 
-// TODO: Improve IfExpr formatting
+// TODO: Improve IfExpr formatting in printing
+// TODO: Change then to block and maybe otherwise to block?
 pub struct IfExpr {
     pub condition: Box<Expr>,
     pub then: Box<Stmt>,

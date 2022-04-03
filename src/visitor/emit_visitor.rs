@@ -1,6 +1,6 @@
-use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, IdentExpr, IfExpr, LitExpr, LitExprTy};
+use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, LitExprTy, UnaryExpr, UnaryOp};
 use crate::ast::function::Function;
-use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
 use crate::visitor::visitor::Visitor;
 
@@ -30,10 +30,18 @@ impl EmitVisitor {
 }
 
 impl Visitor for EmitVisitor {
+    fn enter_scope(&mut self) {
+        self.curr_indent += self.indentation;
+    }
+    fn exit_scope(&mut self) {
+        self.curr_indent -= self.indentation;
+    }
+
     fn visit_function(&mut self, function: &mut Function) {
         self.output.push_str(&format!("fn {}() ", function.name));
         self.visit_expr(&mut function.block)
     }
+
     fn visit_type(&mut self, ty: &Ty) {
         self.output.push_str(&ty.to_string())
     }
@@ -116,16 +124,16 @@ impl Visitor for EmitVisitor {
         self.output.push_str("if ");
         self.visit_expr(&mut expr.condition);
         self.output.push_str(" {\n");
-        self.curr_indent += self.indentation;
+        self.enter_scope();
         self.visit_stmt(&mut expr.then);
-        self.curr_indent -= self.indentation;
+        self.exit_scope();
         self.output
             .push_str(&format!("\n{}}}", " ".repeat(self.curr_indent)));
         if let Some(otherwise) = &mut expr.otherwise {
             self.output.push_str(&format!(" else {{\n"));
-            self.curr_indent += self.indentation;
+            self.enter_scope();
             self.visit_stmt(otherwise);
-            self.curr_indent -= self.indentation;
+            self.exit_scope();
             self.output
                 .push_str(&format!("\n{}}}", " ".repeat(self.curr_indent)));
         }
@@ -133,14 +141,14 @@ impl Visitor for EmitVisitor {
 
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
         self.output.push_str("{\n");
-        self.curr_indent += self.indentation;
+        self.enter_scope();
         for stmt in expr.stmts.iter_mut() {
             // self.output
             //     .push_str(&format!("{}", " ".repeat(self.curr_indent)));
             self.visit_stmt(stmt);
             self.output.push_str("\n");
         }
-        self.curr_indent -= self.indentation;
+        self.exit_scope();
         self.output.push_str("}");
     }
 
