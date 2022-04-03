@@ -9,8 +9,8 @@ pub trait Visitor: Sized {
     fn visit_function(&mut self, function: &mut Function) {
         walk_function(self, function)
     }
-    fn visit_name(&mut self, name: &String) {}
-    fn visit_type(&mut self, ty: &Ty) {}
+    fn visit_name(&mut self, _name: &String) {}
+    fn visit_type(&mut self, _ty: &Ty) {}
 
     // Statements
     fn visit_stmt(&mut self, stmt: &mut Stmt) {
@@ -33,7 +33,7 @@ pub trait Visitor: Sized {
     fn visit_expr(&mut self, expr: &mut Expr) {
         walk_expr(self, expr)
     }
-    fn visit_literal_expr(&mut self, expr: &mut LitExpr) {}
+    fn visit_literal_expr(&mut self, _expr: &mut LitExpr) {}
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         walk_binary_expr(self, expr)
     }
@@ -54,8 +54,8 @@ pub trait Visitor: Sized {
     }
 
     // Operations
-    fn visit_unary_op(&mut self, op: &mut UnaryOp) {}
-    fn visit_binary_op(&mut self, op: &mut BinaryOp) {}
+    fn visit_unary_op(&mut self, _op: &mut UnaryOp) {}
+    fn visit_binary_op(&mut self, _op: &mut BinaryOp) {}
 }
 
 fn walk_function<V: Visitor>(visitor: &mut V, function: &mut Function) {

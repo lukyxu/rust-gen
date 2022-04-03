@@ -1,4 +1,4 @@
-use crate::ast::expr::{Expr, IdentExpr};
+use crate::ast::expr::{Expr};
 use crate::ast::ty::Ty;
 use crate::Context;
 

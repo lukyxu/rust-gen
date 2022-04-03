@@ -96,7 +96,7 @@ impl Visitor for EmitVisitor {
                 };
                 to_emit
             }
-            LitExpr::Float(f_str, float_type) => f_str.to_string(),
+            LitExpr::Float(f_str, _float_type) => f_str.to_string(),
             LitExpr::Bool(bool) => bool.to_string(),
         };
         self.output.push_str(&expr)

@@ -2,7 +2,7 @@ use crate::ast::expr::EvalExprError::{MinMulOverflow, Overflow, ZeroDiv};
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::*;
-use crate::ast::ty::Ty::{Int, UInt};
+
 use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
@@ -150,7 +150,7 @@ impl BinaryExpr {
                 };
                 Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
             }
-            Ty::Int(t) => {
+            Ty::Int(_t) => {
                 let op = ctx.choose_binary_int_op();
                 let lhs = Expr::generate_expr(ctx, res_type);
                 let lhs = if let Some(expr) = lhs {

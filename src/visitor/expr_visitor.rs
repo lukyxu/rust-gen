@@ -1,8 +1,7 @@
 use crate::ast::expr::{
-    BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr,
-    LitExprTy, UnaryExpr, UnaryOp,
+    BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr,
 };
-use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::ast::stmt::{InitLocalStmt};
 use crate::Visitor;
 use std::collections::HashMap;
 

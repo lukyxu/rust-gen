@@ -1,11 +1,11 @@
-use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr, LitExpr};
+use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::Ty;
 use crate::policy::Policy;
 use rand::prelude::{Distribution, SliceRandom, ThreadRng};
 use rand::Rng;
 use std::collections::HashMap;
-use std::iter::Map;
+
 
 #[derive(Default)]
 pub struct Context {
