@@ -62,7 +62,7 @@ pub enum LitExpr {
     Char(char),
     Int(u128, LitExprTy),
     Float(String, LitFloatTy),
-    Bool(bool),
+    Bool(bool)
 }
 
 impl From<LitExpr> for Expr {

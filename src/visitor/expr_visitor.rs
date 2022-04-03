@@ -5,24 +5,37 @@ use crate::ast::stmt::{InitLocalStmt};
 use crate::Visitor;
 use std::collections::HashMap;
 
+type ResExpr = Option<LitExpr>;
+
 #[derive(Clone, Default)]
 pub struct ExprVisitor {
-    expr: Option<LitExpr>,
-    symbol_table: ExprSymbolTable,
+    expr: Option<ResExpr>,
+    deadcode_check_mode: bool,
+    full_symbol_table: ExprSymbolTable,
     local_symbol_table: ExprSymbolTable,
     prev_local_symbol_table: Vec<ExprSymbolTable>,
 }
 
 impl ExprVisitor {
-    fn safe_expr_visit(&mut self, expr: &mut Expr) -> LitExpr {
+    fn safe_expr_visit(&mut self, expr: &mut Expr) -> ResExpr {
         self.expr = None;
         self.visit_expr(expr);
         return self.expr.clone().unwrap();
     }
 
-    fn add_expr(&mut self, key: &String, value: &LitExpr) {
-        self.symbol_table.add_expr(key.clone(), value.clone());
-        self.local_symbol_table.add_expr(key.clone(), value.clone());
+    fn add_expr(&mut self, key: &String, value: &ResExpr) {
+            if !self.deadcode_check_mode {
+                self.full_symbol_table.add_expr(key.clone(), value.clone());
+            }
+            self.local_symbol_table.add_expr(key.clone(), value.clone());
+    }
+
+    fn symbol_table(&self) -> &ExprSymbolTable {
+        if self.deadcode_check_mode {
+            &self.local_symbol_table
+        } else {
+            &self.full_symbol_table
+        }
     }
 }
 
@@ -37,11 +50,12 @@ impl Visitor for ExprVisitor {
         self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap()
     }
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
-        let expr = self.safe_expr_visit(&mut stmt.rhs);
-        self.add_expr(&stmt.name, &expr);
+        let res_expr = self.safe_expr_visit(&mut stmt.rhs);
+        self.add_expr(&stmt.name, &res_expr);
     }
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
-        self.expr = Some((*expr).clone())
+        let res_expr = Some((*expr).clone());
+        self.expr = Some(res_expr)
     }
 
     // TODO: I think I can do this with only the default visitor (No need for lhs/rhs visitor)
@@ -49,34 +63,37 @@ impl Visitor for ExprVisitor {
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
         let rhs = self.safe_expr_visit(&mut expr.rhs);
-        let res = expr.op.apply(lhs, rhs);
-        let error = match res {
-            Ok(lit) => {
-                self.expr = Some(lit);
-                return;
-            }
-            Err(err) => err,
-        };
-        match expr.op {
-            BinaryOp::Add => expr.op = BinaryOp::Sub,
-            BinaryOp::Sub => expr.op = BinaryOp::Add,
-            BinaryOp::Mul => {
-                expr.op = if let EvalExprError::ZeroDiv = error {
-                    BinaryOp::Sub
-                } else {
-                    BinaryOp::Div
+        if let (Some(lhs), Some(rhs)) = (lhs, rhs) {
+            let res = expr.op.apply(lhs, rhs);
+            let error = match res {
+                Ok(lit) => {
+                    let res_expr = Some(lit);
+                    self.expr = Some(res_expr);
+                    return;
                 }
-            }
-            BinaryOp::Div => {
-                expr.op = if let EvalExprError::MinMulOverflow = error {
-                    BinaryOp::Mul
-                } else {
-                    BinaryOp::Sub
+                Err(err) => err,
+            };
+            match expr.op {
+                BinaryOp::Add => expr.op = BinaryOp::Sub,
+                BinaryOp::Sub => expr.op = BinaryOp::Add,
+                BinaryOp::Mul => {
+                    expr.op = if let EvalExprError::ZeroDiv = error {
+                        BinaryOp::Sub
+                    } else {
+                        BinaryOp::Div
+                    }
                 }
+                BinaryOp::Div => {
+                    expr.op = if let EvalExprError::MinMulOverflow = error {
+                        BinaryOp::Mul
+                    } else {
+                        BinaryOp::Sub
+                    }
+                }
+                _ => panic!(),
             }
-            _ => panic!(),
+            self.visit_binary_expr(expr)
         }
-        self.visit_binary_expr(expr)
     }
 
     // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
@@ -88,35 +105,54 @@ impl Visitor for ExprVisitor {
     // TODO: Have Two visitors, one for symbol table and one for testing expressions?
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         let lit = self.safe_expr_visit(&mut expr.condition);
-        if !matches!(lit, LitExpr::Bool(_)) {
+        if !matches!(lit, Some(LitExpr::Bool(_))) && !matches!(lit, None) {
             panic!()
+        }
+        let prev_deadcode_check_move = self.deadcode_check_mode;
+        if let Some(LitExpr::Bool(true)) = lit {
+            self.deadcode_check_mode = prev_deadcode_check_move;
+        } else {
+            self.deadcode_check_mode = true;
         }
         self.enter_scope();
         self.visit_stmt(&mut expr.then);
         self.exit_scope();
         if let Some(otherwise) = &mut expr.otherwise {
+            if let Some(LitExpr::Bool(false)) = lit {
+                self.deadcode_check_mode = prev_deadcode_check_move;
+            } else {
+                self.deadcode_check_mode = true;
+            }
             self.visit_stmt(otherwise)
         }
+        self.deadcode_check_mode = prev_deadcode_check_move
     }
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
     //     walk_block_expr(self, expr)
     // }
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
-        if let Some(expr) = self.symbol_table.get_literal_expr_by_name(&expr.name) {
-            self.expr = Some(expr.clone())
+        if let Some(expr) = self.symbol_table().get_expr_by_name(&expr.name) {
+            self.expr = Some(expr.clone());
+            // When we are not in deadcode check mode then the result expression
+            // should always evaluate to a literal expression
+            assert!(self.deadcode_check_mode || !matches!(expr, None))
         } else {
-            panic!("Expression not in symbol table")
+            assert!(self.deadcode_check_mode);
+            // Not in the local symbol table
+            let res_expr = None;
+            self.expr = Some(res_expr)
+            // panic!("Expression not in symbol table")
         }
     }
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct ExprSymbolTable {
-    expr_mapping: HashMap<String, LitExpr>,
+    expr_mapping: HashMap<String, ResExpr>,
 }
 
 impl ExprSymbolTable {
-    pub fn get_literal_expr_by_name(&self, name: &String) -> Option<LitExpr> {
+    pub fn get_expr_by_name(&self, name: &String) -> Option<ResExpr> {
         if let Some(expr) = self.expr_mapping.get(name) {
             Some(expr.clone())
         } else {
@@ -124,18 +160,7 @@ impl ExprSymbolTable {
         }
     }
 
-    pub fn add_expr(&mut self, key: String, value: LitExpr) {
+    pub fn add_expr(&mut self, key: String, value: ResExpr) {
         self.expr_mapping.insert(key, value);
-    }
-
-    pub fn merge_symbol_table(&self, other: &ExprSymbolTable) -> ExprSymbolTable {
-        ExprSymbolTable {
-            expr_mapping: self
-                .expr_mapping
-                .clone()
-                .into_iter()
-                .chain(other.clone().expr_mapping)
-                .collect(),
-        }
     }
 }

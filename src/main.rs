@@ -5,15 +5,24 @@ use crate::context::Context;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 use crate::visitor::visitor::Visitor;
+use clap::Parser;
 
 mod ast;
 mod context;
 mod policy;
 mod visitor;
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct Args {
+    #[clap(short, long)]
+    seed: Option<u64>
+}
+
 fn main() {
+    let args: Args = Args::parse();
     // TODO: Parse configuation files as generation policies
-    run_generator(None)
+    run_generator(args.seed)
 }
 
 fn run_generator(seed: Option<u64>) {
