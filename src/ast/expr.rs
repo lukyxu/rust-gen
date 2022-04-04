@@ -3,6 +3,7 @@ use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::*;
 
+use crate::ast::stmt::Stmt::Expr;
 use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
@@ -37,7 +38,7 @@ impl Expr {
                 ExprKind::If => IfExpr::generate_expr(ctx, res_type),
                 ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type),
-                ExprKind::Block => Some(BlockExpr::generate_expr(ctx, res_type).into()),
+                ExprKind::Block => BlockExpr::generate_expr(ctx, res_type),
                 _ => panic!(),
             };
             num_failed_attempts += 1
@@ -62,7 +63,7 @@ pub enum LitExpr {
     Char(char),
     Int(u128, LitExprTy),
     Float(String, LitFloatTy),
-    Bool(bool)
+    Bool(bool),
 }
 
 impl From<LitExpr> for Expr {
@@ -187,8 +188,20 @@ pub enum BinaryOp {
     Sub,
     Mul,
     Div,
+    // Rem,
     And,
     Or,
+    // BitXor,
+    // BitAnd,
+    // BitOr,
+    // Shl,
+    // Shr,
+    // Eq,
+    // Lq,
+    // Le,
+    // Ne,
+    // Ge,
+    // Gt
 }
 
 macro_rules! apply_int {
@@ -234,16 +247,16 @@ impl BinaryOp {
             // TODO: Convert apply to borrow
             let res: Result<LitExpr, EvalExprError> = self.apply(lhs.clone(), rhs.clone());
             return match res {
-                Ok(lit_expr) => {Ok(Some(lit_expr))}
-                Err(error) => {Err(error)}
-            }
+                Ok(lit_expr) => Ok(Some(lit_expr)),
+                Err(error) => Err(error),
+            };
         } else if let (BinaryOp::Div, Some(rhs)) = (&self, rhs) {
             // Special case when rhs evaluates to zero but lhs is unknown
             // TODO: Tidy this code up
             if let LitExpr::Int(0, _) = rhs {
-                return Err(ZeroDiv)
+                return Err(ZeroDiv);
             } else if let LitExpr::Int(_, _) = rhs {
-                return Ok(Some(rhs))
+                return Ok(Some(rhs));
             };
         };
         return Ok(None);
@@ -426,7 +439,17 @@ pub struct BlockExpr {
 
 impl BlockExpr {
     // TODO: Make this return an optional
-    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> BlockExpr {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let block_expr = BlockExpr::generate_block_expr(ctx, res_type);
+        match block_expr {
+            None => None,
+            Some(block_expr) => Some(Expr::Block(block_expr)),
+        }
+    }
+    pub fn generate_block_expr(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
+        if ctx.block_depth + 1 > ctx.policy.max_block_depth {
+            return None;
+        }
         let mut stmts: Vec<Stmt> = Vec::new();
         let outer_symbol_table = ctx.type_symbol_table.clone();
         let mut num_stmts = ctx.choose_num_stmts();
@@ -441,7 +464,7 @@ impl BlockExpr {
             stmts.push(Stmt::generate_expr_stmt(ctx, res_type));
         }
         ctx.type_symbol_table = outer_symbol_table;
-        BlockExpr { stmts }
+        Some(BlockExpr { stmts })
     }
 }
 

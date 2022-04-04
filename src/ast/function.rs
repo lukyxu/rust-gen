@@ -14,7 +14,7 @@ impl Function {
     pub fn create_main_fn(ctx: &mut Context) -> Function {
         Function {
             name: String::from("main"),
-            block: BlockExpr::generate_expr(ctx, &Ty::unit_type()).into(),
+            block: BlockExpr::generate_expr(ctx, &Ty::unit_type()).unwrap(),
         }
     }
 }

@@ -16,7 +16,7 @@ mod visitor;
 #[clap(author, version, about, long_about = None)]
 struct Args {
     #[clap(short, long)]
-    seed: Option<u64>
+    seed: Option<u64>,
 }
 
 fn main() {

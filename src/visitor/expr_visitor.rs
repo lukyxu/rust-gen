@@ -1,5 +1,7 @@
-use crate::ast::expr::{BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr};
-use crate::ast::stmt::{InitLocalStmt};
+use crate::ast::expr::{
+    BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr,
+};
+use crate::ast::stmt::InitLocalStmt;
 use crate::Visitor;
 use std::collections::HashMap;
 
@@ -20,10 +22,10 @@ impl ExprVisitor {
     }
 
     fn add_expr(&mut self, key: &String, value: &ResExpr) {
-            if !self.deadcode_check_mode {
-                self.full_symbol_table.add_expr(key.clone(), value.clone());
-            }
-            self.local_symbol_table.add_expr(key.clone(), value.clone());
+        if !self.deadcode_check_mode {
+            self.full_symbol_table.add_expr(key.clone(), value.clone());
+        }
+        self.local_symbol_table.add_expr(key.clone(), value.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
@@ -63,11 +65,9 @@ impl Visitor for ExprVisitor {
                 let res_expr = Some(lit);
                 self.expr = Some(res_expr);
                 return;
-            },
-            Ok(None) => { return }
-            Err(err) => {
-                err
             }
+            Ok(None) => return,
+            Err(err) => err,
         };
         match expr.op {
             BinaryOp::Add => expr.op = BinaryOp::Sub,

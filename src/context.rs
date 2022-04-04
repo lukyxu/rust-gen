@@ -2,8 +2,8 @@ use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::Ty;
 use crate::policy::Policy;
-use rand::prelude::{Distribution, SliceRandom, StdRng, ThreadRng};
-use rand::{Rng, SeedableRng, thread_rng};
+use rand::prelude::{Distribution, SliceRandom, StdRng};
+use rand::{thread_rng, Rng, SeedableRng};
 use std::collections::HashMap;
 
 pub struct Context {
@@ -12,6 +12,7 @@ pub struct Context {
     pub type_symbol_table: TypeSymbolTable,
     pub rng: StdRng,
     pub if_else_depth: u32,
+    pub block_depth: u32,
     pub arith_depth: u32,
 }
 
@@ -28,7 +29,8 @@ impl Context {
             type_symbol_table: Default::default(),
             rng,
             if_else_depth: 0,
-            arith_depth: 0
+            block_depth: 0,
+            arith_depth: 0,
         }
     }
 }

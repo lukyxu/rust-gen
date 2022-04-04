@@ -17,7 +17,7 @@ pub struct Policy {
     pub bool_true_prob: f64,
 
     pub max_if_else_depth: u32,
-    // pub max_block_depth: u32,
+    pub max_block_depth: u32,
     pub max_arith_depth: u32,
     pub max_expr_attempts: u32,
 }
@@ -64,10 +64,11 @@ impl Default for Policy {
             bool_true_prob: 0.5,
 
             max_if_else_depth: 3,
-            // TODO: Add max block depth
-            // max_block_depth: 4,
+            // max_block_depth: 3 + max_if_else_depth,
+            max_block_depth: 3,
             max_arith_depth: 5,
-            max_expr_attempts: 50,
+
+            max_expr_attempts: 100,
         }
     }
 }
