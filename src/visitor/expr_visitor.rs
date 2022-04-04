@@ -1,11 +1,7 @@
-use crate::ast::expr::{
-    BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr,
-};
+use crate::ast::expr::{BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr};
 use crate::ast::stmt::{InitLocalStmt};
 use crate::Visitor;
 use std::collections::HashMap;
-
-type ResExpr = Option<LitExpr>;
 
 #[derive(Clone, Default)]
 pub struct ExprVisitor {
@@ -63,37 +59,38 @@ impl Visitor for ExprVisitor {
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
         let rhs = self.safe_expr_visit(&mut expr.rhs);
-        if let (Some(lhs), Some(rhs)) = (lhs, rhs) {
-            let res = expr.op.apply(lhs, rhs);
-            let error = match res {
-                Ok(lit) => {
-                    let res_expr = Some(lit);
-                    self.expr = Some(res_expr);
-                    return;
-                }
-                Err(err) => err,
-            };
-            match expr.op {
-                BinaryOp::Add => expr.op = BinaryOp::Sub,
-                BinaryOp::Sub => expr.op = BinaryOp::Add,
-                BinaryOp::Mul => {
-                    expr.op = if let EvalExprError::ZeroDiv = error {
-                        BinaryOp::Sub
-                    } else {
-                        BinaryOp::Div
-                    }
-                }
-                BinaryOp::Div => {
-                    expr.op = if let EvalExprError::MinMulOverflow = error {
-                        BinaryOp::Mul
-                    } else {
-                        BinaryOp::Sub
-                    }
-                }
-                _ => panic!(),
+        let res = expr.op.apply_res_expr(lhs, rhs);
+        let error = match res {
+            Ok(Some(lit)) => {
+                let res_expr = Some(lit);
+                self.expr = Some(res_expr);
+                return;
+            },
+            Ok(None) => { return }
+            Err(err) => {
+                err
             }
-            self.visit_binary_expr(expr)
+        };
+        match expr.op {
+            BinaryOp::Add => expr.op = BinaryOp::Sub,
+            BinaryOp::Sub => expr.op = BinaryOp::Add,
+            BinaryOp::Mul => {
+                expr.op = if let EvalExprError::ZeroDiv = error {
+                    BinaryOp::Sub
+                } else {
+                    BinaryOp::Div
+                }
+            }
+            BinaryOp::Div => {
+                expr.op = if let EvalExprError::MinMulOverflow = error {
+                    BinaryOp::Mul
+                } else {
+                    BinaryOp::Sub
+                }
+            }
+            _ => panic!(),
         }
+        self.visit_binary_expr(expr)
     }
 
     // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
@@ -103,6 +100,8 @@ impl Visitor for ExprVisitor {
     //     walk_cast_expr(self, expr)
     // }
     // TODO: Have Two visitors, one for symbol table and one for testing expressions?
+    // TODO(IMPORTANT): If is also an expression so it needs to return the self.expr, see line 120
+    // Done but check this logic tomorrow
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         let lit = self.safe_expr_visit(&mut expr.condition);
         if !matches!(lit, Some(LitExpr::Bool(_))) && !matches!(lit, None) {
@@ -116,16 +115,27 @@ impl Visitor for ExprVisitor {
         }
         self.enter_scope();
         self.visit_stmt(&mut expr.then);
+        // true_expr and false_expr can be none
+        let true_expr: ResExpr = self.expr.clone().unwrap();
         self.exit_scope();
+        let mut false_expr: Option<ResExpr> = None;
         if let Some(otherwise) = &mut expr.otherwise {
             if let Some(LitExpr::Bool(false)) = lit {
                 self.deadcode_check_mode = prev_deadcode_check_move;
             } else {
                 self.deadcode_check_mode = true;
             }
-            self.visit_stmt(otherwise)
+            self.visit_stmt(otherwise);
+            false_expr = Some(self.expr.clone().unwrap());
         }
-        self.deadcode_check_mode = prev_deadcode_check_move
+
+        self.deadcode_check_mode = prev_deadcode_check_move;
+
+        if let Some(LitExpr::Bool(false)) = lit {
+            self.expr = false_expr
+        } else {
+            self.expr = Some(true_expr)
+        }
     }
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
     //     walk_block_expr(self, expr)

@@ -110,6 +110,8 @@ pub enum LitExprTy {
     Unsuffixed,
 }
 
+pub type ResExpr = Option<LitExpr>;
+
 #[derive(Debug, Clone)]
 pub enum LitFloatTy {
     /// Float literal with suffix such as `1f32`, `1E10f32`
@@ -227,6 +229,26 @@ macro_rules! apply_int {
 }
 
 impl BinaryOp {
+    pub fn apply_res_expr(self, lhs: ResExpr, rhs: ResExpr) -> Result<ResExpr, EvalExprError> {
+        if let (Some(lhs), Some(rhs)) = (&lhs, &rhs) {
+            // TODO: Convert apply to borrow
+            let res: Result<LitExpr, EvalExprError> = self.apply(lhs.clone(), rhs.clone());
+            return match res {
+                Ok(lit_expr) => {Ok(Some(lit_expr))}
+                Err(error) => {Err(error)}
+            }
+        } else if let (BinaryOp::Div, Some(rhs)) = (&self, &rhs) {
+            // Special case when rhs evaluates to zero but lhs is unknown
+            // TODO: Tidy this code up
+            if let LitExpr::Int(0, _) = rhs {
+                return Err(ZeroDiv)
+            } else {
+                panic!()
+            };
+        }
+        return Ok(None);
+    }
+
     pub fn apply(self, lhs: LitExpr, rhs: LitExpr) -> Result<LitExpr, EvalExprError> {
         use LitExpr::*;
         match (lhs, rhs) {
