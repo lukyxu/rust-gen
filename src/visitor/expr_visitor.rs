@@ -54,8 +54,6 @@ impl Visitor for ExprVisitor {
         self.expr = Some(res_expr)
     }
 
-    // TODO: I think I can do this with only the default visitor (No need for lhs/rhs visitor)
-    // TODO: Can reduce the amount of duplication in the if let Some(lhs) = lhs_visitor.expr
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
         let rhs = self.safe_expr_visit(&mut expr.rhs);
@@ -99,8 +97,6 @@ impl Visitor for ExprVisitor {
     // fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
     //     walk_cast_expr(self, expr)
     // }
-    // TODO: Have Two visitors, one for symbol table and one for testing expressions?
-    // TODO(IMPORTANT): If is also an expression so it needs to return the self.expr, see line 120
     // Done but check this logic tomorrow
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         let lit = self.safe_expr_visit(&mut expr.condition);

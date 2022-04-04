@@ -237,15 +237,15 @@ impl BinaryOp {
                 Ok(lit_expr) => {Ok(Some(lit_expr))}
                 Err(error) => {Err(error)}
             }
-        } else if let (BinaryOp::Div, Some(rhs)) = (&self, &rhs) {
+        } else if let (BinaryOp::Div, Some(rhs)) = (&self, rhs) {
             // Special case when rhs evaluates to zero but lhs is unknown
             // TODO: Tidy this code up
             if let LitExpr::Int(0, _) = rhs {
                 return Err(ZeroDiv)
-            } else {
-                panic!()
+            } else if let LitExpr::Int(_, _) = rhs {
+                return Ok(Some(rhs))
             };
-        }
+        };
         return Ok(None);
     }
 
