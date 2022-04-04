@@ -3,7 +3,6 @@ use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::*;
 
-use crate::ast::stmt::Stmt::Expr;
 use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;

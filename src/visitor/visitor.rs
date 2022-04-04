@@ -62,7 +62,7 @@ pub trait Visitor: Sized {
 }
 
 fn walk_function<V: Visitor>(visitor: &mut V, function: &mut Function) {
-    visitor.visit_expr(&mut function.block)
+    visitor.visit_block_expr(&mut function.block)
 }
 
 fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {

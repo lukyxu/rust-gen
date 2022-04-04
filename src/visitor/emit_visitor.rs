@@ -39,7 +39,7 @@ impl Visitor for EmitVisitor {
 
     fn visit_function(&mut self, function: &mut Function) {
         self.output.push_str(&format!("fn {}() ", function.name));
-        self.visit_expr(&mut function.block)
+        self.visit_block_expr(&mut function.block)
     }
 
     fn visit_type(&mut self, ty: &Ty) {
