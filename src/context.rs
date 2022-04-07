@@ -37,7 +37,7 @@ impl Context {
     pub fn debug(seed: Option<u64>) -> Context {
         let mut context = Context::new(seed);
         context.policy = Policy::debug();
-        return context
+        return context;
     }
 }
 

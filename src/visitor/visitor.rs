@@ -1,4 +1,7 @@
-use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::expr::{
+    BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
+    UnaryExpr, UnaryOp,
+};
 use crate::ast::function::Function;
 use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::Ty;
@@ -110,7 +113,7 @@ fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
         Expr::If(if_expr) => visitor.visit_if_expr(if_expr),
         Expr::Block(block_expr) => visitor.visit_block_expr(block_expr),
         Expr::Ident(ident_expr) => visitor.visit_ident_expr(ident_expr),
-        Expr::Tuple(tuple_expr) => visitor.visit_tuple_expr(tuple_expr)
+        Expr::Tuple(tuple_expr) => visitor.visit_tuple_expr(tuple_expr),
     }
 }
 

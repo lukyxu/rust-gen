@@ -1,6 +1,8 @@
-use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::expr::{
+    BinaryExpr, BinaryOp, BlockExpr, IdentExpr, IfExpr, LitExpr, LitExprTy, TupleExpr,
+};
 use crate::ast::function::Function;
-use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
 use crate::visitor::visitor::Visitor;
 
@@ -8,7 +10,7 @@ pub struct EmitVisitor {
     output: String,
     curr_indent: usize,
     indentation: usize,
-    expression_mode: bool
+    expression_mode: bool,
 }
 
 impl Default for EmitVisitor {
@@ -17,7 +19,7 @@ impl Default for EmitVisitor {
             output: String::new(),
             curr_indent: 0,
             indentation: 4,
-            expression_mode: false
+            expression_mode: false,
         }
     }
 }
@@ -108,7 +110,7 @@ impl Visitor for EmitVisitor {
             }
             LitExpr::Float(f_str, _float_type) => f_str.to_string(),
             LitExpr::Bool(bool) => bool.to_string(),
-            LitExpr::Tuple(tuple) => panic!()
+            LitExpr::Tuple(_tuple) => panic!(),
         };
         self.output.push_str(&expr)
     }
@@ -155,7 +157,8 @@ impl Visitor for EmitVisitor {
             self.output.push_str("\n");
         }
         self.exit_scope();
-        self.output.push_str(&format!("{}}}", " ".repeat(self.curr_indent)));
+        self.output
+            .push_str(&format!("{}}}", " ".repeat(self.curr_indent)));
     }
 
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {

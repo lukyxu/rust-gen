@@ -25,7 +25,7 @@ pub enum Expr {
     Block(BlockExpr), // TODO: Path, Assign, Arrays, Box, Tuples
     /// A variable access such as `x` (Equivalent to Rust Path in Rust compiler)
     Ident(IdentExpr),
-    Tuple(TupleExpr)
+    Tuple(TupleExpr),
 }
 
 impl Expr {
@@ -65,7 +65,7 @@ pub enum LitExpr {
     Int(u128, LitExprTy),
     Float(String, LitFloatTy),
     Bool(bool),
-    Tuple(Vec<LitExpr>)
+    Tuple(Vec<LitExpr>),
 }
 
 impl From<LitExpr> for Expr {
@@ -94,9 +94,7 @@ impl LitExpr {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
             }
-            tuple @ Ty::Tuple(_) => {
-                TupleExpr::generate_expr(ctx, tuple)
-            }
+            tuple @ Ty::Tuple(_) => TupleExpr::generate_expr(ctx, tuple),
             _ => panic!(),
         }
     }
@@ -178,9 +176,7 @@ impl BinaryExpr {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
             }
-            Ty::Tuple(_) => {
-                None
-            }
+            Ty::Tuple(_) => None,
             _ => panic!(),
         };
         ctx.arith_depth -= 1;
@@ -420,7 +416,9 @@ impl IfExpr {
             Some(cond) => {
                 let then = Box::new(BlockExpr::generate_block_expr(ctx, res_type).unwrap());
                 let otherwise = if !res_type.is_unit() || ctx.choose_otherwise_if_stmt() {
-                    Some(Box::new(BlockExpr::generate_block_expr(ctx, res_type).unwrap()))
+                    Some(Box::new(
+                        BlockExpr::generate_block_expr(ctx, res_type).unwrap(),
+                    ))
                 } else {
                     None
                 };
@@ -497,22 +495,22 @@ impl IdentExpr {
 
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
-    pub tuple: Vec<Box<Expr>>
+    pub tuple: Vec<Box<Expr>>,
 }
 
 impl TupleExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         if let Ty::Tuple(types) = res_type {
-            let mut res = vec!();
+            let mut res = vec![];
             for ty in types {
-                for _ in 0..ctx.policy.max_expr_attempts{
+                for _ in 0..ctx.policy.max_expr_attempts {
                     if let Some(expr) = Expr::generate_expr(ctx, ty) {
                         res.push(Box::new(expr));
                         break;
                     }
                 }
             }
-            Some(Expr::Tuple(TupleExpr {tuple:res}))
+            Some(Expr::Tuple(TupleExpr { tuple: res }))
         } else {
             panic!()
         }

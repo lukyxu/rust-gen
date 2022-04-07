@@ -1,8 +1,9 @@
-use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr, UnaryExpr, UnaryOp};
-use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
-use crate::{Function, Visitor};
+use crate::ast::expr::{
+    BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr,
+};
+use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt};
+use crate::Visitor;
 use std::collections::HashMap;
-use crate::ast::ty::Ty;
 
 #[derive(Clone, Default)]
 pub struct ExprVisitor {
@@ -122,7 +123,7 @@ impl Visitor for ExprVisitor {
             self.visit_block_expr(otherwise);
             Some(self.expr.clone().unwrap())
         } else {
-            let res_expr = Some(LitExpr::Tuple(vec!()));
+            let res_expr = Some(LitExpr::Tuple(vec![]));
             Some(res_expr)
         };
 
@@ -153,7 +154,7 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
-        let mut res: Vec<LitExpr> = vec!();
+        let mut res: Vec<LitExpr> = vec![];
         let mut return_none = false;
         for inner_expr in &mut expr.tuple {
             let res_expr = self.safe_expr_visit(inner_expr);
@@ -171,8 +172,8 @@ impl Visitor for ExprVisitor {
         self.expr = Some(res_expr)
     }
 
-    fn visit_local_decl_stmt(&mut self, stmt: &mut DeclLocalStmt) {
-        let res_expr = Some(LitExpr::Tuple(vec!()));
+    fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
+        let res_expr = Some(LitExpr::Tuple(vec![]));
         self.expr = Some(res_expr)
     }
 }

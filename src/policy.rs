@@ -32,10 +32,23 @@ impl Policy {
             ],
             type_dist: vec![
                 (Ty::Int(IntTy::I8), 3.0),
-                (Ty::Tuple(vec!()), 1.0),
-                (Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Int(IntTy::I8))), 1.0),
-                (Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Int(IntTy::I8), Ty::Int(IntTy::I8))), 0.5),
-                (Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Int(IntTy::I8))))), 0.5),
+                (Ty::Tuple(vec![]), 1.0),
+                (Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]), 1.0),
+                (
+                    Ty::Tuple(vec![
+                        Ty::Int(IntTy::I8),
+                        Ty::Int(IntTy::I8),
+                        Ty::Int(IntTy::I8),
+                    ]),
+                    0.5,
+                ),
+                (
+                    Ty::Tuple(vec![
+                        Ty::Int(IntTy::I8),
+                        Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]),
+                    ]),
+                    0.5,
+                ),
             ],
             expr_dist: vec![
                 (ExprKind::Literal, 2.0),
@@ -87,7 +100,7 @@ impl Default for Policy {
                 (Ty::UInt(UIntTy::U32), 3.0),
                 (Ty::UInt(UIntTy::U64), 1.0),
                 (Ty::UInt(UIntTy::USize), 1.0),
-                (Ty::Tuple(vec!()), 3.0)
+                (Ty::Tuple(vec![]), 3.0),
             ],
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
