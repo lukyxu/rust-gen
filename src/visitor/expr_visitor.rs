@@ -51,6 +51,9 @@ impl Visitor for ExprVisitor {
     }
     // TODO: visit_local_init_stmt & visit_semi_stmt
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
+        if stmt.name == "var_31" {
+            println!()
+        }
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
         self.add_expr(&stmt.name, &res_expr);
     }
@@ -62,7 +65,11 @@ impl Visitor for ExprVisitor {
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
         if expr.op.short_circuit_rhs(&lhs) {
+            let prev_deadcode_mode = self.deadcode_mode;
+            self.safe_expr_visit(&mut expr.rhs);
             self.expr = Some(lhs);
+            self.deadcode_mode = prev_deadcode_mode;
+
             return;
         }
         let rhs = self.safe_expr_visit(&mut expr.rhs);
@@ -176,10 +183,10 @@ impl Visitor for ExprVisitor {
         self.expr = Some(res_expr)
     }
 
+    // TODO: Implement local decl stmt
     fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
-        panic!()
-        // let res_expr = Some(LitExpr::Tuple(vec![]));
-        // self.expr = Some(res_expr)
+        let res_expr = Some(LitExpr::Tuple(vec![]));
+        self.expr = Some(res_expr)
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {

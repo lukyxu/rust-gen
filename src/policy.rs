@@ -42,8 +42,7 @@ impl Policy {
                 (ExprKind::Literal, 3.0),
                 (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
-                (ExprKind::Ident, 2.0),
-                (ExprKind::Assign, 5.0)],
+                (ExprKind::Ident, 2.0)],
             num_stmt_dist: Uniform::new_inclusive(2, 15),
 
             max_if_else_depth: 3,
@@ -108,6 +107,31 @@ impl Policy {
             max_if_else_depth: 2,
             max_block_depth: 4,
             max_arith_depth: 2,
+            ..policy
+        }
+    }
+
+    pub fn simple_debug() -> Self {
+        let policy = Policy::default();
+        Policy {
+            stmt_dist: vec![
+                (StmtKind::Local, 1.0),
+                (StmtKind::Semi, 1.0),
+            ],
+            type_dist: vec![
+                (Ty::Int(IntTy::I8), 1.0),
+            ],
+            mutability_prob: 0.8,
+            expr_dist: vec![
+                (ExprKind::Literal, 3.0),
+                (ExprKind::If, 2.0),
+                (ExprKind::Binary, 2.0),
+                // (ExprKind::Ident, 2.0)
+            ],
+
+            max_if_else_depth: 1,
+            max_block_depth: 2,
+            max_arith_depth: 1,
             ..policy
         }
     }
