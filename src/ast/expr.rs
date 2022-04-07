@@ -132,7 +132,7 @@ pub struct BinaryExpr {
 
 impl BinaryExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if ctx.arith_depth + 1 > ctx.policy.max_arith_depth {
+        if ctx.arith_depth > ctx.policy.max_arith_depth {
             return None;
         }
         ctx.arith_depth += 1;
@@ -407,7 +407,7 @@ pub struct IfExpr {
 
 impl IfExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if ctx.if_else_depth + 1 > ctx.policy.max_if_else_depth {
+        if ctx.if_else_depth > ctx.policy.max_if_else_depth {
             return None;
         }
         let outer_symbol_table = ctx.type_symbol_table.clone();
@@ -450,7 +450,7 @@ impl BlockExpr {
         }
     }
     pub fn generate_block_expr(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
-        if ctx.block_depth + 1 > ctx.policy.max_block_depth {
+        if ctx.block_depth > ctx.policy.max_block_depth {
             return None;
         }
         let mut stmts: Vec<Stmt> = Vec::new();
