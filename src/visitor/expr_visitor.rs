@@ -51,9 +51,6 @@ impl Visitor for ExprVisitor {
     }
     // TODO: visit_local_init_stmt & visit_semi_stmt
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
-        if stmt.name == "var_31" {
-            println!("debug")
-        }
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
         self.add_expr(&stmt.name, &res_expr);
     }
