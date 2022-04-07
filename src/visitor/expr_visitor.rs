@@ -17,9 +17,6 @@ impl ExprVisitor {
     fn safe_expr_visit(&mut self, expr: &mut Expr) -> ResExpr {
         self.expr = None;
         self.visit_expr(expr);
-        if self.expr.is_none() {
-            println!("CLION debug")
-        }
         return self.expr.clone().unwrap();
     }
 
@@ -51,12 +48,10 @@ impl Visitor for ExprVisitor {
     }
     // TODO: visit_local_init_stmt & visit_semi_stmt
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
-        if stmt.name == "var_31" {
-            println!()
-        }
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
         self.add_expr(&stmt.name, &res_expr);
     }
+
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
         let res_expr = Some((*expr).clone());
         self.expr = Some(res_expr)
@@ -74,6 +69,35 @@ impl Visitor for ExprVisitor {
             return;
         }
         let rhs = self.safe_expr_visit(&mut expr.rhs);
+        let res = expr.op.apply_res_expr(lhs.clone(), rhs.clone());
+        let error = match res {
+            Ok(Some(lit)) => {
+                let res_expr = Some(lit);
+                self.expr = Some(res_expr);
+                return;
+            }
+            Ok(None) => return,
+            Err(err) => err,
+        };
+        expr.op = match expr.op {
+            BinaryOp::Add => BinaryOp::Sub,
+            BinaryOp::Sub => BinaryOp::Add,
+            BinaryOp::Mul => {
+                if let EvalExprError::ZeroDiv = error {
+                    BinaryOp::Sub
+                } else {
+                    BinaryOp::Div
+                }
+            }
+            BinaryOp::Div => {
+                if let EvalExprError::MinMulOverflow = error {
+                    BinaryOp::Mul
+                } else {
+                    BinaryOp::Sub
+                }
+            }
+            _ => panic!(),
+        };
         let res = expr.op.apply_res_expr(lhs, rhs);
         let error = match res {
             Ok(Some(lit)) => {
@@ -84,26 +108,6 @@ impl Visitor for ExprVisitor {
             Ok(None) => return,
             Err(err) => err,
         };
-        match expr.op {
-            BinaryOp::Add => expr.op = BinaryOp::Sub,
-            BinaryOp::Sub => expr.op = BinaryOp::Add,
-            BinaryOp::Mul => {
-                expr.op = if let EvalExprError::ZeroDiv = error {
-                    BinaryOp::Sub
-                } else {
-                    BinaryOp::Div
-                }
-            }
-            BinaryOp::Div => {
-                expr.op = if let EvalExprError::MinMulOverflow = error {
-                    BinaryOp::Mul
-                } else {
-                    BinaryOp::Sub
-                }
-            }
-            _ => panic!(),
-        }
-        self.visit_binary_expr(expr)
     }
 
     // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
