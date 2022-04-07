@@ -31,8 +31,11 @@ impl Policy {
                 // (StmtKind::Expr, 0.0): Must be 0
             ],
             type_dist: vec![
-                (Ty::Int(IntTy::I8), 2.0),
-                (Ty::Tuple(vec!()), 1.0)
+                (Ty::Int(IntTy::I8), 3.0),
+                (Ty::Tuple(vec!()), 1.0),
+                (Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Int(IntTy::I8))), 1.0),
+                (Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Int(IntTy::I8), Ty::Int(IntTy::I8))), 0.5),
+                (Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Tuple(vec!(Ty::Int(IntTy::I8), Ty::Int(IntTy::I8))))), 0.5),
             ],
             expr_dist: vec![
                 (ExprKind::Literal, 2.0),
@@ -54,7 +57,7 @@ impl Policy {
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
 
-            max_if_else_depth: 3,
+            max_if_else_depth: 2,
             // max_block_depth: 3 + max_if_else_depth,
             max_block_depth: 4,
             max_arith_depth: 2,

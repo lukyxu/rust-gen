@@ -176,7 +176,10 @@ impl Visitor for EmitVisitor {
 
     fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
         self.output.push_str("(");
-        for expr in &mut expr.tuple {
+        for (i, expr) in (&mut expr.tuple).iter_mut().enumerate() {
+            if i != 0 {
+                self.output.push_str(", ")
+            }
             self.visit_expr(expr)
         }
         self.output.push_str(")")

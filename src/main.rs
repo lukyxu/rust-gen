@@ -26,9 +26,9 @@ fn main() {
 }
 
 fn run_generator(seed: Option<u64>) {
-    let mut ctx = Context::new(seed);
+    let mut ctx = Context::debug(seed);
     let mut main = Function::create_main_fn(&mut ctx);
-    print_output(&mut main);
+    // print_output(&mut main);
     // Make program compilable
     let mut expr_visitor = ExprVisitor::default();
     // Make sure there is no runtime errors
