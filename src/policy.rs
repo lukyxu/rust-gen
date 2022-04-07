@@ -120,18 +120,21 @@ impl Policy {
             ],
             type_dist: vec![
                 (Ty::Int(IntTy::I8), 1.0),
+                (Ty::Tuple(vec![]), 1.0),
             ],
-            mutability_prob: 0.8,
+            mutability_prob: 0.2,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
                 (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
-                // (ExprKind::Ident, 2.0)
+                (ExprKind::Ident, 2.0)
             ],
 
-            max_if_else_depth: 1,
-            max_block_depth: 2,
+            max_if_else_depth: 2,
+            max_block_depth: 3,
             max_arith_depth: 1,
+
+            num_stmt_dist: Uniform::new_inclusive(2, 10),
             ..policy
         }
     }

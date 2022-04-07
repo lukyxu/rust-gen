@@ -66,6 +66,7 @@ impl Visitor for ExprVisitor {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
         if expr.op.short_circuit_rhs(&lhs) {
             let prev_deadcode_mode = self.deadcode_mode;
+            self.deadcode_mode = true;
             self.safe_expr_visit(&mut expr.rhs);
             self.expr = Some(lhs);
             self.deadcode_mode = prev_deadcode_mode;
