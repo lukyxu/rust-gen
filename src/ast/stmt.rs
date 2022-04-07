@@ -22,19 +22,21 @@ impl Stmt {
             StmtKind::Local => {
                 // TODO: Decl statements
                 let name = ctx.create_var_name();
+                let mutable = ctx.choose_mutability();
                 let stmt: Stmt = Stmt::Local(LocalStmt::Init(InitLocalStmt {
                     name: name.clone(),
                     ty: ty.clone(),
                     rhs: Expr::generate_expr_safe(ctx, &ty),
+                    mutable,
                 }));
-                ctx.type_symbol_table.add_var(name, ty);
+                ctx.type_symbol_table.add_var(name, ty, mutable);
                 stmt
             }
             StmtKind::Semi => Stmt::Semi(SemiStmt {
                 expr: Expr::generate_expr_safe(ctx, &ty),
             }),
             StmtKind::Expr => {
-                panic!()
+                panic!("Non expression statement cannot be expression")
             }
         }
     }
@@ -66,6 +68,7 @@ pub struct InitLocalStmt {
     pub name: String,
     pub ty: Ty,
     pub rhs: Expr,
+    pub mutable: bool,
 }
 
 #[derive(Debug, Clone)]

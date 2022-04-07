@@ -1,8 +1,6 @@
-use crate::ast::expr::{
-    BinaryExpr, BinaryOp, BlockExpr, IdentExpr, IfExpr, LitExpr, LitExprTy, TupleExpr,
-};
+use crate::ast::expr::{AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp};
 use crate::ast::function::Function;
-use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
 use crate::visitor::visitor::Visitor;
 
@@ -52,8 +50,9 @@ impl Visitor for EmitVisitor {
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         self.output.push_str(&format!(
-            "{}let {}: ",
+            "{}let {}{}: ",
             " ".repeat(self.curr_indent),
+            if stmt.mutable { "mut " } else { "" },
             stmt.name
         ));
         self.visit_type(&stmt.ty);
@@ -162,7 +161,7 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
-        self.output.push_str(&expr.name)
+        self.visit_name(&expr.name)
     }
 
     fn visit_binary_op(&mut self, op: &mut BinaryOp) {
@@ -186,5 +185,15 @@ impl Visitor for EmitVisitor {
             self.visit_expr(expr)
         }
         self.output.push_str(")")
+    }
+
+    fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
+        self.visit_name(&expr.name);
+        self.output.push_str(" = ");
+        self.visit_expr(&mut expr.rhs);
+    }
+
+    fn visit_name(&mut self, name: &String) {
+        self.output.push_str(name)
     }
 }

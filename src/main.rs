@@ -2,6 +2,7 @@ extern crate core;
 
 use crate::ast::function::Function;
 use crate::context::Context;
+use crate::policy::Policy;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 use crate::visitor::visitor::Visitor;
@@ -26,7 +27,7 @@ fn main() {
 }
 
 fn run_generator(seed: Option<u64>) {
-    let mut ctx = Context::debug(seed);
+    let mut ctx = Context::with_policy(Some(16), Policy::mutability_debug());
     let mut main = Function::create_main_fn(&mut ctx);
     // print_output(&mut main);
     // Make program compilable

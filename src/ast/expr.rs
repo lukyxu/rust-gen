@@ -7,6 +7,7 @@ use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
 use std::{isize, u32, usize};
+use rand::prelude::SliceRandom;
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -26,6 +27,7 @@ pub enum Expr {
     /// A variable access such as `x` (Equivalent to Rust Path in Rust compiler)
     Ident(IdentExpr),
     Tuple(TupleExpr),
+    Assign(AssignExpr),
 }
 
 impl Expr {
@@ -40,6 +42,7 @@ impl Expr {
                 ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type),
                 ExprKind::Block => BlockExpr::generate_expr(ctx, res_type),
+                ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
                 _ => panic!(),
             };
             num_failed_attempts += 1
@@ -244,6 +247,18 @@ macro_rules! apply_int {
 }
 
 impl BinaryOp {
+    // TODO: try refactor this
+    pub fn short_circuit_rhs(self, lhs: &ResExpr) -> bool {
+        if let Some(lhs) = lhs {
+            match (self, lhs) {
+                (BinaryOp::And, LitExpr::Bool(false)) | (BinaryOp::Or, LitExpr::Bool(true)) => true,
+                _ => false
+            }
+        } else {
+            false
+        }
+    }
+
     pub fn apply_res_expr(self, lhs: ResExpr, rhs: ResExpr) -> Result<ResExpr, EvalExprError> {
         if let (Some(lhs), Some(rhs)) = (&lhs, &rhs) {
             // TODO: Convert apply to borrow
@@ -517,6 +532,32 @@ impl TupleExpr {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AssignExpr {
+    pub name: String,
+    pub rhs: Box<Expr>,
+}
+
+impl AssignExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if *res_type != Ty::unit_type() {
+            return None
+        };
+        let ty = ctx.choose_type();
+        let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
+        if mut_ident_exprs.is_empty() {
+            return None;
+        }
+        let ident_expr = mut_ident_exprs.choose(&mut ctx.rng).unwrap().clone();
+
+        Some(Expr::Assign(AssignExpr {
+            name: ident_expr.name,
+            rhs: Box::new(Expr::generate_expr_safe(ctx, &ident_expr.ty))
+        }))
+    }
+}
+
+// TODO: Add tuple here instead of literal
 #[derive(Debug, Clone, Copy)]
 pub enum ExprKind {
     Literal,
@@ -526,6 +567,7 @@ pub enum ExprKind {
     If,
     Block,
     Ident,
+    Assign
 }
 
 #[derive(Copy, Clone)]

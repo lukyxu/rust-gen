@@ -1,9 +1,8 @@
-use crate::ast::expr::{
-    BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr,
-};
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt};
-use crate::Visitor;
+use crate::ast::expr::{AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::{Function, Visitor};
 use std::collections::HashMap;
+use crate::ast::ty::Ty;
 
 #[derive(Clone, Default)]
 pub struct ExprVisitor {
@@ -19,7 +18,7 @@ impl ExprVisitor {
         self.expr = None;
         self.visit_expr(expr);
         if self.expr.is_none() {
-            println!("here")
+            println!("CLION debug")
         }
         return self.expr.clone().unwrap();
     }
@@ -50,7 +49,11 @@ impl Visitor for ExprVisitor {
     fn exit_scope(&mut self) {
         self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap()
     }
+    // TODO: visit_local_init_stmt & visit_semi_stmt
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
+        if stmt.name == "var_31" {
+            println!("debug")
+        }
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
         self.add_expr(&stmt.name, &res_expr);
     }
@@ -61,6 +64,10 @@ impl Visitor for ExprVisitor {
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
+        if expr.op.short_circuit_rhs(&lhs) {
+            self.expr = Some(lhs);
+            return;
+        }
         let rhs = self.safe_expr_visit(&mut expr.rhs);
         let res = expr.op.apply_res_expr(lhs, rhs);
         let error = match res {
@@ -173,6 +180,15 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
+        panic!()
+        // let res_expr = Some(LitExpr::Tuple(vec![]));
+        // self.expr = Some(res_expr)
+    }
+
+    fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
+        let res_expr = self.safe_expr_visit(&mut expr.rhs);
+        self.add_expr(&expr.name, &res_expr);
+
         let res_expr = Some(LitExpr::Tuple(vec![]));
         self.expr = Some(res_expr)
     }
