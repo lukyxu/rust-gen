@@ -14,9 +14,70 @@ pub struct Policy {
 
     pub unsuffixed_int_prob: f64,
     pub otherwise_if_stmt_prob: f64,
+    pub bool_true_prob: f64,
 
     pub max_if_else_depth: u32,
+    pub max_block_depth: u32,
+    pub max_arith_depth: u32,
     pub max_expr_attempts: u32,
+}
+
+impl Policy {
+    pub fn debug() -> Self {
+        Policy {
+            stmt_dist: vec![
+                (StmtKind::Local, 5.0),
+                (StmtKind::Semi, 1.0),
+                // (StmtKind::Expr, 0.0): Must be 0
+            ],
+            type_dist: vec![
+                (Ty::Int(IntTy::I8), 3.0),
+                (Ty::Tuple(vec![]), 1.0),
+                (Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]), 1.0),
+                (
+                    Ty::Tuple(vec![
+                        Ty::Int(IntTy::I8),
+                        Ty::Int(IntTy::I8),
+                        Ty::Int(IntTy::I8),
+                    ]),
+                    0.5,
+                ),
+                (
+                    Ty::Tuple(vec![
+                        Ty::Int(IntTy::I8),
+                        Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]),
+                    ]),
+                    0.5,
+                ),
+            ],
+            expr_dist: vec![
+                (ExprKind::Literal, 2.0),
+                (ExprKind::If, 0.5),
+                (ExprKind::Binary, 1.0),
+                (ExprKind::Ident, 1.0),
+                (ExprKind::Block, 0.0),
+                // (ExprKind::Unary, 1.0),
+            ],
+            binary_int_op_dist: vec![
+                (BinaryOp::Add, 1.0),
+                (BinaryOp::Sub, 1.0),
+                (BinaryOp::Mul, 1.0),
+                (BinaryOp::Div, 1.0),
+            ],
+            binary_bool_op_dist: vec![(BinaryOp::And, 1.0), (BinaryOp::Or, 1.0)],
+            num_stmt_dist: Uniform::new_inclusive(2, 10),
+            unsuffixed_int_prob: 0.5,
+            otherwise_if_stmt_prob: 0.5,
+            bool_true_prob: 0.5,
+
+            max_if_else_depth: 2,
+            // max_block_depth: 3 + max_if_else_depth,
+            max_block_depth: 4,
+            max_arith_depth: 2,
+
+            max_expr_attempts: 100,
+        }
+    }
 }
 
 impl Default for Policy {
@@ -39,12 +100,15 @@ impl Default for Policy {
                 (Ty::UInt(UIntTy::U32), 3.0),
                 (Ty::UInt(UIntTy::U64), 1.0),
                 (Ty::UInt(UIntTy::USize), 1.0),
+                (Ty::Tuple(vec![]), 3.0),
             ],
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
-                (ExprKind::If, 1.0),
+                (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
-                (ExprKind::Ident, 2.0)
+                (ExprKind::Ident, 2.0),
+                (ExprKind::Block, 0.0),
+                // (ExprKind::Unary, 1.0),
             ],
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
@@ -53,12 +117,17 @@ impl Default for Policy {
                 (BinaryOp::Div, 1.0),
             ],
             binary_bool_op_dist: vec![(BinaryOp::And, 1.0), (BinaryOp::Or, 1.0)],
-            num_stmt_dist: Uniform::new_inclusive(5, 10),
+            num_stmt_dist: Uniform::new_inclusive(2, 10),
             unsuffixed_int_prob: 0.5,
             otherwise_if_stmt_prob: 0.5,
+            bool_true_prob: 0.5,
 
             max_if_else_depth: 3,
-            max_expr_attempts: 50,
+            // max_block_depth: 3 + max_if_else_depth,
+            max_block_depth: 3,
+            max_arith_depth: 5,
+
+            max_expr_attempts: 100,
         }
     }
 }
