@@ -8,6 +8,7 @@ use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
 use std::{isize, u32, usize};
 
+#[derive(Debug, Clone)]
 pub enum Expr {
     /// Literal such as `1`, `"foo"`
     Literal(LitExpr),
@@ -24,6 +25,7 @@ pub enum Expr {
     Block(BlockExpr), // TODO: Path, Assign, Arrays, Box, Tuples
     /// A variable access such as `x` (Equivalent to Rust Path in Rust compiler)
     Ident(IdentExpr),
+    Tuple(TupleExpr)
 }
 
 impl Expr {
@@ -63,6 +65,7 @@ pub enum LitExpr {
     Int(u128, LitExprTy),
     Float(String, LitFloatTy),
     Bool(bool),
+    Tuple(Vec<LitExpr>)
 }
 
 impl From<LitExpr> for Expr {
@@ -91,8 +94,8 @@ impl LitExpr {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
             }
-            Ty::Tuple(_) => {
-                panic!()
+            tuple @ Ty::Tuple(_) => {
+                TupleExpr::generate_expr(ctx, tuple)
             }
             _ => panic!(),
         }
@@ -120,6 +123,7 @@ pub enum LitFloatTy {
     Unsuffixed,
 }
 
+#[derive(Debug, Clone)]
 pub struct BinaryExpr {
     pub lhs: Box<Expr>,
     pub rhs: Box<Expr>,
@@ -173,6 +177,9 @@ impl BinaryExpr {
             Ty::UInt(t) => {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
+            }
+            Ty::Tuple(_) => {
+                None
             }
             _ => panic!(),
         };
@@ -370,6 +377,7 @@ literal!(u64, Unsigned(U64));
 literal!(u128, Unsigned(U128));
 literal!(usize, Unsigned(USize));
 
+#[derive(Debug, Clone)]
 pub struct UnaryExpr {
     pub expr: Box<Expr>,
     pub op: UnaryOp,
@@ -382,6 +390,7 @@ pub enum UnaryOp {
     Neg,
 }
 
+#[derive(Debug, Clone)]
 pub struct CastExpr {
     pub expr: Box<Expr>,
     pub ty: Ty,
@@ -389,10 +398,11 @@ pub struct CastExpr {
 
 // TODO: Improve IfExpr formatting in printing
 // TODO: Change then to block and maybe otherwise to block?
+#[derive(Debug, Clone)]
 pub struct IfExpr {
     pub condition: Box<Expr>,
-    pub then: Box<Stmt>,
-    pub otherwise: Option<Box<Stmt>>,
+    pub then: Box<BlockExpr>,
+    pub otherwise: Option<Box<BlockExpr>>,
 }
 
 impl IfExpr {
@@ -406,18 +416,11 @@ impl IfExpr {
         let if_expr = match cond {
             None => None,
             Some(cond) => {
-                let (then, otherwise) = if res_type.is_unit() {
-                    let otherwise = if ctx.choose_otherwise_if_stmt() {
-                        Some(Box::new(Stmt::generate_non_expr_stmt(ctx)))
-                    } else {
-                        None
-                    };
-                    (Box::new(Stmt::generate_non_expr_stmt(ctx)), otherwise)
+                let then = Box::new(BlockExpr::generate_block_expr(ctx, res_type).unwrap());
+                let otherwise = if !res_type.is_unit() || ctx.choose_otherwise_if_stmt() {
+                    Some(Box::new(BlockExpr::generate_block_expr(ctx, res_type).unwrap()))
                 } else {
-                    (
-                        Box::new(Stmt::generate_expr_stmt(ctx, res_type)),
-                        Some(Box::new(Stmt::generate_expr_stmt(ctx, res_type))),
-                    )
+                    None
                 };
                 Some(Expr::If(IfExpr {
                     condition: Box::new(cond),
@@ -432,6 +435,7 @@ impl IfExpr {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct BlockExpr {
     pub stmts: Vec<Stmt>,
 }
@@ -485,6 +489,30 @@ impl IdentExpr {
             Some(Expr::Ident(ident_expr))
         } else {
             None
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TupleExpr {
+    pub tuple: Vec<Box<Expr>>
+}
+
+impl TupleExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if let Ty::Tuple(types) = res_type {
+            let mut res = vec!();
+            for ty in types {
+                for _ in 0..ctx.policy.max_expr_attempts{
+                    if let Some(expr) = Expr::generate_expr(ctx, ty) {
+                        res.push(Box::new(expr));
+                        break;
+                    }
+                }
+            }
+            Some(Expr::Tuple(TupleExpr {tuple:res}))
+        } else {
+            panic!()
         }
     }
 }

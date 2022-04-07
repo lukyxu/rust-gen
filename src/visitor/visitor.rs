@@ -1,6 +1,4 @@
-use crate::ast::expr::{
-    BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, UnaryExpr, UnaryOp,
-};
+use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr, UnaryOp};
 use crate::ast::function::Function;
 use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::Ty;
@@ -54,6 +52,9 @@ pub trait Visitor: Sized {
     }
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
         walk_ident_expr(self, expr)
+    }
+    fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
+        walk_tuple_expr(self, expr)
     }
 
     // Operations
@@ -109,6 +110,7 @@ fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
         Expr::If(if_expr) => visitor.visit_if_expr(if_expr),
         Expr::Block(block_expr) => visitor.visit_block_expr(block_expr),
         Expr::Ident(ident_expr) => visitor.visit_ident_expr(ident_expr),
+        Expr::Tuple(tuple_expr) => visitor.visit_tuple_expr(tuple_expr)
     }
 }
 
@@ -137,13 +139,9 @@ fn walk_if_expr<V: Visitor>(
     }: &mut IfExpr,
 ) {
     visitor.visit_expr(condition);
-    visitor.enter_scope();
-    visitor.visit_stmt(then);
-    visitor.exit_scope();
+    visitor.visit_block_expr(then);
     if let Some(x) = otherwise {
-        visitor.enter_scope();
-        visitor.visit_stmt(x);
-        visitor.exit_scope();
+        visitor.visit_block_expr(x);
     }
 }
 
@@ -155,7 +153,13 @@ fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockE
     visitor.exit_scope();
 }
 
-fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name, ty }: &IdentExpr) {
+fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name, ty }: &mut IdentExpr) {
     visitor.visit_type(ty);
     visitor.visit_name(name)
+}
+
+fn walk_tuple_expr<V: Visitor>(visitor: &mut V, TupleExpr { tuple }: &mut TupleExpr) {
+    for expr in tuple {
+        visitor.visit_expr(expr)
+    }
 }

@@ -33,6 +33,12 @@ impl Context {
             arith_depth: 0,
         }
     }
+
+    pub fn debug(seed: Option<u64>) -> Context {
+        let mut context = Context::new(seed);
+        context.policy = Policy::debug();
+        return context
+    }
 }
 
 fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> T {

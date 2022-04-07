@@ -1,14 +1,13 @@
-use crate::ast::expr::{
-    BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr,
-};
-use crate::ast::stmt::InitLocalStmt;
-use crate::Visitor;
+use crate::ast::expr::{BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::{Function, Visitor};
 use std::collections::HashMap;
+use crate::ast::ty::Ty;
 
 #[derive(Clone, Default)]
 pub struct ExprVisitor {
     expr: Option<ResExpr>,
-    deadcode_check_mode: bool,
+    deadcode_mode: bool,
     full_symbol_table: ExprSymbolTable,
     local_symbol_table: ExprSymbolTable,
     prev_local_symbol_table: Vec<ExprSymbolTable>,
@@ -18,18 +17,21 @@ impl ExprVisitor {
     fn safe_expr_visit(&mut self, expr: &mut Expr) -> ResExpr {
         self.expr = None;
         self.visit_expr(expr);
+        if self.expr.is_none() {
+            println!("here")
+        }
         return self.expr.clone().unwrap();
     }
 
     fn add_expr(&mut self, key: &String, value: &ResExpr) {
-        if !self.deadcode_check_mode {
+        if !self.deadcode_mode {
             self.full_symbol_table.add_expr(key.clone(), value.clone());
         }
         self.local_symbol_table.add_expr(key.clone(), value.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
-        if self.deadcode_check_mode {
+        if self.deadcode_mode {
             &self.local_symbol_table
         } else {
             &self.full_symbol_table
@@ -97,35 +99,34 @@ impl Visitor for ExprVisitor {
     // fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
     //     walk_cast_expr(self, expr)
     // }
-    // Done but check this logic tomorrow
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         let lit = self.safe_expr_visit(&mut expr.condition);
         if !matches!(lit, Some(LitExpr::Bool(_))) && !matches!(lit, None) {
             panic!()
         }
-        let prev_deadcode_check_move = self.deadcode_check_mode;
+        let prev_deadcode_check_move = self.deadcode_mode;
         if let Some(LitExpr::Bool(true)) = lit {
-            self.deadcode_check_mode = prev_deadcode_check_move;
+            self.deadcode_mode = prev_deadcode_check_move;
         } else {
-            self.deadcode_check_mode = true;
+            self.deadcode_mode = true;
         }
-        self.enter_scope();
-        self.visit_stmt(&mut expr.then);
+        self.visit_block_expr(&mut expr.then);
         // true_expr and false_expr can be none
         let true_expr: ResExpr = self.expr.clone().unwrap();
-        self.exit_scope();
-        let mut false_expr: Option<ResExpr> = None;
-        if let Some(otherwise) = &mut expr.otherwise {
+        let false_expr: Option<ResExpr> = if let Some(otherwise) = &mut expr.otherwise {
             if let Some(LitExpr::Bool(false)) = lit {
-                self.deadcode_check_mode = prev_deadcode_check_move;
+                self.deadcode_mode = prev_deadcode_check_move;
             } else {
-                self.deadcode_check_mode = true;
+                self.deadcode_mode = true;
             }
-            self.visit_stmt(otherwise);
-            false_expr = Some(self.expr.clone().unwrap());
-        }
+            self.visit_block_expr(otherwise);
+            Some(self.expr.clone().unwrap())
+        } else {
+            let res_expr = Some(LitExpr::Tuple(vec!()));
+            Some(res_expr)
+        };
 
-        self.deadcode_check_mode = prev_deadcode_check_move;
+        self.deadcode_mode = prev_deadcode_check_move;
 
         if let Some(LitExpr::Bool(false)) = lit {
             self.expr = false_expr
@@ -141,14 +142,38 @@ impl Visitor for ExprVisitor {
             self.expr = Some(expr.clone());
             // When we are not in deadcode check mode then the result expression
             // should always evaluate to a literal expression
-            assert!(self.deadcode_check_mode || !matches!(expr, None))
+            assert!(self.deadcode_mode || !matches!(expr, None))
         } else {
-            assert!(self.deadcode_check_mode);
+            assert!(self.deadcode_mode);
             // Not in the local symbol table
             let res_expr = None;
             self.expr = Some(res_expr)
             // panic!("Expression not in symbol table")
         }
+    }
+
+    fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
+        let mut res: Vec<LitExpr> = vec!();
+        let mut return_none = false;
+        for inner_expr in &mut expr.tuple {
+            let res_expr = self.safe_expr_visit(inner_expr);
+            if let Some(lit_expr) = res_expr {
+                res.push(lit_expr)
+            } else {
+                return_none = true
+            }
+        }
+        let res_expr: ResExpr = if return_none {
+            None
+        } else {
+            Some(LitExpr::Tuple(res))
+        };
+        self.expr = Some(res_expr)
+    }
+
+    fn visit_local_decl_stmt(&mut self, stmt: &mut DeclLocalStmt) {
+        let res_expr = Some(LitExpr::Tuple(vec!()));
+        self.expr = Some(res_expr)
     }
 }
 
