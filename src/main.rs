@@ -26,7 +26,7 @@ fn main() {
 }
 
 fn run_generator(seed: Option<u64>) {
-    let mut ctx = Context::debug(seed);
+    let mut ctx = Context::debug(Some(564));
     let mut main = Function::create_main_fn(&mut ctx);
     // print_output(&mut main);
     // Make program compilable
@@ -46,7 +46,7 @@ fn print_output(main: &mut Function) {
 
 #[test]
 fn test() {
-    for i in 1..100 {
+    for i in 0..1000 {
         run_generator(Some(i))
     }
 }

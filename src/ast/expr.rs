@@ -338,9 +338,10 @@ macro_rules! literal {
                     Ok(LitExpr::Int(res as u128, $ty))
                 } else {
                     let is_signed = $rust_ty::MIN < 0;
+                    // (lhs = int::min and rhs == -1) or (lhs == -1 and rhs = int::min)
                     if is_signed
-                        && (((lhs == $rust_ty::MIN) && rhs + 1 == 0)
-                            || (rhs == $rust_ty::MIN && lhs + 1 == 0))
+                        && (((lhs == $rust_ty::MIN) && rhs.wrapping_add(1) == 0)
+                            || (rhs == $rust_ty::MIN && lhs.wrapping_add(1) == 0))
                     {
                         Err(MinMulOverflow)
                     } else {
@@ -364,6 +365,7 @@ macro_rules! literal {
     };
 }
 
+// TODO: Use num_trait library
 literal!(i8, Signed(I8));
 literal!(i16, Signed(I16));
 literal!(i32, Signed(I32));
