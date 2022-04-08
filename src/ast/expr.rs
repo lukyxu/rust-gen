@@ -6,8 +6,8 @@ use crate::ast::ty::IntTy::*;
 use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
-use std::{isize, u32, usize};
 use rand::prelude::SliceRandom;
+use std::{isize, u32, usize};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -203,7 +203,7 @@ impl BinaryExpr {
                 } else {
                     BinaryOp::Sub
                 }
-            },
+            }
             _ => panic!(),
         }
     }
@@ -274,7 +274,7 @@ impl BinaryOp {
         if let Some(lhs) = lhs {
             match (self, lhs) {
                 (BinaryOp::And, LitExpr::Bool(false)) | (BinaryOp::Or, LitExpr::Bool(true)) => true,
-                _ => false
+                _ => false,
             }
         } else {
             false
@@ -563,7 +563,7 @@ pub struct AssignExpr {
 impl AssignExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         if *res_type != Ty::unit_type() {
-            return None
+            return None;
         };
         let ty = ctx.choose_type();
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
@@ -574,7 +574,7 @@ impl AssignExpr {
 
         Some(Expr::Assign(AssignExpr {
             name: ident_expr.name,
-            rhs: Box::new(Expr::generate_expr_safe(ctx, &ident_expr.ty))
+            rhs: Box::new(Expr::generate_expr_safe(ctx, &ident_expr.ty)),
         }))
     }
 }
@@ -589,7 +589,7 @@ pub enum ExprKind {
     If,
     Block,
     Ident,
-    Assign
+    Assign,
 }
 
 #[derive(Debug, Copy, Clone)]

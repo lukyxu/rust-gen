@@ -1,8 +1,9 @@
-use crate::ast::expr::{AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr, UnaryExpr, UnaryOp};
-use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
-use crate::{Function, Visitor};
+use crate::ast::expr::{
+    AssignExpr, BinaryExpr, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr,
+};
+use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt};
+use crate::Visitor;
 use std::collections::HashMap;
-use crate::ast::ty::Ty;
 
 #[derive(Clone, Default)]
 pub struct ExprVisitor {
