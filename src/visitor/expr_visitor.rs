@@ -68,10 +68,10 @@ impl Visitor for ExprVisitor {
             return;
         }
         let rhs = self.safe_expr_visit(&mut expr.rhs);
-        let mut res = expr.op.apply_res_expr(lhs.clone(), rhs.clone());
+        let mut res = expr.op.apply_res_expr(&lhs, &rhs);
         if let Err(err) = &res {
             expr.op = expr.replacement_op(err);
-            res = expr.op.apply_res_expr(lhs.clone(), rhs.clone());
+            res = expr.op.apply_res_expr(&lhs, &rhs);
         };
         self.expr = Some(res.unwrap())
     }

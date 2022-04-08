@@ -236,11 +236,11 @@ macro_rules! apply_int {
         fn $fn_name(
             self,
             lhs_u128: u128,
-            lhs: LitExprTy,
+            lhs: &LitExprTy,
             rhs_u128: u128,
-            rhs: LitExprTy,
+            rhs: &LitExprTy,
         ) -> Result<LitExpr, EvalExprError> {
-            match (&lhs, &rhs) {
+            match (lhs, rhs) {
                 (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
                 (Signed(I16), Signed(I16)) => i16::$op_name(lhs_u128 as i16, rhs_u128 as i16),
                 (Signed(I32), Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
@@ -281,10 +281,10 @@ impl BinaryOp {
         }
     }
 
-    pub fn apply_res_expr(self, lhs: ResExpr, rhs: ResExpr) -> Result<ResExpr, EvalExprError> {
-        if let (Some(lhs), Some(rhs)) = (&lhs, &rhs) {
+    pub fn apply_res_expr(self, lhs: &ResExpr, rhs: &ResExpr) -> Result<ResExpr, EvalExprError> {
+        if let (Some(lhs), Some(rhs)) = (lhs, rhs) {
             // TODO: Convert apply to borrow
-            let res: Result<LitExpr, EvalExprError> = self.apply(lhs.clone(), rhs.clone());
+            let res: Result<LitExpr, EvalExprError> = self.apply(lhs, rhs);
             return match res {
                 Ok(lit_expr) => Ok(Some(lit_expr)),
                 Err(error) => Err(error),
@@ -295,19 +295,19 @@ impl BinaryOp {
             if let LitExpr::Int(0, _) = rhs {
                 return Err(ZeroDiv);
             } else if let LitExpr::Int(_, _) = rhs {
-                return Ok(Some(rhs));
+                return Ok(Some(rhs.clone()));
             };
         };
         return Ok(None);
     }
 
-    pub fn apply(self, lhs: LitExpr, rhs: LitExpr) -> Result<LitExpr, EvalExprError> {
+    pub fn apply(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
         use LitExpr::*;
         match (lhs, rhs) {
             (Int(lhs_u128, lhs_ty), Int(rhs_u128, rhs_ty)) => {
-                self.apply_int(lhs_u128, lhs_ty, rhs_u128, rhs_ty)
+                self.apply_int(*lhs_u128, lhs_ty, *rhs_u128, rhs_ty)
             }
-            (Bool(lhs), Bool(rhs)) => Ok(self.apply_bool(lhs, rhs)),
+            (Bool(lhs), Bool(rhs)) => Ok(self.apply_bool(*lhs, *rhs)),
             _ => panic!("Non integer/booleans"),
         }
     }
@@ -318,9 +318,9 @@ impl BinaryOp {
     fn apply_int(
         self,
         lhs_u128: u128,
-        lhs: LitExprTy,
+        lhs: &LitExprTy,
         rhs_u128: u128,
-        rhs: LitExprTy,
+        rhs: &LitExprTy,
     ) -> Result<LitExpr, EvalExprError> {
         match self {
             BinaryOp::Add => self.apply_add(lhs_u128, lhs, rhs_u128, rhs),
