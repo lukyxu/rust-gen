@@ -28,7 +28,7 @@ fn main() {
 
 fn run_generator(seed: Option<u64>) {
     // 16, 45
-    let mut ctx = Context::with_policy(seed, Policy::mutability_debug());
+    let mut ctx = Context::with_policy(seed, Policy::default());
     let mut main = Function::create_main_fn(&mut ctx);
     // print_output(&mut main);
     // Make program compilable

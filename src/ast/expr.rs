@@ -185,6 +185,28 @@ impl BinaryExpr {
         ctx.arith_depth -= 1;
         res
     }
+
+    pub fn replacement_op(&self, error: &EvalExprError) -> BinaryOp {
+        match self.op {
+            BinaryOp::Add => BinaryOp::Sub,
+            BinaryOp::Sub => BinaryOp::Add,
+            BinaryOp::Mul => {
+                if let EvalExprError::MinMulOverflow = error {
+                    BinaryOp::Sub
+                } else {
+                    BinaryOp::Div
+                }
+            }
+            BinaryOp::Div => {
+                if let EvalExprError::ZeroDiv = error {
+                    BinaryOp::Mul
+                } else {
+                    BinaryOp::Sub
+                }
+            },
+            _ => panic!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -570,7 +592,7 @@ pub enum ExprKind {
     Assign
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum EvalExprError {
     Overflow,
     MinMulOverflow,

@@ -65,49 +65,15 @@ impl Visitor for ExprVisitor {
             self.safe_expr_visit(&mut expr.rhs);
             self.expr = Some(lhs);
             self.deadcode_mode = prev_deadcode_mode;
-
             return;
         }
         let rhs = self.safe_expr_visit(&mut expr.rhs);
-        let res = expr.op.apply_res_expr(lhs.clone(), rhs.clone());
-        let error = match res {
-            Ok(Some(lit)) => {
-                let res_expr = Some(lit);
-                self.expr = Some(res_expr);
-                return;
-            }
-            Ok(None) => return,
-            Err(err) => err,
+        let mut res = expr.op.apply_res_expr(lhs.clone(), rhs.clone());
+        if let Err(err) = &res {
+            expr.op = expr.replacement_op(err);
+            res = expr.op.apply_res_expr(lhs.clone(), rhs.clone());
         };
-        expr.op = match expr.op {
-            BinaryOp::Add => BinaryOp::Sub,
-            BinaryOp::Sub => BinaryOp::Add,
-            BinaryOp::Mul => {
-                if let EvalExprError::ZeroDiv = error {
-                    BinaryOp::Sub
-                } else {
-                    BinaryOp::Div
-                }
-            }
-            BinaryOp::Div => {
-                if let EvalExprError::MinMulOverflow = error {
-                    BinaryOp::Mul
-                } else {
-                    BinaryOp::Sub
-                }
-            }
-            _ => panic!(),
-        };
-        let res = expr.op.apply_res_expr(lhs, rhs);
-        let error = match res {
-            Ok(Some(lit)) => {
-                let res_expr = Some(lit);
-                self.expr = Some(res_expr);
-                return;
-            }
-            Ok(None) => return,
-            Err(err) => err,
-        };
+        self.expr = Some(res.unwrap())
     }
 
     // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {

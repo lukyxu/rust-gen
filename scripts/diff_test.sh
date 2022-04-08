@@ -3,7 +3,7 @@ cd /home/lukyxu/repos/rust/rust-gen
 rm -rf prog
 mkdir prog
 mkdir prog/prog-exec
-for i in {0..1000}
+for i in {0..10000}
 do
   echo "Seed $i"
   export RUSTFLAGS=-Awarnings
