@@ -1,5 +1,5 @@
 use crate::ast::expr::{
-    BinaryExpr, BinaryOp, EvalExprError, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr,
+    AssignExpr, BinaryExpr, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr,
 };
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt};
 use crate::Visitor;
@@ -18,9 +18,6 @@ impl ExprVisitor {
     fn safe_expr_visit(&mut self, expr: &mut Expr) -> ResExpr {
         self.expr = None;
         self.visit_expr(expr);
-        if self.expr.is_none() {
-            println!("here")
-        }
         return self.expr.clone().unwrap();
     }
 
@@ -50,10 +47,12 @@ impl Visitor for ExprVisitor {
     fn exit_scope(&mut self) {
         self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap()
     }
+    // TODO: visit_local_init_stmt & visit_semi_stmt
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
         self.add_expr(&stmt.name, &res_expr);
     }
+
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
         let res_expr = Some((*expr).clone());
         self.expr = Some(res_expr)
@@ -61,37 +60,21 @@ impl Visitor for ExprVisitor {
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
-        let rhs = self.safe_expr_visit(&mut expr.rhs);
-        let res = expr.op.apply_res_expr(lhs, rhs);
-        let error = match res {
-            Ok(Some(lit)) => {
-                let res_expr = Some(lit);
-                self.expr = Some(res_expr);
-                return;
-            }
-            Ok(None) => return,
-            Err(err) => err,
-        };
-        match expr.op {
-            BinaryOp::Add => expr.op = BinaryOp::Sub,
-            BinaryOp::Sub => expr.op = BinaryOp::Add,
-            BinaryOp::Mul => {
-                expr.op = if let EvalExprError::ZeroDiv = error {
-                    BinaryOp::Sub
-                } else {
-                    BinaryOp::Div
-                }
-            }
-            BinaryOp::Div => {
-                expr.op = if let EvalExprError::MinMulOverflow = error {
-                    BinaryOp::Mul
-                } else {
-                    BinaryOp::Sub
-                }
-            }
-            _ => panic!(),
+        if expr.op.short_circuit_rhs(&lhs) {
+            let prev_deadcode_mode = self.deadcode_mode;
+            self.deadcode_mode = true;
+            self.safe_expr_visit(&mut expr.rhs);
+            self.expr = Some(lhs);
+            self.deadcode_mode = prev_deadcode_mode;
+            return;
         }
-        self.visit_binary_expr(expr)
+        let rhs = self.safe_expr_visit(&mut expr.rhs);
+        let mut res = expr.op.apply_res_expr(&lhs, &rhs);
+        if let Err(err) = &res {
+            expr.op = expr.replacement_op(err);
+            res = expr.op.apply_res_expr(&lhs, &rhs);
+        };
+        self.expr = Some(res.unwrap())
     }
 
     // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
@@ -172,7 +155,16 @@ impl Visitor for ExprVisitor {
         self.expr = Some(res_expr)
     }
 
+    // TODO: Implement local decl stmt
     fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
+        let res_expr = Some(LitExpr::Tuple(vec![]));
+        self.expr = Some(res_expr)
+    }
+
+    fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
+        let res_expr = self.safe_expr_visit(&mut expr.rhs);
+        self.add_expr(&expr.name, &res_expr);
+
         let res_expr = Some(LitExpr::Tuple(vec![]));
         self.expr = Some(res_expr)
     }

@@ -6,6 +6,7 @@ use crate::ast::ty::IntTy::*;
 use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
+use rand::prelude::SliceRandom;
 use std::{isize, u32, usize};
 
 #[derive(Debug, Clone)]
@@ -26,6 +27,7 @@ pub enum Expr {
     /// A variable access such as `x` (Equivalent to Rust Path in Rust compiler)
     Ident(IdentExpr),
     Tuple(TupleExpr),
+    Assign(AssignExpr),
 }
 
 impl Expr {
@@ -40,6 +42,7 @@ impl Expr {
                 ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type),
                 ExprKind::Block => BlockExpr::generate_expr(ctx, res_type),
+                ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
                 _ => panic!(),
             };
             num_failed_attempts += 1
@@ -182,6 +185,28 @@ impl BinaryExpr {
         ctx.arith_depth -= 1;
         res
     }
+
+    pub fn replacement_op(&self, error: &EvalExprError) -> BinaryOp {
+        match self.op {
+            BinaryOp::Add => BinaryOp::Sub,
+            BinaryOp::Sub => BinaryOp::Add,
+            BinaryOp::Mul => {
+                if let EvalExprError::MinMulOverflow = error {
+                    BinaryOp::Sub
+                } else {
+                    BinaryOp::Div
+                }
+            }
+            BinaryOp::Div => {
+                if let EvalExprError::ZeroDiv = error {
+                    BinaryOp::Mul
+                } else {
+                    BinaryOp::Sub
+                }
+            }
+            _ => panic!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -211,11 +236,11 @@ macro_rules! apply_int {
         fn $fn_name(
             self,
             lhs_u128: u128,
-            lhs: LitExprTy,
+            lhs: &LitExprTy,
             rhs_u128: u128,
-            rhs: LitExprTy,
+            rhs: &LitExprTy,
         ) -> Result<LitExpr, EvalExprError> {
-            match (&lhs, &rhs) {
+            match (lhs, rhs) {
                 (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
                 (Signed(I16), Signed(I16)) => i16::$op_name(lhs_u128 as i16, rhs_u128 as i16),
                 (Signed(I32), Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
@@ -244,10 +269,22 @@ macro_rules! apply_int {
 }
 
 impl BinaryOp {
-    pub fn apply_res_expr(self, lhs: ResExpr, rhs: ResExpr) -> Result<ResExpr, EvalExprError> {
-        if let (Some(lhs), Some(rhs)) = (&lhs, &rhs) {
+    // TODO: try refactor this
+    pub fn short_circuit_rhs(self, lhs: &ResExpr) -> bool {
+        if let Some(lhs) = lhs {
+            match (self, lhs) {
+                (BinaryOp::And, LitExpr::Bool(false)) | (BinaryOp::Or, LitExpr::Bool(true)) => true,
+                _ => false,
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn apply_res_expr(self, lhs: &ResExpr, rhs: &ResExpr) -> Result<ResExpr, EvalExprError> {
+        if let (Some(lhs), Some(rhs)) = (lhs, rhs) {
             // TODO: Convert apply to borrow
-            let res: Result<LitExpr, EvalExprError> = self.apply(lhs.clone(), rhs.clone());
+            let res: Result<LitExpr, EvalExprError> = self.apply(lhs, rhs);
             return match res {
                 Ok(lit_expr) => Ok(Some(lit_expr)),
                 Err(error) => Err(error),
@@ -258,19 +295,19 @@ impl BinaryOp {
             if let LitExpr::Int(0, _) = rhs {
                 return Err(ZeroDiv);
             } else if let LitExpr::Int(_, _) = rhs {
-                return Ok(Some(rhs));
+                return Ok(Some(rhs.clone()));
             };
         };
         return Ok(None);
     }
 
-    pub fn apply(self, lhs: LitExpr, rhs: LitExpr) -> Result<LitExpr, EvalExprError> {
+    pub fn apply(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
         use LitExpr::*;
         match (lhs, rhs) {
             (Int(lhs_u128, lhs_ty), Int(rhs_u128, rhs_ty)) => {
-                self.apply_int(lhs_u128, lhs_ty, rhs_u128, rhs_ty)
+                self.apply_int(*lhs_u128, lhs_ty, *rhs_u128, rhs_ty)
             }
-            (Bool(lhs), Bool(rhs)) => Ok(self.apply_bool(lhs, rhs)),
+            (Bool(lhs), Bool(rhs)) => Ok(self.apply_bool(*lhs, *rhs)),
             _ => panic!("Non integer/booleans"),
         }
     }
@@ -281,9 +318,9 @@ impl BinaryOp {
     fn apply_int(
         self,
         lhs_u128: u128,
-        lhs: LitExprTy,
+        lhs: &LitExprTy,
         rhs_u128: u128,
-        rhs: LitExprTy,
+        rhs: &LitExprTy,
     ) -> Result<LitExpr, EvalExprError> {
         match self {
             BinaryOp::Add => self.apply_add(lhs_u128, lhs, rhs_u128, rhs),
@@ -517,6 +554,32 @@ impl TupleExpr {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct AssignExpr {
+    pub name: String,
+    pub rhs: Box<Expr>,
+}
+
+impl AssignExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if *res_type != Ty::unit_type() {
+            return None;
+        };
+        let ty = ctx.choose_type();
+        let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
+        if mut_ident_exprs.is_empty() {
+            return None;
+        }
+        let ident_expr = mut_ident_exprs.choose(&mut ctx.rng).unwrap().clone();
+
+        Some(Expr::Assign(AssignExpr {
+            name: ident_expr.name,
+            rhs: Box::new(Expr::generate_expr_safe(ctx, &ident_expr.ty)),
+        }))
+    }
+}
+
+// TODO: Add tuple here instead of literal
 #[derive(Debug, Clone, Copy)]
 pub enum ExprKind {
     Literal,
@@ -526,9 +589,10 @@ pub enum ExprKind {
     If,
     Block,
     Ident,
+    Assign,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum EvalExprError {
     Overflow,
     MinMulOverflow,

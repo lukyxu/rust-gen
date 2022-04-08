@@ -34,9 +34,9 @@ impl Context {
         }
     }
 
-    pub fn debug(seed: Option<u64>) -> Context {
+    pub fn with_policy(seed: Option<u64>, policy: Policy) -> Context {
         let mut context = Context::new(seed);
-        context.policy = Policy::debug();
+        context.policy = policy;
         return context;
     }
 }
@@ -86,6 +86,10 @@ impl Context {
         self.rng.gen_bool(self.policy.bool_true_prob)
     }
 
+    pub fn choose_mutability(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.mutability_prob)
+    }
+
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
         let ident_exprs = self.type_symbol_table.get_ident_exprs_by_type(ty);
         if let Some(ident) = ident_exprs.choose(&mut self.rng).clone() {
@@ -109,15 +113,22 @@ impl NameHandler {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct TypeMapping {
+    ty: Ty,
+    mutable: bool,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct TypeSymbolTable {
-    var_type_mapping: HashMap<String, Ty>,
+    var_type_mapping: HashMap<String, TypeMapping>,
 }
 
 // TODO: Change this to a bidirectional map
 impl TypeSymbolTable {
-    pub fn add_var(&mut self, key: String, value: Ty) {
-        self.var_type_mapping.insert(key, value);
+    pub fn add_var(&mut self, key: String, ty: Ty, mutable: bool) {
+        self.var_type_mapping
+            .insert(key, TypeMapping { ty, mutable });
     }
 
     pub fn contains(&self, key: &String) -> bool {
@@ -125,23 +136,35 @@ impl TypeSymbolTable {
     }
 
     pub fn get_ident_expr_by_name(&self, key: &String) -> Option<IdentExpr> {
-        if let Some(ty) = self.var_type_mapping.get(key) {
+        if let Some(ty_mapping) = self.var_type_mapping.get(key) {
             Some(IdentExpr {
                 name: key.clone(),
-                ty: ty.clone(),
+                ty: ty_mapping.ty.clone(),
             })
         } else {
             None
         }
     }
 
+    // TODO: refactor
     pub fn get_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
         self.var_type_mapping
             .iter()
-            .filter(|&(_k, v)| *v == *ty)
-            .map(|(name, ty)| IdentExpr {
+            .filter(|&(_k, v)| v.ty == *ty)
+            .map(|(name, ty_mapping)| IdentExpr {
                 name: name.clone(),
-                ty: ty.clone(),
+                ty: ty_mapping.ty.clone(),
+            })
+            .collect()
+    }
+
+    pub fn get_mut_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
+        self.var_type_mapping
+            .iter()
+            .filter(|&(_k, v)| v.mutable == true && v.ty == *ty)
+            .map(|(name, ty_mapping)| IdentExpr {
+                name: name.clone(),
+                ty: ty_mapping.ty.clone(),
             })
             .collect()
     }
