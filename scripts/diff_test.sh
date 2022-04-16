@@ -1,5 +1,5 @@
 set -e
-cd /home/lukyxu/repos/rust/rust-gen
+cd "$( dirname "$0" )/.."
 rm -rf prog
 mkdir prog
 mkdir prog/prog-exec
