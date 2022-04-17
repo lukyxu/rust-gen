@@ -1,5 +1,5 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, EvalExpr,
+    AssignExpr, BinaryExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
 };
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt};
 use crate::Visitor;
@@ -47,10 +47,15 @@ impl Visitor for ExprVisitor {
     fn exit_scope(&mut self) {
         self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap()
     }
-    // TODO: visit_local_init_stmt & visit_semi_stmt
+
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
         self.add_expr(&stmt.name, &res_expr);
+        self.expr = Some(EvalExpr::unit_expr())
+    }
+
+    fn visit_semi_stmt(&mut self, stmt: &mut crate::ast::stmt::SemiStmt) {
+        self.expr = Some(EvalExpr::unit_expr())
     }
 
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
@@ -84,14 +89,13 @@ impl Visitor for ExprVisitor {
     // }
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         let cond_expr = self.safe_expr_visit(&mut expr.condition);
-        
+
         let prev_deadcode_check_move = self.deadcode_mode;
         self.deadcode_mode = match &cond_expr {
             EvalExpr::Literal(LitExpr::Bool(true)) => prev_deadcode_check_move,
             EvalExpr::Literal(LitExpr::Bool(false)) | EvalExpr::Unknown => true,
-            _ => panic!()
+            _ => panic!(),
         };
-
         // TODO: convert this to safe_visit_expr
         self.visit_block_expr(&mut expr.then);
         // true_expr and false_expr can be none
@@ -100,7 +104,7 @@ impl Visitor for ExprVisitor {
             self.deadcode_mode = match &cond_expr {
                 EvalExpr::Literal(LitExpr::Bool(false)) => prev_deadcode_check_move,
                 EvalExpr::Literal(LitExpr::Bool(true)) | EvalExpr::Unknown => true,
-                _ => panic!()
+                _ => panic!(),
             };
             self.visit_block_expr(otherwise);
             self.expr.clone().unwrap()
@@ -109,12 +113,12 @@ impl Visitor for ExprVisitor {
         };
 
         self.deadcode_mode = prev_deadcode_check_move;
-        
+
         self.expr = Some(match &cond_expr {
             EvalExpr::Literal(LitExpr::Bool(true)) => true_expr,
             EvalExpr::Literal(LitExpr::Bool(false)) => false_expr,
             EvalExpr::Unknown => EvalExpr::Unknown,
-            _ => panic!()
+            _ => panic!(),
         });
     }
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
@@ -140,7 +144,7 @@ impl Visitor for ExprVisitor {
             let res_expr = self.safe_expr_visit(inner_expr);
             if let EvalExpr::Unknown = res_expr {
                 return_none = true;
-                break
+                break;
             } else {
                 res.push(res_expr)
             }

@@ -268,9 +268,15 @@ macro_rules! apply_int {
 impl BinaryOp {
     // TODO: try refactor this
     pub fn short_circuit_rhs(self, lhs: &EvalExpr) -> bool {
-        let short_circuit_and = matches!((self, lhs), (BinaryOp::And, EvalExpr::Literal(LitExpr::Bool(false))));
-        let short_circuit_or = matches!((self, lhs), (BinaryOp::Or, EvalExpr::Literal(LitExpr::Bool(true))));
-        return short_circuit_and || short_circuit_or
+        let short_circuit_and = matches!(
+            (self, lhs),
+            (BinaryOp::And, EvalExpr::Literal(LitExpr::Bool(false)))
+        );
+        let short_circuit_or = matches!(
+            (self, lhs),
+            (BinaryOp::Or, EvalExpr::Literal(LitExpr::Bool(true)))
+        );
+        return short_circuit_and || short_circuit_or;
     }
 
     pub fn apply_res_expr(self, lhs: &EvalExpr, rhs: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
@@ -596,11 +602,11 @@ pub enum EvalExpr {
     /// Literal such as `1`, `"foo"`
     Literal(LitExpr),
     Tuple(Vec<EvalExpr>),
-    Unknown
+    Unknown,
 }
 
 impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
-        return EvalExpr::Tuple(vec![])
+        return EvalExpr::Tuple(vec![]);
     }
 }
