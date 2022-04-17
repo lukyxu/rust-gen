@@ -8,6 +8,7 @@ use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
 use rand::prelude::SliceRandom;
 use std::{isize, u32, usize};
+use num_traits::{AsPrimitive, PrimInt, WrappingAdd};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -281,7 +282,6 @@ impl BinaryOp {
 
     pub fn apply_res_expr(self, lhs: &EvalExpr, rhs: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
         if let (EvalExpr::Literal(lhs), EvalExpr::Literal(rhs)) = (lhs, rhs) {
-            // TODO: Convert apply to borrow
             let res: Result<LitExpr, EvalExprError> = self.apply(lhs, rhs);
             return match res {
                 Ok(lit_expr) => Ok(EvalExpr::Literal(lit_expr)),
@@ -338,77 +338,86 @@ impl BinaryOp {
     }
 }
 
-trait Literal<T> {
+trait Literal<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T>> {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
 
-macro_rules! literal {
+trait ByLitExprTy<T> {
+    fn by_lit_expr_type() -> LitExprTy;
+}
+
+macro_rules! by_lit_expr_ty_impl {
     ($rust_ty: ident, $ty: expr) => {
-        impl Literal<$rust_ty> for $rust_ty {
-            fn expr_add(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
-                if let Some(res) = lhs.checked_add(rhs) {
-                    Ok(LitExpr::Int(res as u128, $ty))
-                } else {
-                    Err(Overflow)
-                }
-            }
-
-            fn expr_sub(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
-                if let Some(res) = lhs.checked_sub(rhs) {
-                    Ok(LitExpr::Int(res as u128, $ty))
-                } else {
-                    Err(Overflow)
-                }
-            }
-
-            fn expr_mul(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
-                if let Some(res) = lhs.checked_mul(rhs) {
-                    Ok(LitExpr::Int(res as u128, $ty))
-                } else {
-                    let is_signed = $rust_ty::MIN < 0;
-                    // (lhs = int::min and rhs == -1) or (lhs == -1 and rhs = int::min)
-                    if is_signed
-                        && (((lhs == $rust_ty::MIN) && rhs.wrapping_add(1) == 0)
-                            || (rhs == $rust_ty::MIN && lhs.wrapping_add(1) == 0))
-                    {
-                        Err(MinMulOverflow)
-                    } else {
-                        Err(Overflow)
-                    }
-                }
-            }
-
-            fn expr_div(lhs: $rust_ty, rhs: $rust_ty) -> Result<LitExpr, EvalExprError> {
-                if let Some(res) = lhs.checked_div(rhs) {
-                    Ok(LitExpr::Int(res as u128, $ty))
-                } else {
-                    if rhs == 0 {
-                        Err(ZeroDiv)
-                    } else {
-                        Err(Overflow)
-                    }
-                }
+        impl ByLitExprTy<$rust_ty> for $rust_ty {
+            fn by_lit_expr_type() -> LitExprTy {
+                $ty
             }
         }
     };
 }
 
-// TODO: Use num_trait library
-literal!(i8, Signed(I8));
-literal!(i16, Signed(I16));
-literal!(i32, Signed(I32));
-literal!(i64, Signed(I64));
-literal!(i128, Signed(I128));
-literal!(isize, Signed(ISize));
-literal!(u8, Unsigned(U8));
-literal!(u16, Unsigned(U16));
-literal!(u32, Unsigned(U32));
-literal!(u64, Unsigned(U64));
-literal!(u128, Unsigned(U128));
-literal!(usize, Unsigned(USize));
+impl <T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T>> Literal<T> for T {
+    fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if let Some(res) = lhs.checked_add(&rhs) {
+            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+        } else {
+            Err(Overflow)
+        }
+    }
+
+    fn expr_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if let Some(res) = lhs.checked_sub(&rhs) {
+            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+        } else {
+            Err(Overflow)
+        }
+    }
+
+    fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if let Some(res) = lhs.checked_mul(&rhs) {
+            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+        } else {
+            let is_signed = T::min_value() < T::zero();
+
+            if is_signed
+                && (((lhs == T::min_value()) && rhs.wrapping_add(&T::one()) == T::zero())
+                || (rhs == T::min_value() && lhs.wrapping_add(&T::one()) == T::zero()))
+            {
+                Err(MinMulOverflow)
+            } else {
+                Err(Overflow)
+            }
+        }
+    }
+
+    fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if let Some(res) = lhs.checked_div(&rhs) {
+            Ok(LitExpr::Int(res.as_(), (Signed(I8))))
+        } else {
+            if rhs == T::zero() {
+                Err(ZeroDiv)
+            } else {
+                Err(Overflow)
+            }
+        }
+    }
+}
+
+by_lit_expr_ty_impl!(i8, Signed(I8));
+by_lit_expr_ty_impl!(i16, Signed(I16));
+by_lit_expr_ty_impl!(i32, Signed(I32));
+by_lit_expr_ty_impl!(i64, Signed(I64));
+by_lit_expr_ty_impl!(i128, Signed(I128));
+by_lit_expr_ty_impl!(isize, Signed(ISize));
+by_lit_expr_ty_impl!(u8, Unsigned(U8));
+by_lit_expr_ty_impl!(u16, Unsigned(U16));
+by_lit_expr_ty_impl!(u32, Unsigned(U32));
+by_lit_expr_ty_impl!(u64, Unsigned(U64));
+by_lit_expr_ty_impl!(u128, Unsigned(U128));
+by_lit_expr_ty_impl!(usize, Unsigned(USize));
 
 #[derive(Debug, Clone)]
 pub struct UnaryExpr {

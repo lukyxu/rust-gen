@@ -54,7 +54,7 @@ impl Visitor for ExprVisitor {
         self.expr = Some(EvalExpr::unit_expr())
     }
 
-    fn visit_semi_stmt(&mut self, stmt: &mut crate::ast::stmt::SemiStmt) {
+    fn visit_semi_stmt(&mut self, _stmt: &mut crate::ast::stmt::SemiStmt) {
         self.expr = Some(EvalExpr::unit_expr())
     }
 
