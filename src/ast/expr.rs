@@ -68,7 +68,6 @@ pub enum LitExpr {
     Int(u128, LitExprTy),
     Float(String, LitFloatTy),
     Bool(bool),
-    Tuple(Vec<LitExpr>),
 }
 
 impl From<LitExpr> for Expr {
@@ -113,8 +112,6 @@ pub enum LitExprTy {
     /// Defaults to i32
     Unsuffixed,
 }
-
-pub type ResExpr = Option<LitExpr>;
 
 #[derive(Debug, Clone)]
 pub enum LitFloatTy {
@@ -270,35 +267,30 @@ macro_rules! apply_int {
 
 impl BinaryOp {
     // TODO: try refactor this
-    pub fn short_circuit_rhs(self, lhs: &ResExpr) -> bool {
-        if let Some(lhs) = lhs {
-            match (self, lhs) {
-                (BinaryOp::And, LitExpr::Bool(false)) | (BinaryOp::Or, LitExpr::Bool(true)) => true,
-                _ => false,
-            }
-        } else {
-            false
-        }
+    pub fn short_circuit_rhs(self, lhs: &EvalExpr) -> bool {
+        let short_circuit_and = matches!((self, lhs), (BinaryOp::And, EvalExpr::Literal(LitExpr::Bool(false))));
+        let short_circuit_or = matches!((self, lhs), (BinaryOp::Or, EvalExpr::Literal(LitExpr::Bool(true))));
+        return short_circuit_and || short_circuit_or
     }
 
-    pub fn apply_res_expr(self, lhs: &ResExpr, rhs: &ResExpr) -> Result<ResExpr, EvalExprError> {
-        if let (Some(lhs), Some(rhs)) = (lhs, rhs) {
+    pub fn apply_res_expr(self, lhs: &EvalExpr, rhs: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
+        if let (EvalExpr::Literal(lhs), EvalExpr::Literal(rhs)) = (lhs, rhs) {
             // TODO: Convert apply to borrow
             let res: Result<LitExpr, EvalExprError> = self.apply(lhs, rhs);
             return match res {
-                Ok(lit_expr) => Ok(Some(lit_expr)),
+                Ok(lit_expr) => Ok(EvalExpr::Literal(lit_expr)),
                 Err(error) => Err(error),
             };
-        } else if let (BinaryOp::Div, Some(rhs)) = (&self, rhs) {
+        } else if let (BinaryOp::Div, EvalExpr::Literal(rhs)) = (&self, rhs) {
             // Special case when rhs evaluates to zero but lhs is unknown
             // TODO: Tidy this code up
             if let LitExpr::Int(0, _) = rhs {
                 return Err(ZeroDiv);
             } else if let LitExpr::Int(_, _) = rhs {
-                return Ok(Some(rhs.clone()));
+                return Ok(EvalExpr::Literal(rhs.clone()));
             };
         };
-        return Ok(None);
+        return Ok(EvalExpr::Unknown);
     }
 
     pub fn apply(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
@@ -597,4 +589,18 @@ pub enum EvalExprError {
     Overflow,
     MinMulOverflow,
     ZeroDiv,
+}
+
+#[derive(Debug, Clone)]
+pub enum EvalExpr {
+    /// Literal such as `1`, `"foo"`
+    Literal(LitExpr),
+    Tuple(Vec<EvalExpr>),
+    Unknown
+}
+
+impl EvalExpr {
+    pub fn unit_expr() -> EvalExpr {
+        return EvalExpr::Tuple(vec![])
+    }
 }

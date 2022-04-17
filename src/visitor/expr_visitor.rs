@@ -1,5 +1,5 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, Expr, IdentExpr, IfExpr, LitExpr, ResExpr, TupleExpr,
+    AssignExpr, BinaryExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, EvalExpr,
 };
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt};
 use crate::Visitor;
@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 #[derive(Clone, Default)]
 pub struct ExprVisitor {
-    expr: Option<ResExpr>,
+    expr: Option<EvalExpr>,
     deadcode_mode: bool,
     full_symbol_table: ExprSymbolTable,
     local_symbol_table: ExprSymbolTable,
@@ -15,13 +15,13 @@ pub struct ExprVisitor {
 }
 
 impl ExprVisitor {
-    fn safe_expr_visit(&mut self, expr: &mut Expr) -> ResExpr {
+    fn safe_expr_visit(&mut self, expr: &mut Expr) -> EvalExpr {
         self.expr = None;
         self.visit_expr(expr);
         return self.expr.clone().unwrap();
     }
 
-    fn add_expr(&mut self, key: &String, value: &ResExpr) {
+    fn add_expr(&mut self, key: &String, value: &EvalExpr) {
         if !self.deadcode_mode {
             self.full_symbol_table.add_expr(key.clone(), value.clone());
         }
@@ -54,8 +54,7 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
-        let res_expr = Some((*expr).clone());
-        self.expr = Some(res_expr)
+        self.expr = Some(EvalExpr::Literal(expr.clone()))
     }
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
@@ -84,39 +83,39 @@ impl Visitor for ExprVisitor {
     //     walk_cast_expr(self, expr)
     // }
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
-        let lit = self.safe_expr_visit(&mut expr.condition);
-        if !matches!(lit, Some(LitExpr::Bool(_))) && !matches!(lit, None) {
-            panic!()
-        }
+        let cond_expr = self.safe_expr_visit(&mut expr.condition);
+        
         let prev_deadcode_check_move = self.deadcode_mode;
-        if let Some(LitExpr::Bool(true)) = lit {
-            self.deadcode_mode = prev_deadcode_check_move;
-        } else {
-            self.deadcode_mode = true;
-        }
+        self.deadcode_mode = match &cond_expr {
+            EvalExpr::Literal(LitExpr::Bool(true)) => prev_deadcode_check_move,
+            EvalExpr::Literal(LitExpr::Bool(false)) | EvalExpr::Unknown => true,
+            _ => panic!()
+        };
+
+        // TODO: convert this to safe_visit_expr
         self.visit_block_expr(&mut expr.then);
         // true_expr and false_expr can be none
-        let true_expr: ResExpr = self.expr.clone().unwrap();
-        let false_expr: Option<ResExpr> = if let Some(otherwise) = &mut expr.otherwise {
-            if let Some(LitExpr::Bool(false)) = lit {
-                self.deadcode_mode = prev_deadcode_check_move;
-            } else {
-                self.deadcode_mode = true;
-            }
+        let true_expr: EvalExpr = self.expr.clone().unwrap();
+        let false_expr: EvalExpr = if let Some(otherwise) = &mut expr.otherwise {
+            self.deadcode_mode = match &cond_expr {
+                EvalExpr::Literal(LitExpr::Bool(false)) => prev_deadcode_check_move,
+                EvalExpr::Literal(LitExpr::Bool(true)) | EvalExpr::Unknown => true,
+                _ => panic!()
+            };
             self.visit_block_expr(otherwise);
-            Some(self.expr.clone().unwrap())
+            self.expr.clone().unwrap()
         } else {
-            let res_expr = Some(LitExpr::Tuple(vec![]));
-            Some(res_expr)
+            EvalExpr::unit_expr()
         };
 
         self.deadcode_mode = prev_deadcode_check_move;
-
-        if let Some(LitExpr::Bool(false)) = lit {
-            self.expr = false_expr
-        } else {
-            self.expr = Some(true_expr)
-        }
+        
+        self.expr = Some(match &cond_expr {
+            EvalExpr::Literal(LitExpr::Bool(true)) => true_expr,
+            EvalExpr::Literal(LitExpr::Bool(false)) => false_expr,
+            EvalExpr::Unknown => EvalExpr::Unknown,
+            _ => panic!()
+        });
     }
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
     //     walk_block_expr(self, expr)
@@ -125,58 +124,55 @@ impl Visitor for ExprVisitor {
         if let Some(expr) = self.symbol_table().get_expr_by_name(&expr.name) {
             self.expr = Some(expr.clone());
             // When we are not in deadcode check mode then the result expression
-            // should always evaluate to a literal expression
-            assert!(self.deadcode_mode || !matches!(expr, None))
+            // should never evaluated to unknown value
+            assert!(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown))
         } else {
             assert!(self.deadcode_mode);
             // Not in the local symbol table
-            let res_expr = None;
-            self.expr = Some(res_expr)
-            // panic!("Expression not in symbol table")
+            self.expr = Some(EvalExpr::Unknown)
         }
     }
 
     fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
-        let mut res: Vec<LitExpr> = vec![];
+        let mut res: Vec<EvalExpr> = vec![];
         let mut return_none = false;
         for inner_expr in &mut expr.tuple {
             let res_expr = self.safe_expr_visit(inner_expr);
-            if let Some(lit_expr) = res_expr {
-                res.push(lit_expr)
+            if let EvalExpr::Unknown = res_expr {
+                return_none = true;
+                break
             } else {
-                return_none = true
+                res.push(res_expr)
             }
         }
-        let res_expr: ResExpr = if return_none {
-            None
+        let res_expr: EvalExpr = if return_none {
+            EvalExpr::Unknown
         } else {
-            Some(LitExpr::Tuple(res))
+            EvalExpr::Tuple(res)
         };
         self.expr = Some(res_expr)
     }
 
     // TODO: Implement local decl stmt
     fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
-        let res_expr = Some(LitExpr::Tuple(vec![]));
-        self.expr = Some(res_expr)
+        self.expr = Some(EvalExpr::unit_expr())
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
         self.add_expr(&expr.name, &res_expr);
 
-        let res_expr = Some(LitExpr::Tuple(vec![]));
-        self.expr = Some(res_expr)
+        self.expr = Some(EvalExpr::unit_expr())
     }
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct ExprSymbolTable {
-    expr_mapping: HashMap<String, ResExpr>,
+    expr_mapping: HashMap<String, EvalExpr>,
 }
 
 impl ExprSymbolTable {
-    pub fn get_expr_by_name(&self, name: &String) -> Option<ResExpr> {
+    pub fn get_expr_by_name(&self, name: &String) -> Option<EvalExpr> {
         if let Some(expr) = self.expr_mapping.get(name) {
             Some(expr.clone())
         } else {
@@ -184,7 +180,7 @@ impl ExprSymbolTable {
         }
     }
 
-    pub fn add_expr(&mut self, key: String, value: ResExpr) {
+    pub fn add_expr(&mut self, key: String, value: EvalExpr) {
         self.expr_mapping.insert(key, value);
     }
 }
