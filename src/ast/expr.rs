@@ -260,7 +260,7 @@ macro_rules! apply_int {
                     usize::$op_name(lhs_u128 as usize, rhs_u128 as usize)
                 }
                 (Unsuffixed, Unsuffixed) => (i32::$op_name(lhs_u128 as i32, rhs_u128 as i32)),
-                _ => panic!(),
+                _ => panic!("Mismatch type in binary operation {:?} {:?}", lhs, rhs),
             }
         }
     };
@@ -395,7 +395,7 @@ impl <T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExp
 
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_div(&rhs) {
-            Ok(LitExpr::Int(res.as_(), (Signed(I8))))
+            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
         } else {
             if rhs == T::zero() {
                 Err(ZeroDiv)
