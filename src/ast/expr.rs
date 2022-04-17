@@ -136,21 +136,25 @@ impl BinaryExpr {
         }
         ctx.arith_depth += 1;
         // Binary op depth
-        let res = match res_type {
+        let res = BinaryExpr::generate_expr_internal(ctx, res_type)
+        ctx.arith_depth -= 1;
+        res
+    }
+
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        match res_type {
             Ty::Bool => {
                 let op = ctx.choose_binary_bool_op();
                 let lhs = Expr::generate_expr(ctx, res_type);
                 let lhs = if let Some(expr) = lhs {
                     Box::new(expr)
                 } else {
-                    ctx.arith_depth -= 1;
                     return None;
                 };
                 let rhs = Expr::generate_expr(ctx, res_type);
                 let rhs = if let Some(expr) = rhs {
                     Box::new(expr)
                 } else {
-                    ctx.arith_depth -= 1;
                     return None;
                 };
                 Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
@@ -161,14 +165,12 @@ impl BinaryExpr {
                 let lhs = if let Some(expr) = lhs {
                     Box::new(expr)
                 } else {
-                    ctx.arith_depth -= 1;
                     return None;
                 };
                 let rhs = Expr::generate_expr(ctx, res_type);
                 let rhs = if let Some(expr) = rhs {
                     Box::new(expr)
                 } else {
-                    ctx.arith_depth -= 1;
                     return None;
                 };
                 Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
@@ -179,9 +181,7 @@ impl BinaryExpr {
             }
             Ty::Tuple(_) => None,
             _ => panic!(),
-        };
-        ctx.arith_depth -= 1;
-        res
+        }
     }
 
     pub fn replacement_op(&self, error: &EvalExprError) -> BinaryOp {
@@ -313,6 +313,7 @@ impl BinaryOp {
     apply_int!(apply_sub, expr_sub);
     apply_int!(apply_mul, expr_mul);
     apply_int!(apply_div, expr_div);
+
     fn apply_int(
         self,
         lhs_u128: u128,
