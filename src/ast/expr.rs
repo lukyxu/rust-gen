@@ -136,7 +136,7 @@ impl BinaryExpr {
         }
         ctx.arith_depth += 1;
         // Binary op depth
-        let res = BinaryExpr::generate_expr_internal(ctx, res_type)
+        let res = BinaryExpr::generate_expr_internal(ctx, res_type);
         ctx.arith_depth -= 1;
         res
     }
