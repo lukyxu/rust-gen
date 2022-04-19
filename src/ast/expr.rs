@@ -175,6 +175,7 @@ impl BinaryExpr {
                 };
                 Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
             }
+            // TODO: UInt??
             Ty::UInt(t) => {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
@@ -426,8 +427,31 @@ pub struct UnaryExpr {
     pub op: UnaryOp,
 }
 
+impl UnaryExpr {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if ctx.arith_depth > ctx.policy.max_arith_depth {
+            return None;
+        }
+        ctx.arith_depth += 1;
+        // Binary op depth
+        let res = UnaryExpr::generate_expr_internal(ctx, res_type);
+        ctx.arith_depth -= 1;
+        res
+    }
+
+    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        match res_type {
+            Ty::Bool => {
+
+            }
+            Ty::
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum UnaryOp {
+    // TODO: Deref when adding pointer types
     Deref,
     Not,
     Neg,
@@ -440,7 +464,6 @@ pub struct CastExpr {
 }
 
 // TODO: Improve IfExpr formatting in printing
-// TODO: Change then to block and maybe otherwise to block?
 #[derive(Debug, Clone)]
 pub struct IfExpr {
     pub condition: Box<Expr>,
