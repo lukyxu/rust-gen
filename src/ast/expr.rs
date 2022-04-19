@@ -433,18 +433,20 @@ impl UnaryExpr {
             return None;
         }
         ctx.arith_depth += 1;
-        // Binary op depth
         let res = UnaryExpr::generate_expr_internal(ctx, res_type);
         ctx.arith_depth -= 1;
         res
     }
 
+    // TODO: generate_expr_internal
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
-            Ty::Bool => {
-
+            Ty::Bool | Ty::Int(_) | Ty::UInt(_) => {
+                Expr::generate_expr(ctx, res_type)
             }
-            Ty::
+            _ => {
+                None
+            }
         }
     }
 }
