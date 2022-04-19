@@ -34,7 +34,7 @@ fn run_generator(seed: Option<u64>) {
     // Make program compilable
     let mut expr_visitor = ExprVisitor::default();
     // Make sure there is no runtime errors
-
+    print_output(&mut main);
     // Print program
     expr_visitor.visit_function(&mut main);
     print_output(&mut main)

@@ -142,47 +142,20 @@ impl BinaryExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        match res_type {
+        let op = match res_type {
             Ty::Bool => {
-                let op = ctx.choose_binary_bool_op();
-                let lhs = Expr::generate_expr(ctx, res_type);
-                let lhs = if let Some(expr) = lhs {
-                    Box::new(expr)
-                } else {
-                    return None;
-                };
-                let rhs = Expr::generate_expr(ctx, res_type);
-                let rhs = if let Some(expr) = rhs {
-                    Box::new(expr)
-                } else {
-                    return None;
-                };
-                Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
+                ctx.choose_binary_bool_op()
             }
-            Ty::Int(_t) => {
-                let op = ctx.choose_binary_int_op();
-                let lhs = Expr::generate_expr(ctx, res_type);
-                let lhs = if let Some(expr) = lhs {
-                    Box::new(expr)
-                } else {
-                    return None;
-                };
-                let rhs = Expr::generate_expr(ctx, res_type);
-                let rhs = if let Some(expr) = rhs {
-                    Box::new(expr)
-                } else {
-                    return None;
-                };
-                Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
+            Ty::Int(_) => {
+                ctx.choose_binary_int_op()
             }
-            // TODO: UInt??
-            Ty::UInt(t) => {
-                let val = t.rand_val(ctx);
-                Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
-            }
-            Ty::Tuple(_) => None,
+            // TODO: UInt binary expressions
+            Ty::Tuple(_) | Ty::UInt(_) => return None,
             _ => panic!(),
-        }
+        };
+        let lhs = Box::new(Expr::generate_expr(ctx, res_type)?);
+        let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
+        Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
     }
 
     pub fn replacement_op(&self, error: &EvalExprError) -> BinaryOp {
