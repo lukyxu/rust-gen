@@ -78,6 +78,9 @@ impl Visitor for ExprVisitor {
             expr.op = expr.replacement_op(err);
             res = expr.op.apply_res_expr(&lhs, &rhs);
         };
+        if let Err(e) = res {
+            println!(":/")
+        };
         self.expr = Some(res.unwrap())
     }
 
@@ -177,11 +180,7 @@ pub struct ExprSymbolTable {
 
 impl ExprSymbolTable {
     pub fn get_expr_by_name(&self, name: &String) -> Option<EvalExpr> {
-        if let Some(expr) = self.expr_mapping.get(name) {
-            Some(expr.clone())
-        } else {
-            None
-        }
+        Some(self.expr_mapping.get(name)?.clone())
     }
 
     pub fn add_expr(&mut self, key: String, value: EvalExpr) {
