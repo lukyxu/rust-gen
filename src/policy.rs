@@ -139,7 +139,11 @@ impl Policy {
         let policy = Policy::default();
         Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
-            type_dist: vec![(Ty::Int(IntTy::I8), 1.0), (Ty::Bool, 1.0), (Ty::Tuple(vec![]), 1.0)],
+            type_dist: vec![
+                (Ty::Int(IntTy::I8), 1.0),
+                (Ty::Bool, 1.0),
+                (Ty::Tuple(vec![]), 1.0),
+            ],
             mutability_prob: 0.2,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),

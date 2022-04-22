@@ -6,9 +6,9 @@ use crate::ast::ty::IntTy::*;
 use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
+use num_traits::{AsPrimitive, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 use std::{isize, u32, usize};
-use num_traits::{AsPrimitive, PrimInt, WrappingAdd};
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -17,8 +17,10 @@ pub enum Expr {
     /// Binary operation such as `a + b`, `a * b`
     Binary(BinaryExpr),
     /// Unary operation such as `!x`
+    #[allow(dead_code)]
     Unary(UnaryExpr),
     /// Cast expression such as `x as u64`
+    #[allow(dead_code)]
     Cast(CastExpr),
     /// If expression with optional `else` block
     /// `if expr { block } else { expr }`
@@ -63,10 +65,14 @@ impl Expr {
 #[derive(Debug, Clone)]
 pub enum LitExpr {
     // TODO: Support different styles of Strings such as raw strings `r##"foo"##`
+    #[allow(dead_code)]
     Str(String),
+    #[allow(dead_code)]
     Byte(u8),
+    #[allow(dead_code)]
     Char(char),
     Int(u128, LitExprTy),
+    #[allow(dead_code)]
     Float(String, LitFloatTy),
     Bool(bool),
 }
@@ -115,6 +121,7 @@ pub enum LitExprTy {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum LitFloatTy {
     /// Float literal with suffix such as `1f32`, `1E10f32`
     Suffixed(FloatTy),
@@ -143,12 +150,8 @@ impl BinaryExpr {
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let op = match res_type {
-            Ty::Bool => {
-                ctx.choose_binary_bool_op()
-            }
-            Ty::Int(_) => {
-                ctx.choose_binary_int_op()
-            }
+            Ty::Bool => ctx.choose_binary_bool_op(),
+            Ty::Int(_) => ctx.choose_binary_int_op(),
             // TODO: UInt binary expressions
             Ty::Tuple(_) | Ty::UInt(_) => return None,
             _ => panic!(),
@@ -334,7 +337,9 @@ macro_rules! by_lit_expr_ty_impl {
     };
 }
 
-impl <T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T>> Literal<T> for T {
+impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T>> Literal<T>
+    for T
+{
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_add(&rhs) {
             Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
@@ -359,7 +364,7 @@ impl <T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExp
 
             if is_signed
                 && (((lhs == T::min_value()) && rhs.wrapping_add(&T::one()) == T::zero())
-                || (rhs == T::min_value() && lhs.wrapping_add(&T::one()) == T::zero()))
+                    || (rhs == T::min_value() && lhs.wrapping_add(&T::one()) == T::zero()))
             {
                 Err(MinMulOverflow)
             } else {
@@ -401,6 +406,7 @@ pub struct UnaryExpr {
 }
 
 impl UnaryExpr {
+    #[allow(dead_code)]
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         if ctx.arith_depth > ctx.policy.max_arith_depth {
             return None;
@@ -412,19 +418,17 @@ impl UnaryExpr {
     }
 
     // TODO: generate_expr_internal
+    #[allow(dead_code)]
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
-            Ty::Bool | Ty::Int(_) | Ty::UInt(_) => {
-                Expr::generate_expr(ctx, res_type)
-            }
-            _ => {
-                None
-            }
+            Ty::Bool | Ty::Int(_) | Ty::UInt(_) => Expr::generate_expr(ctx, res_type),
+            _ => None,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
 pub enum UnaryOp {
     // TODO: Deref when adding pointer types
     Deref,
@@ -590,11 +594,14 @@ impl AssignExpr {
 pub enum ExprKind {
     Literal,
     Binary,
+    #[allow(dead_code)]
     Unary,
+    #[allow(dead_code)]
     Cast,
     If,
     Block,
     Ident,
+    #[allow(dead_code)]
     Assign,
 }
 
