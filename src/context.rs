@@ -131,10 +131,12 @@ impl TypeSymbolTable {
             .insert(key, TypeMapping { ty, mutable });
     }
 
+    #[allow(dead_code)]
     pub fn contains(&self, key: &String) -> bool {
         self.var_type_mapping.contains_key(key)
     }
 
+    #[allow(dead_code)]
     pub fn get_ident_expr_by_name(&self, key: &String) -> Option<IdentExpr> {
         if let Some(ty_mapping) = self.var_type_mapping.get(key) {
             Some(IdentExpr {

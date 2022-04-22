@@ -51,6 +51,7 @@ impl Stmt {
 #[derive(Debug, Clone)]
 pub enum LocalStmt {
     /// Local declaration such as `let x;`
+    #[allow(dead_code)]
     Decl(DeclLocalStmt),
     /// Local declaration with initializer such as `let x = y`
     Init(InitLocalStmt), // TODO: InitElse
@@ -90,10 +91,12 @@ pub struct SemiStmt {
 #[derive(Debug, Clone, Copy)]
 pub enum StmtKind {
     Local,
+    #[allow(dead_code)]
     Expr,
     Semi,
 }
 
+#[allow(dead_code)]
 pub enum LocalStmtKind {
     Decl,
     Init,

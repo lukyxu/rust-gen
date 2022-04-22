@@ -78,7 +78,7 @@ impl Visitor for ExprVisitor {
             expr.op = expr.replacement_op(err);
             res = expr.op.apply_res_expr(&lhs, &rhs);
         };
-        if let Err(e) = res {
+        if let Err(_e) = res {
             println!(":/")
         };
         self.expr = Some(res.unwrap())

@@ -23,6 +23,7 @@ pub struct Policy {
     pub max_expr_attempts: u32,
 }
 
+#[allow(dead_code)]
 impl Policy {
     pub fn stress_test() -> Self {
         let policy = Policy::default();

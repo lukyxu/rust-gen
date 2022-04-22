@@ -5,10 +5,13 @@ use rand::Rng;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
     Bool,
+    #[allow(dead_code)]
     Char,
     Int(IntTy),
     UInt(UIntTy),
+    #[allow(dead_code)]
     Float(FloatTy),
+    #[allow(dead_code)]
     Str,
     Tuple(Vec<Ty>), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
 }
@@ -71,6 +74,7 @@ impl ToString for Ty {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[allow(dead_code)]
 pub enum FloatTy {
     F32,
     F64,
