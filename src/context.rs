@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 pub struct Context {
     pub policy: Policy,
+    pub arena: Arena,
     pub name_handler: NameHandler,
     pub type_symbol_table: TypeSymbolTable,
     pub rng: StdRng,

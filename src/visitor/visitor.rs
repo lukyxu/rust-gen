@@ -75,12 +75,13 @@ fn walk_function<V: Visitor>(visitor: &mut V, function: &mut Function) {
 
 fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
     match stmt {
-        Stmt::Local(LocalStmt::Decl(local_decl_stmt)) => {
-            visitor.visit_local_decl_stmt(local_decl_stmt)
-        }
-        Stmt::Local(LocalStmt::Init(local_init_stmt)) => {
-            visitor.visit_local_init_stmt(local_init_stmt)
-        }
+        // Stmt::Local(&LocalStmt::Decl(local_decl_stmt)) => {
+        //     visitor.visit_local_decl_stmt(local_decl_stmt)
+        // }
+        // Stmt::Local(&LocalStmt::Init(local_init_stmt)) => {
+        //     visitor.visit_local_init_stmt(&mut  local_init_stmt)
+        // }
+        _ => {}
         Stmt::Expr(expr_stmt) => visitor.visit_expr_stmt(expr_stmt),
         Stmt::Semi(semi_stmt) => visitor.visit_semi_stmt(semi_stmt),
     }
