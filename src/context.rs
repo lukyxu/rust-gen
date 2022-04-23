@@ -37,7 +37,7 @@ impl Context {
     pub fn with_policy(seed: Option<u64>, policy: Policy) -> Context {
         let mut context = Context::new(seed);
         context.policy = policy;
-        return context;
+        context
     }
 }
 
@@ -92,11 +92,7 @@ impl Context {
 
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
         let ident_exprs = self.type_symbol_table.get_ident_exprs_by_type(ty);
-        if let Some(ident) = ident_exprs.choose(&mut self.rng).clone() {
-            Some(ident.clone())
-        } else {
-            None
-        }
+        ident_exprs.choose(&mut self.rng).cloned()
     }
 }
 
@@ -107,7 +103,7 @@ pub struct NameHandler {
 
 impl NameHandler {
     fn create_var_name(&mut self) -> String {
-        let res = format!("var_{}", self.var_counter.to_string());
+        let res = format!("var_{}", self.var_counter);
         self.var_counter += 1;
         res
     }
@@ -138,14 +134,10 @@ impl TypeSymbolTable {
 
     #[allow(dead_code)]
     pub fn get_ident_expr_by_name(&self, key: &String) -> Option<IdentExpr> {
-        if let Some(ty_mapping) = self.var_type_mapping.get(key) {
-            Some(IdentExpr {
-                name: key.clone(),
-                ty: ty_mapping.ty.clone(),
-            })
-        } else {
-            None
-        }
+        self.var_type_mapping.get(key).map(|ty_mapping| IdentExpr {
+            name: key.clone(),
+            ty: ty_mapping.ty.clone(),
+        })
     }
 
     // TODO: refactor
@@ -163,7 +155,7 @@ impl TypeSymbolTable {
     pub fn get_mut_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
         self.var_type_mapping
             .iter()
-            .filter(|&(_k, v)| v.mutable == true && v.ty == *ty)
+            .filter(|&(_k, v)| v.mutable && v.ty == *ty)
             .map(|(name, ty_mapping)| IdentExpr {
                 name: name.clone(),
                 ty: ty_mapping.ty.clone(),

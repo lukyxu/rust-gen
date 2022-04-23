@@ -3,9 +3,9 @@ extern crate core;
 use crate::ast::function::Function;
 use crate::context::Context;
 use crate::policy::Policy;
+use crate::visitor::base_visitor::Visitor;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
-use crate::visitor::visitor::Visitor;
 use clap::Parser;
 
 mod ast;

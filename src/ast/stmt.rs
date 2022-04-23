@@ -43,7 +43,7 @@ impl Stmt {
 
     pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Stmt {
         Stmt::Expr(ExprStmt {
-            expr: Expr::generate_expr_safe(ctx, &res_type),
+            expr: Expr::generate_expr_safe(ctx, res_type),
         })
     }
 }

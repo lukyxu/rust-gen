@@ -18,14 +18,14 @@ impl ExprVisitor {
     fn safe_expr_visit(&mut self, expr: &mut Expr) -> EvalExpr {
         self.expr = None;
         self.visit_expr(expr);
-        return self.expr.clone().unwrap();
+        self.expr.clone().unwrap()
     }
 
-    fn add_expr(&mut self, key: &String, value: &EvalExpr) {
+    fn add_expr(&mut self, key: &str, value: &EvalExpr) {
         if !self.deadcode_mode {
-            self.full_symbol_table.add_expr(key.clone(), value.clone());
+            self.full_symbol_table.add_expr(key, value.clone());
         }
-        self.local_symbol_table.add_expr(key.clone(), value.clone());
+        self.local_symbol_table.add_expr(key, value.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
@@ -46,6 +46,11 @@ impl Visitor for ExprVisitor {
 
     fn exit_scope(&mut self) {
         self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap()
+    }
+
+    // TODO: Implement local decl stmt
+    fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
+        self.expr = Some(EvalExpr::unit_expr())
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
@@ -83,7 +88,6 @@ impl Visitor for ExprVisitor {
         };
         self.expr = Some(res.unwrap())
     }
-
     // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
     //     walk_unary_expr(self, expr)
     // }
@@ -124,6 +128,7 @@ impl Visitor for ExprVisitor {
             _ => panic!(),
         });
     }
+
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
     //     walk_block_expr(self, expr)
     // }
@@ -160,11 +165,6 @@ impl Visitor for ExprVisitor {
         self.expr = Some(res_expr)
     }
 
-    // TODO: Implement local decl stmt
-    fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
-        self.expr = Some(EvalExpr::unit_expr())
-    }
-
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
         self.add_expr(&expr.name, &res_expr);
@@ -183,7 +183,7 @@ impl ExprSymbolTable {
         Some(self.expr_mapping.get(name)?.clone())
     }
 
-    pub fn add_expr(&mut self, key: String, value: EvalExpr) {
-        self.expr_mapping.insert(key, value);
+    pub fn add_expr(&mut self, key: &str, value: EvalExpr) {
+        self.expr_mapping.insert(key.to_owned(), value);
     }
 }

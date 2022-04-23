@@ -54,7 +54,7 @@ impl Expr {
     }
 
     pub fn generate_expr_safe(ctx: &mut Context, res_type: &Ty) -> Expr {
-        let expr = Expr::generate_expr(ctx, &res_type);
+        let expr = Expr::generate_expr(ctx, res_type);
         match expr {
             None => panic!("Failed to generate non expression statement"),
             Some(expr) => expr,
@@ -95,13 +95,13 @@ impl LitExpr {
                 let expr_type = if matches!(t, IntTy::I32) && ctx.choose_unsuffixed_int() {
                     LitExprTy::Unsuffixed
                 } else {
-                    LitExprTy::Signed(t.clone())
+                    LitExprTy::Signed(*t)
                 };
                 Some(LitExpr::Int(val, expr_type).into())
             }
             Ty::UInt(t) => {
                 let val = t.rand_val(ctx);
-                Some(LitExpr::Int(val, LitExprTy::Unsigned(t.clone())).into())
+                Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
             }
             tuple @ Ty::Tuple(_) => TupleExpr::generate_expr(ctx, tuple),
             _ => panic!(),
@@ -254,7 +254,7 @@ impl BinaryOp {
             (self, lhs),
             (BinaryOp::Or, EvalExpr::Literal(LitExpr::Bool(true)))
         );
-        return short_circuit_and || short_circuit_or;
+        short_circuit_and || short_circuit_or
     }
 
     pub fn apply_res_expr(self, lhs: &EvalExpr, rhs: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
@@ -273,7 +273,7 @@ impl BinaryOp {
                 return Ok(EvalExpr::Literal(rhs.clone()));
             };
         };
-        return Ok(EvalExpr::Unknown);
+        Ok(EvalExpr::Unknown)
     }
 
     pub fn apply(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
@@ -376,12 +376,10 @@ impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExpr
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_div(&rhs) {
             Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+        } else if rhs == T::zero() {
+            Err(ZeroDiv)
         } else {
-            if rhs == T::zero() {
-                Err(ZeroDiv)
-            } else {
-                Err(Overflow)
-            }
+            Err(Overflow)
         }
     }
 }
@@ -491,10 +489,7 @@ impl BlockExpr {
     // TODO: Make this return an optional
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let block_expr = BlockExpr::generate_block_expr(ctx, res_type);
-        match block_expr {
-            None => None,
-            Some(block_expr) => Some(Expr::Block(block_expr)),
-        }
+        block_expr.map(Expr::Block)
     }
     pub fn generate_block_expr(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
         if ctx.block_depth > ctx.policy.max_block_depth {
@@ -532,17 +527,13 @@ pub struct IdentExpr {
 
 impl IdentExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if let Some(ident_expr) = ctx.choose_ident_expr_by_type(res_type) {
-            Some(Expr::Ident(ident_expr))
-        } else {
-            None
-        }
+        ctx.choose_ident_expr_by_type(res_type).map(Expr::Ident)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct TupleExpr {
-    pub tuple: Vec<Box<Expr>>,
+    pub tuple: Vec<Expr>,
 }
 
 impl TupleExpr {
@@ -552,7 +543,7 @@ impl TupleExpr {
             for ty in types {
                 for _ in 0..ctx.policy.max_expr_attempts {
                     if let Some(expr) = Expr::generate_expr(ctx, ty) {
-                        res.push(Box::new(expr));
+                        res.push(expr);
                         break;
                     }
                 }
@@ -622,6 +613,6 @@ pub enum EvalExpr {
 
 impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
-        return EvalExpr::Tuple(vec![]);
+        EvalExpr::Tuple(vec![])
     }
 }

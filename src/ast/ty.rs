@@ -25,14 +25,14 @@ impl Ty {
     }
 
     pub fn unit_type() -> Ty {
-        return Ty::Tuple(Vec::new());
+        Ty::Tuple(Vec::new())
     }
 }
 
 impl ToString for Ty {
     fn to_string(&self) -> String {
         let tmp;
-        let str: String = match self {
+        match self {
             Ty::Bool => "bool",
             Ty::Char => "char",
             Ty::Int(int) => match int {
@@ -68,8 +68,7 @@ impl ToString for Ty {
                 &tmp
             }
         }
-        .to_string();
-        return str;
+        .to_string()
     }
 }
 
@@ -116,7 +115,7 @@ pub enum UIntTy {
 
 impl ToString for UIntTy {
     fn to_string(&self) -> String {
-        return match self {
+        match self {
             UIntTy::USize => "usize",
             UIntTy::U8 => "u8",
             UIntTy::U16 => "u16",
@@ -124,7 +123,7 @@ impl ToString for UIntTy {
             UIntTy::U64 => "u64",
             UIntTy::U128 => "u128",
         }
-        .to_string();
+        .to_string()
     }
 }
 

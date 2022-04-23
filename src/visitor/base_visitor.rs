@@ -14,7 +14,7 @@ pub trait Visitor: Sized {
     fn visit_function(&mut self, function: &mut Function) {
         walk_function(self, function);
     }
-    fn visit_name(&mut self, _name: &String) {}
+    fn visit_name(&mut self, _name: &str) {}
     fn visit_type(&mut self, _ty: &Ty) {}
 
     // Statements

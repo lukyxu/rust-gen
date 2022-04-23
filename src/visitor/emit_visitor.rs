@@ -4,7 +4,7 @@ use crate::ast::expr::{
 use crate::ast::function::Function;
 use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
-use crate::visitor::visitor::Visitor;
+use crate::visitor::base_visitor::Visitor;
 
 pub struct EmitVisitor {
     output: String,
@@ -29,7 +29,7 @@ impl EmitVisitor {
         if self.output.is_empty() {
             panic!("Run visit before accessing emit visitor output")
         }
-        return self.output.clone();
+        self.output.clone()
     }
 }
 
@@ -46,6 +46,10 @@ impl Visitor for EmitVisitor {
         self.visit_block_expr(&mut function.block)
     }
 
+    fn visit_name(&mut self, name: &str) {
+        self.output.push_str(name)
+    }
+
     fn visit_type(&mut self, ty: &Ty) {
         self.output.push_str(&ty.to_string())
     }
@@ -60,7 +64,7 @@ impl Visitor for EmitVisitor {
         self.visit_type(&stmt.ty);
         self.output.push_str(" = ");
         self.visit_expr(&mut stmt.rhs);
-        self.output.push_str(";")
+        self.output.push(';');
     }
 
     fn visit_expr_stmt(&mut self, stmt: &mut ExprStmt) {
@@ -71,7 +75,7 @@ impl Visitor for EmitVisitor {
     fn visit_semi_stmt(&mut self, stmt: &mut SemiStmt) {
         self.output.push_str(&" ".repeat(self.curr_indent));
         self.visit_expr(&mut stmt.expr);
-        self.output.push_str(";");
+        self.output.push(';');
     }
 
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
@@ -91,7 +95,7 @@ impl Visitor for EmitVisitor {
                             IntTy::I64 => (*u128 as i64).to_string(),
                             IntTy::I128 => (*u128 as i128).to_string(),
                         };
-                        format!("{}_{}", int_str, Ty::Int(*t).to_string()).to_string()
+                        format!("{}_{}", int_str, Ty::Int(*t).to_string())
                     }
                     LitExprTy::Unsigned(t) => {
                         let uint_str = match t {
@@ -118,13 +122,13 @@ impl Visitor for EmitVisitor {
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let prev_expression = self.expression_mode;
         self.expression_mode = true;
-        self.output.push_str("(");
+        self.output.push('(');
         self.visit_expr(&mut expr.lhs);
-        self.output.push_str(" ");
+        self.output.push(' ');
         self.visit_binary_op(&mut expr.op);
-        self.output.push_str(" ");
+        self.output.push(' ');
         self.visit_expr(&mut expr.rhs);
-        self.output.push_str(")");
+        self.output.push(')');
         self.expression_mode = prev_expression;
     }
 
@@ -132,12 +136,12 @@ impl Visitor for EmitVisitor {
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         self.output.push_str("if ");
         self.visit_expr(&mut expr.condition);
-        self.output.push_str(" ");
+        self.output.push(' ');
         self.visit_block_expr(&mut expr.then);
         // self.output
         //     .push_str(&format!("\n{}}}", " ".repeat(self.curr_indent)));
         if let Some(otherwise) = &mut expr.otherwise {
-            self.output.push_str(&format!(" else "));
+            self.output.push_str(" else ");
             self.visit_block_expr(otherwise);
             // if !self.expression_mode {
             //     self.output.push_str("\n")
@@ -154,7 +158,7 @@ impl Visitor for EmitVisitor {
             // self.output
             //     .push_str(&format!("{}", " ".repeat(self.curr_indent)));
             self.visit_stmt(stmt);
-            self.output.push_str("\n");
+            self.output.push('\n');
         }
         self.exit_scope();
         self.output
@@ -163,6 +167,23 @@ impl Visitor for EmitVisitor {
 
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
         self.visit_name(&expr.name)
+    }
+
+    fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
+        self.output.push('(');
+        for (i, expr) in (&mut expr.tuple).iter_mut().enumerate() {
+            if i != 0 {
+                self.output.push_str(", ")
+            }
+            self.visit_expr(expr)
+        }
+        self.output.push(')')
+    }
+
+    fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
+        self.visit_name(&expr.name);
+        self.output.push_str(" = ");
+        self.visit_expr(&mut expr.rhs);
     }
 
     fn visit_binary_op(&mut self, op: &mut BinaryOp) {
@@ -174,27 +195,6 @@ impl Visitor for EmitVisitor {
             BinaryOp::And => "&&",
             BinaryOp::Or => "||",
         };
-        self.output.push_str(&op)
-    }
-
-    fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
-        self.output.push_str("(");
-        for (i, expr) in (&mut expr.tuple).iter_mut().enumerate() {
-            if i != 0 {
-                self.output.push_str(", ")
-            }
-            self.visit_expr(expr)
-        }
-        self.output.push_str(")")
-    }
-
-    fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
-        self.visit_name(&expr.name);
-        self.output.push_str(" = ");
-        self.visit_expr(&mut expr.rhs);
-    }
-
-    fn visit_name(&mut self, name: &String) {
-        self.output.push_str(name)
+        self.output.push_str(op)
     }
 }
