@@ -1,7 +1,8 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
+    AssignExpr, BinaryExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr,
+    UnaryOp,
 };
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt};
+use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::Visitor;
 use std::collections::HashMap;
 
@@ -59,7 +60,8 @@ impl Visitor for ExprVisitor {
         self.expr = Some(EvalExpr::unit_expr())
     }
 
-    fn visit_semi_stmt(&mut self, _stmt: &mut crate::ast::stmt::SemiStmt) {
+    fn visit_semi_stmt(&mut self, stmt: &mut SemiStmt) {
+        self.visit_expr(&mut stmt.expr);
         self.expr = Some(EvalExpr::unit_expr())
     }
 
@@ -78,19 +80,25 @@ impl Visitor for ExprVisitor {
             return;
         }
         let rhs = self.safe_expr_visit(&mut expr.rhs);
-        let mut res = expr.op.apply_res_expr(&lhs, &rhs);
+        let mut res = expr.op.apply(&lhs, &rhs);
         if let Err(err) = &res {
             expr.op = expr.replacement_op(err);
-            res = expr.op.apply_res_expr(&lhs, &rhs);
+            res = expr.op.apply(&lhs, &rhs);
         };
         if let Err(_e) = res {
             println!(":/")
         };
         self.expr = Some(res.unwrap())
     }
-    // fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
-    //     walk_unary_expr(self, expr)
-    // }
+    fn visit_unary_expr(&mut self, unary_expr: &mut UnaryExpr) {
+        let expr = self.safe_expr_visit(&mut unary_expr.expr);
+        let mut res = unary_expr.op.apply(&expr);
+        if res.is_err() {
+            unary_expr.op = UnaryOp::None;
+            res = Ok(expr)
+        };
+        self.expr = Some(res.unwrap())
+    }
     // fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
     //     walk_cast_expr(self, expr)
     // }

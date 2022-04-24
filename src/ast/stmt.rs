@@ -3,6 +3,7 @@ use crate::ast::ty::Ty;
 use crate::Context;
 
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum Stmt {
     /// Let binding
     Local(LocalStmt),
@@ -89,6 +90,7 @@ pub struct SemiStmt {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum StmtKind {
     Local,
     #[allow(dead_code)]

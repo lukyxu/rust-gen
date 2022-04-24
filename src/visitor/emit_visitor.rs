@@ -1,5 +1,6 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, IdentExpr, IfExpr, LitExpr, LitExprTy, TupleExpr,
+    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, IdentExpr, IfExpr, LitExpr,
+    LitExprTy, TupleExpr, UnaryExpr, UnaryOp,
 };
 use crate::ast::function::Function;
 use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
@@ -10,7 +11,6 @@ pub struct EmitVisitor {
     output: String,
     curr_indent: usize,
     indentation: usize,
-    expression_mode: bool,
 }
 
 impl Default for EmitVisitor {
@@ -19,7 +19,6 @@ impl Default for EmitVisitor {
             output: String::new(),
             curr_indent: 0,
             indentation: 4,
-            expression_mode: false,
         }
     }
 }
@@ -106,7 +105,7 @@ impl Visitor for EmitVisitor {
                             UIntTy::U64 => (*u128 as u64).to_string(),
                             UIntTy::U128 => u128.to_string(),
                         };
-                        format!("{}_{}", uint_str, Ty::UInt(*t).to_string()).to_string()
+                        format!("{}_{}", uint_str, Ty::UInt(*t).to_string())
                     }
                     // Unsuffixed defaults to i32
                     LitExprTy::Unsuffixed => (*u128 as i32).to_string(),
@@ -120,8 +119,6 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
-        let prev_expression = self.expression_mode;
-        self.expression_mode = true;
         self.output.push('(');
         self.visit_expr(&mut expr.lhs);
         self.output.push(' ');
@@ -129,7 +126,13 @@ impl Visitor for EmitVisitor {
         self.output.push(' ');
         self.visit_expr(&mut expr.rhs);
         self.output.push(')');
-        self.expression_mode = prev_expression;
+    }
+
+    fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
+        self.visit_unary_op(&mut expr.op);
+        self.output.push('(');
+        self.visit_expr(&mut expr.expr);
+        self.output.push(')');
     }
 
     // Have two of these, one for if_expression
@@ -187,14 +190,10 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_binary_op(&mut self, op: &mut BinaryOp) {
-        let op = match op {
-            BinaryOp::Add => "+",
-            BinaryOp::Sub => "-",
-            BinaryOp::Mul => "*",
-            BinaryOp::Div => "/",
-            BinaryOp::And => "&&",
-            BinaryOp::Or => "||",
-        };
-        self.output.push_str(op)
+        self.output.push_str(&op.to_string())
+    }
+
+    fn visit_unary_op(&mut self, op: &mut UnaryOp) {
+        self.output.push_str(&op.to_string())
     }
 }
