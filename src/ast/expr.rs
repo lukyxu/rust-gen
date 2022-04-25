@@ -1,4 +1,4 @@
-use crate::ast::expr::EvalExprError::{MinMulOverflow, Overflow, ZeroDiv};
+use crate::ast::expr::EvalExprError::{MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv};
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::*;
@@ -10,6 +10,7 @@ use num_traits::{AsPrimitive, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
 use std::{isize, u32, usize};
+use std::mem::swap;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -100,6 +101,12 @@ impl From<LitExpr> for Expr {
     }
 }
 
+impl From<LitExpr> for EvalExpr {
+    fn from(expr: LitExpr) -> Self {
+        EvalExpr::Literal(expr)
+    }
+}
+
 impl LitExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
@@ -171,24 +178,43 @@ impl BinaryExpr {
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let op = match res_type {
             Ty::Bool => ctx.choose_binary_bool_op(),
-            Ty::Int(_) => ctx.choose_binary_int_op(),
+            Ty::Int(_) | Ty::UInt(_)  => ctx.choose_binary_int_op(),
             // TODO: UInt binary expressions
-            Ty::Tuple(_) | Ty::UInt(_) => return None,
+            Ty::Tuple(_) => return None,
             _ => panic!(),
         };
         let lhs = Box::new(Expr::generate_expr(ctx, res_type)?);
         let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
         Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
     }
+    pub fn fix(&mut self, error: &EvalExprError, lhs: &mut EvalExpr, rhs: &mut EvalExpr) {
+        if let EvalExprError::UnsignedOverflow = error {
+            match self.op {
+                BinaryOp::Sub => {
+                    swap(&mut self.lhs, &mut self.rhs);
+                    swap(lhs, rhs)
+                }
+                _ => {}
+            }
+        }
+        self.op = self.replacement_op(error)
+    }
 
     pub fn replacement_op(&self, error: &EvalExprError) -> BinaryOp {
         match self.op {
             BinaryOp::Add => BinaryOp::Sub,
-            BinaryOp::Sub => BinaryOp::Add,
+            BinaryOp::Sub => {
+                match error {
+                    SignedOverflow => BinaryOp::Add,
+                    UnsignedOverflow => BinaryOp::Sub,
+                    _ => panic!()
+                }
+            }
             BinaryOp::Mul => {
                 if let EvalExprError::MinMulOverflow = error {
                     BinaryOp::Sub
                 } else {
+                    // Signed/Unsigned Overflow
                     BinaryOp::Div
                 }
             }
@@ -196,6 +222,7 @@ impl BinaryExpr {
                 if let EvalExprError::ZeroDiv = error {
                     BinaryOp::Mul
                 } else {
+                    // Signed Overflow
                     BinaryOp::Sub
                 }
             }
@@ -296,7 +323,7 @@ impl BinaryOp {
         if let (EvalExpr::Literal(lhs), EvalExpr::Literal(rhs)) = (lhs, rhs) {
             let res: Result<LitExpr, EvalExprError> = self.apply_lit(lhs, rhs);
             return match res {
-                Ok(lit_expr) => Ok(EvalExpr::Literal(lit_expr)),
+                Ok(lit_expr) => Ok(lit_expr.into()),
                 Err(error) => Err(error),
             };
         } else if let (BinaryOp::Div, EvalExpr::Literal(rhs)) = (&self, rhs) {
@@ -379,7 +406,7 @@ impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExpr
         if let Some(res) = lhs.checked_add(&rhs) {
             Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
         } else {
-            Err(Overflow)
+            Err(EvalExprError::overflow_error::<T>())
         }
     }
 
@@ -387,7 +414,7 @@ impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExpr
         if let Some(res) = lhs.checked_sub(&rhs) {
             Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
         } else {
-            Err(Overflow)
+            Err(EvalExprError::overflow_error::<T>())
         }
     }
 
@@ -403,7 +430,7 @@ impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExpr
             {
                 Err(MinMulOverflow)
             } else {
-                Err(Overflow)
+                Err(EvalExprError::overflow_error::<T>())
             }
         }
     }
@@ -414,7 +441,8 @@ impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExpr
         } else if rhs == T::zero() {
             Err(ZeroDiv)
         } else {
-            Err(Overflow)
+            assert!(T::min_value() < T::zero());
+            Err(SignedOverflow)
         }
     }
 }
@@ -499,22 +527,22 @@ impl UnaryOp {
                     match int_type {
                         ISize => isize::checked_neg(u128 as isize)
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
-                            .ok_or(EvalExprError::Overflow),
+                            .ok_or(EvalExprError::SignedOverflow),
                         I8 => i8::checked_neg(u128 as i8)
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
-                            .ok_or(EvalExprError::Overflow),
+                            .ok_or(EvalExprError::SignedOverflow),
                         I16 => i16::checked_neg(u128 as i16)
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
-                            .ok_or(EvalExprError::Overflow),
+                            .ok_or(EvalExprError::SignedOverflow),
                         I32 => i32::checked_neg(u128 as i32)
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
-                            .ok_or(EvalExprError::Overflow),
+                            .ok_or(EvalExprError::SignedOverflow),
                         I64 => i64::checked_neg(u128 as i64)
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
-                            .ok_or(EvalExprError::Overflow),
+                            .ok_or(EvalExprError::SignedOverflow),
                         I128 => i128::checked_neg(u128 as i128)
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
-                            .ok_or(EvalExprError::Overflow),
+                            .ok_or(EvalExprError::SignedOverflow),
                     }
                 } else {
                     panic!()
@@ -688,9 +716,21 @@ pub enum ExprKind {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EvalExprError {
-    Overflow,
+    SignedOverflow,
+    UnsignedOverflow,
     MinMulOverflow,
     ZeroDiv,
+}
+
+impl EvalExprError {
+    pub fn overflow_error<T: PrimInt>() -> EvalExprError {
+        let is_signed = T::min_value() < T::zero();
+        if is_signed {
+            SignedOverflow
+        } else {
+            UnsignedOverflow
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -730,5 +770,147 @@ impl EvalExpr {
 
     pub fn u8(u: u8) -> EvalExpr {
         EvalExpr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ast::expr::EvalExprError::{MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv};
+    use crate::ast::expr::{BinaryOp, EvalExprError, UnaryOp};
+
+    #[test]
+    fn unary_expr_ok_not() {
+        for b in [true, false] {
+            assert_eq!(UnaryOp::Not.apply(&EvalExpr::bool(b)), Ok(EvalExpr::bool(!b)))
+        }
+    }
+    #[test]
+    fn unary_expr_ok_neg() {
+        // i = -127..=127
+        for i in i8::MIN + 1..=i8::MAX {
+            assert_eq!(UnaryOp::Neg.apply(&EvalExpr::i8(i)), Ok(EvalExpr::i8(-i)))
+        }
+    }
+    #[test]
+    fn unary_expr_fail_neg_signed_min_val() {
+        // i = -128
+        let i = i8::MIN;
+        assert_eq!(
+            UnaryOp::Neg.apply(&EvalExpr::i8(i)),
+            Err(EvalExprError::SignedOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_add() {
+        assert_eq!(
+            BinaryOp::Add.apply(&EvalExpr::i8(-5), &EvalExpr::i8(12)),
+            Ok(EvalExpr::i8(7))
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_unsigned_add() {
+        assert_eq!(
+            BinaryOp::Add.apply(&EvalExpr::u8(5), &EvalExpr::u8(12)),
+            Ok(EvalExpr::u8(17))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_overflow_signed_add() {
+        assert_eq!(
+            BinaryOp::Add.apply(&EvalExpr::i8(127), &EvalExpr::i8(127)),
+            Err(EvalExprError::SignedOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_overflow_unsigned_add() {
+        assert_eq!(
+            BinaryOp::Add.apply(&EvalExpr::u8(255), &EvalExpr::u8(255)),
+            Err(EvalExprError::UnsignedOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_sub() {
+        assert_eq!(
+            BinaryOp::Sub.apply(&EvalExpr::i8(-12), &EvalExpr::i8(16)),
+            Ok(EvalExpr::i8(-28))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_overflow_signed_sub() {
+        assert_eq!(
+            BinaryOp::Sub.apply(&EvalExpr::i8(-128), &EvalExpr::i8(127)),
+            Err(EvalExprError::SignedOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_mul() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(4), &EvalExpr::i8(5)),
+            Ok(EvalExpr::i8(20))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_min_mul_overflow() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(i8::MIN), &EvalExpr::i8(-1)),
+            Err(MinMulOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_min_mul_overflow_1() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(-1), &EvalExpr::i8(i8::MIN)),
+            Err(MinMulOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_mul_overflow() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(12), &EvalExpr::i8(-15)),
+            Err(SignedOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_unsigned_mul_overflow() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::u8(12), &EvalExpr::u8(30)),
+            Err(UnsignedOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_div() {
+        assert_eq!(
+            BinaryOp::Div.apply(&EvalExpr::i8(120), &EvalExpr::i8(4)),
+            Ok(EvalExpr::i8(30))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_div_overflow() {
+        assert_eq!(
+            BinaryOp::Div.apply(&EvalExpr::i8(i8::MIN), &EvalExpr::i8(-1)),
+            Err(SignedOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_div_zero() {
+        assert_eq!(
+            BinaryOp::Div.apply(&EvalExpr::i8(12), &EvalExpr::i8(0)),
+            Err(ZeroDiv)
+        )
     }
 }

@@ -7,16 +7,28 @@ use crate::visitor::base_visitor;
 use crate::Visitor;
 use std::collections::HashMap;
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct ExprVisitor {
     expr: Option<EvalExpr>,
     deadcode_mode: bool,
     full_symbol_table: ExprSymbolTable,
     local_symbol_table: ExprSymbolTable,
     prev_local_symbol_table: Vec<ExprSymbolTable>,
+    max_attempt_fix: usize
 }
 
 impl ExprVisitor {
+    pub fn new() -> ExprVisitor {
+        ExprVisitor {
+            expr: None,
+            deadcode_mode: false,
+            full_symbol_table: ExprSymbolTable::default(),
+            local_symbol_table: ExprSymbolTable::default(),
+            prev_local_symbol_table: vec![],
+            max_attempt_fix: 1
+        }
+    }
+
     fn safe_expr_visit(&mut self, expr: &mut Expr) -> EvalExpr {
         self.expr = None;
         self.visit_expr(expr);
@@ -80,7 +92,7 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
-        let lhs = self.safe_expr_visit(&mut expr.lhs);
+        let mut lhs = self.safe_expr_visit(&mut expr.lhs);
         if expr.op.short_circuit_rhs(&lhs) {
             let prev_deadcode_mode = self.deadcode_mode;
             self.deadcode_mode = true;
@@ -89,15 +101,16 @@ impl Visitor for ExprVisitor {
             self.deadcode_mode = prev_deadcode_mode;
             return;
         }
-        let rhs = self.safe_expr_visit(&mut expr.rhs);
+        let mut rhs = self.safe_expr_visit(&mut expr.rhs);
         let mut res = expr.op.apply(&lhs, &rhs);
-        if let Err(err) = &res {
-            expr.op = expr.replacement_op(err);
-            res = expr.op.apply(&lhs, &rhs);
-        };
-        if let Err(_e) = res {
-            println!(":/")
-        };
+        for _ in 0..=self.max_attempt_fix {
+            if let Err(err) = &res {
+                expr.fix(err, &mut lhs, &mut rhs);
+                res = expr.op.apply(&lhs, &rhs);
+            } else {
+                break
+            }
+        }
         self.expr = Some(res.unwrap())
     }
     fn visit_unary_expr(&mut self, _expr: &mut UnaryExpr) {
@@ -220,7 +233,7 @@ impl ExprSymbolTable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::expr::EvalExprError::{MinMulOverflow, Overflow, ZeroDiv};
+    use crate::ast::expr::EvalExprError::{MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv};
     use crate::ast::expr::{BinaryOp, EvalExprError, UnaryOp};
 
     #[test]
@@ -230,115 +243,79 @@ mod tests {
                 expr: Box::new(Expr::bool(b)),
                 op: UnaryOp::Not,
             });
-            let mut visitor = ExprVisitor::default();
+            let expected_expr = expr.clone();
+            let mut visitor = ExprVisitor::new();
             visitor.visit_unary_expr(&mut expr);
-            let expr = visitor.expr;
-            let expected_expr = Some(EvalExpr::bool(!b));
-            assert_eq!(expr, expected_expr)
+            // Assert that the tree is the same
+            assert_eq!(expr, expected_expr);
+            let eval_expr = visitor.expr;
+            let expected_eval_expr = Some(EvalExpr::bool(!b));
+            // Assert that the evaluated value is correct
+            assert_eq!(eval_expr, expected_eval_expr);
         }
     }
+
     #[test]
     fn unary_expr_ok_neg() {
-        // i = -127..=127
-        for i in i8::MIN + 1..=i8::MAX {
-            assert_eq!(UnaryOp::Neg.apply(&EvalExpr::i8(i)), Ok(EvalExpr::i8(-i)))
+        let mut expr = Expr::Unary(UnaryExpr {
+            expr: Box::new(Expr::i8(32)),
+            op: UnaryOp::Neg,
+        });
+        let expected_expr = expr.clone();
+        let mut visitor = ExprVisitor::new();
+        visitor.visit_unary_expr(&mut expr);
+        assert_eq!(expr, expected_expr);
+        let eval_expr = visitor.expr;
+        let expected_eval_expr = Some(EvalExpr::i8(-32));
+        assert_eq!(eval_expr, expected_eval_expr);
+    }
+
+    #[test]
+    fn unary_expr_fix_overflow_neg() {
+        let mut expr = Expr::Unary(UnaryExpr {
+            expr: Box::new(Expr::i8(i8::MIN)),
+            op: UnaryOp::Neg,
+        });
+        let expected_expr = Expr::i8(i8::MIN);
+        let mut visitor = ExprVisitor::new();
+        visitor.visit_unary_expr(&mut expr);
+        assert_eq!(expr, expected_expr);
+        let eval_expr = visitor.expr;
+        let expected_eval_expr = Some(EvalExpr::i8(i8::MIN));
+        assert_eq!(eval_expr, expected_eval_expr);
+    }
+
+    #[test]
+    fn binary_expr_signed_fix() {
+        for op in [BinaryOp::Add, BinaryOp::Sub, BinaryOp::Mul, BinaryOp::Div] {
+            for i in i8::MIN..=i8::MAX {
+                for j in i8::MIN..=i8::MAX {
+                    let mut expr = BinaryExpr {
+                        lhs: Box::new(Expr::i8(i)),
+                        rhs: Box::new(Expr::i8(j)),
+                        op,
+                    };
+                    let mut visitor = ExprVisitor::new();
+                    visitor.visit_binary_expr(&mut expr);
+                }
+            }
         }
     }
-    #[test]
-    fn unary_expr_fail_neg_signed_min_val() {
-        // i = -128
-        let i = i8::MIN;
-        assert_eq!(
-            UnaryOp::Neg.apply(&EvalExpr::i8(i)),
-            Err(EvalExprError::Overflow)
-        )
-    }
 
     #[test]
-    fn binary_expr_ok_signed_add() {
-        assert_eq!(
-            BinaryOp::Add.apply(&EvalExpr::i8(5), &EvalExpr::i8(12)),
-            Ok(EvalExpr::i8(17))
-        )
-    }
-
-    #[test]
-    fn binary_expr_fail_overflow_signed_add() {
-        assert_eq!(
-            BinaryOp::Add.apply(&EvalExpr::i8(127), &EvalExpr::i8(127)),
-            Err(EvalExprError::Overflow)
-        )
-    }
-
-    #[test]
-    fn binary_expr_ok_signed_sub() {
-        assert_eq!(
-            BinaryOp::Sub.apply(&EvalExpr::i8(-12), &EvalExpr::i8(16)),
-            Ok(EvalExpr::i8(-28))
-        )
-    }
-
-    #[test]
-    fn binary_expr_fail_overflow_signed_sub() {
-        assert_eq!(
-            BinaryOp::Sub.apply(&EvalExpr::i8(-128), &EvalExpr::i8(127)),
-            Err(EvalExprError::Overflow)
-        )
-    }
-
-    #[test]
-    fn binary_expr_ok_signed_mul() {
-        assert_eq!(
-            BinaryOp::Mul.apply(&EvalExpr::i8(4), &EvalExpr::i8(5)),
-            Ok(EvalExpr::i8(20))
-        )
-    }
-
-    #[test]
-    fn binary_expr_fail_signed_min_mul_overflow() {
-        assert_eq!(
-            BinaryOp::Mul.apply(&EvalExpr::i8(i8::MIN), &EvalExpr::i8(-1)),
-            Err(MinMulOverflow)
-        )
-    }
-
-    #[test]
-    fn binary_expr_fail_signed_min_mul_overflow_1() {
-        assert_eq!(
-            BinaryOp::Mul.apply(&EvalExpr::i8(-1), &EvalExpr::i8(i8::MIN)),
-            Err(MinMulOverflow)
-        )
-    }
-
-    #[test]
-    fn binary_expr_fail_signed_mul_overflow() {
-        assert_eq!(
-            BinaryOp::Mul.apply(&EvalExpr::i8(12), &EvalExpr::i8(-15)),
-            Err(Overflow)
-        )
-    }
-
-    #[test]
-    fn binary_expr_ok_signed_div() {
-        assert_eq!(
-            BinaryOp::Div.apply(&EvalExpr::i8(120), &EvalExpr::i8(4)),
-            Ok(EvalExpr::i8(30))
-        )
-    }
-
-    #[test]
-    fn binary_expr_fail_signed_div_overflow() {
-        assert_eq!(
-            BinaryOp::Div.apply(&EvalExpr::i8(i8::MIN), &EvalExpr::i8(-1)),
-            Err(Overflow)
-        )
-    }
-
-    #[test]
-    fn binary_expr_fail_signed_div_zero() {
-        assert_eq!(
-            BinaryOp::Div.apply(&EvalExpr::i8(12), &EvalExpr::i8(0)),
-            Err(ZeroDiv)
-        )
+    fn binary_expr_unsigned_fix() {
+        for op in [BinaryOp::Add,BinaryOp::Sub,BinaryOp::Mul,BinaryOp::Div] {
+            for i in u8::MIN..=u8::MAX {
+                for j in u8::MIN..=u8::MAX {
+                    let mut expr = BinaryExpr {
+                        lhs: Box::new(Expr::u8(i)),
+                        rhs: Box::new(Expr::u8(j)),
+                        op,
+                    };
+                    let mut visitor = ExprVisitor::new();
+                    visitor.visit_binary_expr(&mut expr);
+                }
+            }
+        }
     }
 }
