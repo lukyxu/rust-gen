@@ -203,7 +203,7 @@ impl Default for Policy {
             ],
             binary_bool_op_dist: vec![(BinaryOp::And, 1.0), (BinaryOp::Or, 1.0)],
             num_stmt_dist: Uniform::new_inclusive(2, 10),
-            unsuffixed_int_prob: 0.5,
+            unsuffixed_int_prob: 0.0,
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
             mutability_prob: 0.5,

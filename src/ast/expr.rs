@@ -139,10 +139,10 @@ impl LitExpr {
         if let LitExpr::Int(u128, _) = self {
             match res_type {
                 Ty::Int(s_int) => {
-                    LitExpr::Int(u128, LitExprTy::Signed(s_int.clone()))
+                    LitExpr::Int(s_int.recast(u128), LitExprTy::Signed(s_int.clone()))
                 }
                 Ty::UInt(u_int) => {
-                    LitExpr::Int(u128, LitExprTy::Unsigned(u_int.clone()))
+                    LitExpr::Int(u_int.recast(u128), LitExprTy::Unsigned(u_int.clone()))
                 }
                 _ => panic!()
             }
@@ -337,22 +337,25 @@ impl BinaryOp {
     }
 
     pub fn apply(self, lhs: &EvalExpr, rhs: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
-        if let (EvalExpr::Literal(lhs), EvalExpr::Literal(rhs)) = (lhs, rhs) {
-            let res: Result<LitExpr, EvalExprError> = self.apply_lit(lhs, rhs);
-            return match res {
-                Ok(lit_expr) => Ok(lit_expr.into()),
-                Err(error) => Err(error),
-            };
-        } else if let (BinaryOp::Div, EvalExpr::Literal(rhs)) = (&self, rhs) {
-            // Special case when rhs evaluates to zero but lhs is unknown
-            // TODO: Tidy this code up
-            if let LitExpr::Int(0, _) = rhs {
-                return Err(ZeroDiv);
-            } else if let LitExpr::Int(_, _) = rhs {
-                return Ok(EvalExpr::Literal(rhs.clone()));
-            };
-        };
-        Ok(EvalExpr::Unknown)
+        match (self, lhs, rhs) {
+            (_, EvalExpr::Literal(lhs), EvalExpr::Literal(rhs)) => {
+                let res: Result<LitExpr, EvalExprError> = self.apply_lit(lhs, rhs);
+                match res {
+                    Ok(lit_expr) => Ok(lit_expr.into()),
+                    Err(error) => Err(error),
+                }
+            }
+            (BinaryOp::Div, _, EvalExpr::Literal(rhs)) | (BinaryOp::Rem, _, EvalExpr::Literal(rhs)) => {
+                if let LitExpr::Int(0, _) = rhs {
+                    Err(ZeroDiv)
+                } else if let LitExpr::Int(_, _) = rhs {
+                    Ok(EvalExpr::Literal(rhs.clone()))
+                } else {
+                    Ok(EvalExpr::Unknown)
+                }
+            }
+            _ => Ok(EvalExpr::Unknown)
+        }
     }
 
     pub fn apply_lit(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
@@ -984,5 +987,11 @@ mod tests {
             BinaryOp::Div.apply(&EvalExpr::i8(12), &EvalExpr::i8(0)),
             Err(ZeroDiv)
         )
+    }
+
+    #[test]
+    fn cast_expr_ok() {
+        let expr = LitExpr::Int(-27_i8 as u128, LitExprTy::Signed(IntTy::I8));
+        assert_eq!(expr.cast(&Ty::UInt(UIntTy::U32)).cast(&Ty::UInt(UIntTy::U64)), LitExpr::Int(4294967269, Unsigned(UIntTy::U64)));
     }
 }
