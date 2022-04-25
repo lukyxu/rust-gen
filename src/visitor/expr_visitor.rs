@@ -1,8 +1,9 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr,
-    UnaryOp,
+    AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
+    UnaryExpr, UnaryOp,
 };
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::visitor::base_visitor;
 use crate::Visitor;
 use std::collections::HashMap;
 
@@ -65,6 +66,15 @@ impl Visitor for ExprVisitor {
         self.expr = Some(EvalExpr::unit_expr())
     }
 
+    fn visit_expr(&mut self, expr: &mut Expr) {
+        if let Expr::Unary(_) = expr {
+            // visit_unary_expr can modify the expr to some other expr variant
+            self.visit_unary_expr(expr)
+        } else {
+            base_visitor::walk_expr(self, expr)
+        }
+    }
+
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
         self.expr = Some(EvalExpr::Literal(expr.clone()))
     }
@@ -90,14 +100,8 @@ impl Visitor for ExprVisitor {
         };
         self.expr = Some(res.unwrap())
     }
-    fn visit_unary_expr(&mut self, unary_expr: &mut UnaryExpr) {
-        let expr = self.safe_expr_visit(&mut unary_expr.expr);
-        let mut res = unary_expr.op.apply(&expr);
-        if res.is_err() {
-            unary_expr.op = UnaryOp::None;
-            res = Ok(expr)
-        };
-        self.expr = Some(res.unwrap())
+    fn visit_unary_expr(&mut self, _expr: &mut UnaryExpr) {
+        unreachable!()
     }
     // fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
     //     walk_cast_expr(self, expr)
@@ -181,6 +185,23 @@ impl Visitor for ExprVisitor {
     }
 }
 
+impl ExprVisitor {
+    fn visit_unary_expr(&mut self, expr: &mut Expr) {
+        if let Expr::Unary(unary_expr) = expr {
+            let eval_expr = self.safe_expr_visit(&mut unary_expr.expr);
+            let mut res = unary_expr.op.apply(&eval_expr);
+            if res.is_err() {
+                res = Ok(eval_expr);
+                // TODO: See if you can improve this
+                *expr = *unary_expr.clone().expr;
+            }
+            self.expr = Some(res.unwrap())
+        } else {
+            panic!()
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct ExprSymbolTable {
     expr_mapping: HashMap<String, EvalExpr>,
@@ -193,5 +214,41 @@ impl ExprSymbolTable {
 
     pub fn add_expr(&mut self, key: &str, value: EvalExpr) {
         self.expr_mapping.insert(key.to_owned(), value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ast::expr::EvalExprError;
+    #[test]
+    fn unary_expr_not_ok() {
+        for b in [true, false] {
+            let mut expr = Expr::Unary(UnaryExpr {
+                expr: Box::new(Expr::bool(b)),
+                op: UnaryOp::Not,
+            });
+            let mut visitor = ExprVisitor::default();
+            visitor.visit_unary_expr(&mut expr);
+            let expr = visitor.expr;
+            let expected_expr = Some(EvalExpr::bool(!b));
+            assert_eq!(expr, expected_expr)
+        }
+    }
+    #[test]
+    fn unary_expr_neg_ok() {
+        // i = -127..=127
+        for i in i8::MIN + 1..=i8::MAX {
+            assert_eq!(UnaryOp::Neg.apply(&EvalExpr::i8(i)), Ok(EvalExpr::i8(-i)))
+        }
+    }
+    #[test]
+    fn unary_expr_neg_fail_signed_min_val() {
+        // i = -128
+        let i = i8::MIN;
+        assert_eq!(
+            UnaryOp::Neg.apply(&EvalExpr::i8(i)),
+            Err(EvalExprError::Overflow)
+        )
     }
 }

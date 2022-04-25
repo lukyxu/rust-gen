@@ -1,6 +1,6 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, IdentExpr, IfExpr, LitExpr,
-    LitExprTy, TupleExpr, UnaryExpr, UnaryOp,
+    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, IdentExpr, IfExpr, LitExpr, LitExprTy, TupleExpr,
+    UnaryExpr, UnaryOp,
 };
 use crate::ast::function::Function;
 use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
