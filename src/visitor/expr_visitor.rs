@@ -220,9 +220,11 @@ impl ExprSymbolTable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::expr::EvalExprError;
+    use crate::ast::expr::EvalExprError::{MinMulOverflow, Overflow, ZeroDiv};
+    use crate::ast::expr::{BinaryOp, EvalExprError};
+
     #[test]
-    fn unary_expr_not_ok() {
+    fn unary_expr_ok_not() {
         for b in [true, false] {
             let mut expr = Expr::Unary(UnaryExpr {
                 expr: Box::new(Expr::bool(b)),
@@ -236,19 +238,107 @@ mod tests {
         }
     }
     #[test]
-    fn unary_expr_neg_ok() {
+    fn unary_expr_ok_neg() {
         // i = -127..=127
         for i in i8::MIN + 1..=i8::MAX {
             assert_eq!(UnaryOp::Neg.apply(&EvalExpr::i8(i)), Ok(EvalExpr::i8(-i)))
         }
     }
     #[test]
-    fn unary_expr_neg_fail_signed_min_val() {
+    fn unary_expr_fail_neg_signed_min_val() {
         // i = -128
         let i = i8::MIN;
         assert_eq!(
             UnaryOp::Neg.apply(&EvalExpr::i8(i)),
             Err(EvalExprError::Overflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_add() {
+        assert_eq!(
+            BinaryOp::Add.apply(&EvalExpr::i8(5), &EvalExpr::i8(12)),
+            Ok(EvalExpr::i8(17))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_overflow_signed_add() {
+        assert_eq!(
+            BinaryOp::Add.apply(&EvalExpr::i8(127), &EvalExpr::i8(127)),
+            Err(EvalExprError::Overflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_sub() {
+        assert_eq!(
+            BinaryOp::Sub.apply(&EvalExpr::i8(-12), &EvalExpr::i8(16)),
+            Ok(EvalExpr::i8(-28))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_overflow_signed_sub() {
+        assert_eq!(
+            BinaryOp::Sub.apply(&EvalExpr::i8(-128), &EvalExpr::i8(127)),
+            Err(EvalExprError::Overflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_mul() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(4), &EvalExpr::i8(5)),
+            Ok(EvalExpr::i8(20))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_min_mul_overflow() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(i8::MIN), &EvalExpr::i8(-1)),
+            Err(MinMulOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_min_mul_overflow_1() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(-1), &EvalExpr::i8(i8::MIN)),
+            Err(MinMulOverflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_mul_overflow() {
+        assert_eq!(
+            BinaryOp::Mul.apply(&EvalExpr::i8(12), &EvalExpr::i8(-15)),
+            Err(Overflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_ok_signed_div() {
+        assert_eq!(
+            BinaryOp::Div.apply(&EvalExpr::i8(120), &EvalExpr::i8(4)),
+            Ok(EvalExpr::i8(30))
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_div_overflow() {
+        assert_eq!(
+            BinaryOp::Div.apply(&EvalExpr::i8(i8::MIN), &EvalExpr::i8(-1)),
+            Err(Overflow)
+        )
+    }
+
+    #[test]
+    fn binary_expr_fail_signed_div_zero() {
+        assert_eq!(
+            BinaryOp::Div.apply(&EvalExpr::i8(12), &EvalExpr::i8(0)),
+            Err(ZeroDiv)
         )
     }
 }
