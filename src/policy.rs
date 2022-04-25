@@ -198,6 +198,7 @@ impl Default for Policy {
                 (BinaryOp::Sub, 1.0),
                 (BinaryOp::Mul, 1.0),
                 (BinaryOp::Div, 1.0),
+                (BinaryOp::Rem, 1.0),
             ],
             binary_bool_op_dist: vec![(BinaryOp::And, 1.0), (BinaryOp::Or, 1.0)],
             num_stmt_dist: Uniform::new_inclusive(2, 10),

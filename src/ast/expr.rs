@@ -6,7 +6,7 @@ use crate::ast::ty::IntTy::*;
 use crate::ast::ty::UIntTy::*;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
-use num_traits::{AsPrimitive, PrimInt, WrappingAdd};
+use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
 use std::{isize, u32, usize};
@@ -218,7 +218,7 @@ impl BinaryExpr {
                     BinaryOp::Div
                 }
             }
-            BinaryOp::Div => {
+            BinaryOp::Div | BinaryOp::Rem=> {
                 if let EvalExprError::ZeroDiv = error {
                     BinaryOp::Mul
                 } else {
@@ -238,7 +238,7 @@ pub enum BinaryOp {
     Sub,
     Mul,
     Div,
-    // Rem,
+    Rem,
     And,
     Or,
     // BitXor,
@@ -261,6 +261,7 @@ impl ToString for BinaryOp {
             BinaryOp::Sub => "-",
             BinaryOp::Mul => "*",
             BinaryOp::Div => "/",
+            BinaryOp::Rem => "%",
             BinaryOp::And => "&&",
             BinaryOp::Or => "||",
         }
@@ -352,6 +353,7 @@ impl BinaryOp {
     apply_int!(apply_sub, expr_sub);
     apply_int!(apply_mul, expr_mul);
     apply_int!(apply_div, expr_div);
+    apply_int!(apply_rem, expr_rem);
 
     fn apply_int(
         self,
@@ -365,6 +367,7 @@ impl BinaryOp {
             BinaryOp::Sub => self.apply_sub(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Mul => self.apply_mul(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Div => self.apply_div(lhs_u128, lhs, rhs_u128, rhs),
+            BinaryOp::Rem => self.apply_rem(lhs_u128, lhs, rhs_u128, rhs),
             _ => panic!("Undefined operation on ints"),
         }
     }
@@ -378,11 +381,12 @@ impl BinaryOp {
     }
 }
 
-trait Literal<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T>> {
+trait Literal<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T> + CheckedRem<Output = T>> {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
 
 trait ByLitExprTy<T> {
@@ -399,7 +403,7 @@ macro_rules! by_lit_expr_ty_impl {
     };
 }
 
-impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T>> Literal<T>
+impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExprTy<T> + CheckedRem<Output = T>> Literal<T>
     for T
 {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
@@ -437,6 +441,17 @@ impl<T: PrimInt + Copy + AsPrimitive<u128> + WrappingAdd<Output = T> + ByLitExpr
 
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_div(&rhs) {
+            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+        } else if rhs == T::zero() {
+            Err(ZeroDiv)
+        } else {
+            assert!(T::min_value() < T::zero());
+            Err(SignedOverflow)
+        }
+    }
+
+    fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if let Some(res) = lhs.checked_rem(&rhs) {
             Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
         } else if rhs == T::zero() {
             Err(ZeroDiv)

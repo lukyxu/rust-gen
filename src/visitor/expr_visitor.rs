@@ -287,7 +287,7 @@ mod tests {
 
     #[test]
     fn binary_expr_signed_fix() {
-        for op in [BinaryOp::Add, BinaryOp::Sub, BinaryOp::Mul, BinaryOp::Div] {
+        for op in [BinaryOp::Add, BinaryOp::Sub, BinaryOp::Mul, BinaryOp::Div, BinaryOp::Rem] {
             for i in i8::MIN..=i8::MAX {
                 for j in i8::MIN..=i8::MAX {
                     let mut expr = BinaryExpr {
@@ -304,7 +304,7 @@ mod tests {
 
     #[test]
     fn binary_expr_unsigned_fix() {
-        for op in [BinaryOp::Add,BinaryOp::Sub,BinaryOp::Mul,BinaryOp::Div] {
+        for op in [BinaryOp::Add,BinaryOp::Sub,BinaryOp::Mul,BinaryOp::Div, BinaryOp::Rem] {
             for i in u8::MIN..=u8::MAX {
                 for j in u8::MIN..=u8::MAX {
                     let mut expr = BinaryExpr {
