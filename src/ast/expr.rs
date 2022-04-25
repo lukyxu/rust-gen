@@ -135,6 +135,21 @@ impl LitExpr {
             ),
         }
     }
+    pub fn cast(self, res_type: &Ty) -> LitExpr {
+        if let LitExpr::Int(u128, _) = self {
+            match res_type {
+                Ty::Int(s_int) => {
+                    LitExpr::Int(u128, LitExprTy::Signed(s_int.clone()))
+                }
+                Ty::UInt(u_int) => {
+                    LitExpr::Int(u128, LitExprTy::Unsigned(u_int.clone()))
+                }
+                _ => panic!()
+            }
+        } else {
+            panic!()
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -539,7 +554,8 @@ impl UnaryOp {
                 }
             }
             UnaryOp::Neg => {
-                if let EvalExpr::Literal(LitExpr::Int(u128, ty @ Signed(int_type))) = *expr {
+                if let EvalExpr::Literal(LitExpr::Int(u128, ty @ Signed(int_type))) = expr {
+                    let (u128, ty) = (*u128, *ty);
                     match int_type {
                         ISize => isize::checked_neg(u128 as isize)
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
@@ -560,6 +576,12 @@ impl UnaryOp {
                             .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
                             .ok_or(EvalExprError::SignedOverflow),
                     }
+                } else if let EvalExpr::Literal(LitExpr::Int(u128, Unsuffixed)) = expr {
+                    i32::checked_neg(*u128 as i32)
+                        .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, LitExprTy::Signed(IntTy::I32))))
+                        .ok_or(EvalExprError::SignedOverflow)
+                } else if let EvalExpr::Unknown = expr {
+                    Ok(EvalExpr::Unknown)
                 } else {
                     panic!()
                 }
@@ -785,6 +807,15 @@ pub enum EvalExpr {
 impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
         EvalExpr::Tuple(vec![])
+    }
+    pub fn cast(self, res_type: &Ty) -> EvalExpr {
+        if let EvalExpr::Literal(lit_expr) = self {
+            EvalExpr::Literal(lit_expr.cast(res_type))
+        } else if let EvalExpr::Unknown = self {
+            self
+        } else {
+            panic!()
+        }
     }
 }
 

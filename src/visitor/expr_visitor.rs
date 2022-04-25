@@ -1,7 +1,4 @@
-use crate::ast::expr::{
-    AssignExpr, BinaryExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
-    UnaryExpr,
-};
+use crate::ast::expr::{AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr};
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::visitor::base_visitor;
 use crate::Visitor;
@@ -116,9 +113,11 @@ impl Visitor for ExprVisitor {
     fn visit_unary_expr(&mut self, _expr: &mut UnaryExpr) {
         unreachable!()
     }
-    // fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
-    //     walk_cast_expr(self, expr)
-    // }
+
+    fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
+        self.expr = Some(self.safe_expr_visit(&mut expr.expr).cast(&expr.ty))
+    }
+
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         let cond_expr = self.safe_expr_visit(&mut expr.condition);
 
