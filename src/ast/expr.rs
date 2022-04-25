@@ -8,7 +8,7 @@ use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
 use num_traits::{AsPrimitive, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
-use std::io::IntoInnerError;
+
 use std::{isize, u32, usize};
 
 #[derive(Debug, Clone, PartialEq)]

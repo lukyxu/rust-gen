@@ -1,6 +1,6 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
-    UnaryExpr, UnaryOp,
+    AssignExpr, BinaryExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
+    UnaryExpr,
 };
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::visitor::base_visitor;
@@ -221,7 +221,7 @@ impl ExprSymbolTable {
 mod tests {
     use super::*;
     use crate::ast::expr::EvalExprError::{MinMulOverflow, Overflow, ZeroDiv};
-    use crate::ast::expr::{BinaryOp, EvalExprError};
+    use crate::ast::expr::{BinaryOp, EvalExprError, UnaryOp};
 
     #[test]
     fn unary_expr_ok_not() {
