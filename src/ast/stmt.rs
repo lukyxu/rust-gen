@@ -2,7 +2,8 @@ use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
 use crate::Context;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Stmt {
     /// Let binding
     Local(LocalStmt),
@@ -48,7 +49,7 @@ impl Stmt {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum LocalStmt {
     /// Local declaration such as `let x;`
     #[allow(dead_code)]
@@ -57,14 +58,14 @@ pub enum LocalStmt {
     Init(InitLocalStmt), // TODO: InitElse
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DeclLocalStmt {
     pub name: String,
     pub ty: Ty,
 }
 
 // TODO: Make type optional/inferred/Non-shown?
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct InitLocalStmt {
     pub name: String,
     pub ty: Ty,
@@ -72,7 +73,7 @@ pub struct InitLocalStmt {
     pub mutable: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ExprStmt {
     pub expr: Expr,
 }
@@ -83,12 +84,13 @@ impl From<ExprStmt> for Stmt {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SemiStmt {
     pub expr: Expr,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub enum StmtKind {
     Local,
     #[allow(dead_code)]

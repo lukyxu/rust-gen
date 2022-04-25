@@ -28,14 +28,11 @@ fn main() {
 
 fn run_generator(seed: Option<u64>) {
     // 16, 45
-    let mut ctx = Context::with_policy(seed, Policy::default());
+    let mut ctx = Context::with_policy(seed, Policy::unary_debug());
     let mut main = Function::create_main_fn(&mut ctx);
-    // print_output(&mut main);
     // Make program compilable
     let mut expr_visitor = ExprVisitor::default();
-    // Make sure there is no runtime errors
-    print_output(&mut main);
-    // Print program
+    // Fix runtime errors
     expr_visitor.visit_function(&mut main);
     print_output(&mut main)
 }

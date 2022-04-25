@@ -8,16 +8,17 @@ use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
 use num_traits::{AsPrimitive, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
+use std::io::IntoInnerError;
 use std::{isize, u32, usize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Expr {
     /// Literal such as `1`, `"foo"`
     Literal(LitExpr),
     /// Binary operation such as `a + b`, `a * b`
     Binary(BinaryExpr),
     /// Unary operation such as `!x`
-    #[allow(dead_code)]
     Unary(UnaryExpr),
     /// Cast expression such as `x as u64`
     #[allow(dead_code)]
@@ -46,7 +47,8 @@ impl Expr {
                 ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type),
                 ExprKind::Block => BlockExpr::generate_expr(ctx, res_type),
                 ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
-                _ => panic!(),
+                ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type),
+                _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
             num_failed_attempts += 1
         }
@@ -62,7 +64,22 @@ impl Expr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[cfg(test)]
+impl Expr {
+    pub fn bool(b: bool) -> Expr {
+        Expr::Literal(LitExpr::Bool(b))
+    }
+
+    pub fn i8(i: i8) -> Expr {
+        Expr::Literal(LitExpr::Int(i as u128, LitExprTy::Signed(IntTy::I8)))
+    }
+
+    pub fn u8(u: u8) -> Expr {
+        Expr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum LitExpr {
     // TODO: Support different styles of Strings such as raw strings `r##"foo"##`
     #[allow(dead_code)]
@@ -104,12 +121,15 @@ impl LitExpr {
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
             }
             tuple @ Ty::Tuple(_) => TupleExpr::generate_expr(ctx, tuple),
-            _ => panic!(),
+            _ => panic!(
+                "Literal type for {} not supported yet",
+                res_type.to_string()
+            ),
         }
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum LitExprTy {
     /// `64_i32`
     Signed(IntTy),
@@ -120,7 +140,7 @@ pub enum LitExprTy {
     Unsuffixed,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum LitFloatTy {
     /// Float literal with suffix such as `1f32`, `1E10f32`
@@ -129,7 +149,7 @@ pub enum LitFloatTy {
     Unsuffixed,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BinaryExpr {
     pub lhs: Box<Expr>,
     pub rhs: Box<Expr>,
@@ -184,7 +204,8 @@ impl BinaryExpr {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -204,6 +225,20 @@ pub enum BinaryOp {
     // Ne,
     // Ge,
     // Gt
+}
+
+impl ToString for BinaryOp {
+    fn to_string(&self) -> String {
+        match self {
+            BinaryOp::Add => "+",
+            BinaryOp::Sub => "-",
+            BinaryOp::Mul => "*",
+            BinaryOp::Div => "/",
+            BinaryOp::And => "&&",
+            BinaryOp::Or => "||",
+        }
+        .to_owned()
+    }
 }
 
 macro_rules! apply_int {
@@ -257,9 +292,9 @@ impl BinaryOp {
         short_circuit_and || short_circuit_or
     }
 
-    pub fn apply_res_expr(self, lhs: &EvalExpr, rhs: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
+    pub fn apply(self, lhs: &EvalExpr, rhs: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
         if let (EvalExpr::Literal(lhs), EvalExpr::Literal(rhs)) = (lhs, rhs) {
-            let res: Result<LitExpr, EvalExprError> = self.apply(lhs, rhs);
+            let res: Result<LitExpr, EvalExprError> = self.apply_lit(lhs, rhs);
             return match res {
                 Ok(lit_expr) => Ok(EvalExpr::Literal(lit_expr)),
                 Err(error) => Err(error),
@@ -276,7 +311,7 @@ impl BinaryOp {
         Ok(EvalExpr::Unknown)
     }
 
-    pub fn apply(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
+    pub fn apply_lit(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
         use LitExpr::*;
         match (lhs, rhs) {
             (Int(lhs_u128, lhs_ty), Int(rhs_u128, rhs_ty)) => {
@@ -397,7 +432,7 @@ by_lit_expr_ty_impl!(u64, Unsigned(U64));
 by_lit_expr_ty_impl!(u128, Unsigned(U128));
 by_lit_expr_ty_impl!(usize, Unsigned(USize));
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnaryExpr {
     pub expr: Box<Expr>,
     pub op: UnaryOp,
@@ -418,14 +453,17 @@ impl UnaryExpr {
     // TODO: generate_expr_internal
     #[allow(dead_code)]
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        match res_type {
-            Ty::Bool | Ty::Int(_) | Ty::UInt(_) => Expr::generate_expr(ctx, res_type),
-            _ => None,
-        }
+        let op = match res_type {
+            Ty::Bool => UnaryOp::Not,
+            Ty::Int(_) => UnaryOp::Neg,
+            _ => return None,
+        };
+        let expr = Box::new(Expr::generate_expr(ctx, res_type)?);
+        Some(Expr::Unary(UnaryExpr { expr, op }))
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[allow(dead_code)]
 pub enum UnaryOp {
     // TODO: Deref when adding pointer types
@@ -434,14 +472,66 @@ pub enum UnaryOp {
     Neg,
 }
 
-#[derive(Debug, Clone)]
+impl ToString for UnaryOp {
+    fn to_string(&self) -> String {
+        match self {
+            UnaryOp::Deref => "*",
+            UnaryOp::Not => "!",
+            UnaryOp::Neg => "-",
+        }
+        .to_owned()
+    }
+}
+
+impl UnaryOp {
+    pub fn apply(self, expr: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
+        match self {
+            UnaryOp::Deref => todo!(),
+            UnaryOp::Not => {
+                if let EvalExpr::Literal(LitExpr::Bool(bool)) = *expr {
+                    Ok(EvalExpr::Literal(LitExpr::Bool(!bool)))
+                } else {
+                    panic!()
+                }
+            }
+            UnaryOp::Neg => {
+                if let EvalExpr::Literal(LitExpr::Int(u128, ty @ Signed(int_type))) = *expr {
+                    match int_type {
+                        ISize => isize::checked_neg(u128 as isize)
+                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .ok_or(EvalExprError::Overflow),
+                        I8 => i8::checked_neg(u128 as i8)
+                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .ok_or(EvalExprError::Overflow),
+                        I16 => i16::checked_neg(u128 as i16)
+                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .ok_or(EvalExprError::Overflow),
+                        I32 => i32::checked_neg(u128 as i32)
+                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .ok_or(EvalExprError::Overflow),
+                        I64 => i64::checked_neg(u128 as i64)
+                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .ok_or(EvalExprError::Overflow),
+                        I128 => i128::checked_neg(u128 as i128)
+                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .ok_or(EvalExprError::Overflow),
+                    }
+                } else {
+                    panic!()
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct CastExpr {
     pub expr: Box<Expr>,
     pub ty: Ty,
 }
 
 // TODO: Improve IfExpr formatting in printing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IfExpr {
     pub condition: Box<Expr>,
     pub then: Box<BlockExpr>,
@@ -480,7 +570,7 @@ impl IfExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BlockExpr {
     pub stmts: Vec<Stmt>,
 }
@@ -519,7 +609,7 @@ impl From<BlockExpr> for Expr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
     pub ty: Ty,
@@ -531,7 +621,7 @@ impl IdentExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TupleExpr {
     pub tuple: Vec<Expr>,
 }
@@ -555,7 +645,7 @@ impl TupleExpr {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AssignExpr {
     pub name: String,
     pub rhs: Box<Expr>,
@@ -582,10 +672,10 @@ impl AssignExpr {
 
 // TODO: Add tuple here instead of literal
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum ExprKind {
     Literal,
     Binary,
-    #[allow(dead_code)]
     Unary,
     #[allow(dead_code)]
     Cast,
@@ -596,14 +686,14 @@ pub enum ExprKind {
     Assign,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EvalExprError {
     Overflow,
     MinMulOverflow,
     ZeroDiv,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EvalExpr {
     /// Literal such as `1`, `"foo"`
     Literal(LitExpr),
@@ -614,5 +704,31 @@ pub enum EvalExpr {
 impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
         EvalExpr::Tuple(vec![])
+    }
+}
+
+impl TryFrom<Expr> for EvalExpr {
+    type Error = &'static str;
+
+    fn try_from(value: Expr) -> Result<Self, Self::Error> {
+        match value {
+            Expr::Literal(lit) => Ok(EvalExpr::Literal(lit)),
+            _ => Err("Unimplemented/Unsuccessful"),
+        }
+    }
+}
+
+#[cfg(test)]
+impl EvalExpr {
+    pub fn bool(b: bool) -> EvalExpr {
+        EvalExpr::Literal(LitExpr::Bool(b))
+    }
+
+    pub fn i8(i: i8) -> EvalExpr {
+        EvalExpr::Literal(LitExpr::Int(i as u128, LitExprTy::Signed(IntTy::I8)))
+    }
+
+    pub fn u8(u: u8) -> EvalExpr {
+        EvalExpr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
     }
 }

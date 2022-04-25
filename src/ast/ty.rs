@@ -68,7 +68,7 @@ impl ToString for Ty {
                 &tmp
             }
         }
-        .to_string()
+        .to_owned()
     }
 }
 
@@ -123,7 +123,7 @@ impl ToString for UIntTy {
             UIntTy::U64 => "u64",
             UIntTy::U128 => "u128",
         }
-        .to_string()
+        .to_owned()
     }
 }
 

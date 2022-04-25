@@ -108,7 +108,7 @@ fn walk_semi_stmt<V: Visitor>(visitor: &mut V, SemiStmt { expr }: &mut SemiStmt)
     visitor.visit_expr(expr);
 }
 
-fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
+pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
     match expr {
         Expr::Literal(literal_expr) => visitor.visit_literal_expr(literal_expr),
         Expr::Binary(binary_expr) => visitor.visit_binary_expr(binary_expr),
