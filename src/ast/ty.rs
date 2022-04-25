@@ -27,6 +27,19 @@ impl Ty {
     pub fn unit_type() -> Ty {
         Ty::Tuple(Vec::new())
     }
+
+    pub fn is_primitive_number(&self) -> bool {
+        // TODO: Add floats
+        match self {
+            Ty::Int(_) | Ty::UInt(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn compatible_cast(&self, target_type: &Ty) -> bool {
+        // TODO: More thorough casting
+        self.is_primitive_number() && target_type.is_primitive_number()
+    }
 }
 
 impl ToString for Ty {

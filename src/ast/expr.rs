@@ -49,6 +49,7 @@ impl Expr {
                 ExprKind::Block => BlockExpr::generate_expr(ctx, res_type),
                 ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
                 ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type),
+                ExprKind::Cast => CastExpr::generate_expr(ctx, res_type),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
             num_failed_attempts += 1
@@ -573,6 +574,30 @@ pub struct CastExpr {
     pub ty: Ty,
 }
 
+impl CastExpr {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if ctx.arith_depth > ctx.policy.max_arith_depth {
+            return None;
+        }
+        ctx.arith_depth += 1;
+        let res = CastExpr::generate_expr_internal(ctx, res_type);
+        ctx.arith_depth -= 1;
+        res
+    }
+
+    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let source_type = ctx.choose_type();
+        if !source_type.compatible_cast(res_type) {
+            return None
+        }
+        let expr = Box::new(Expr::generate_expr_safe(ctx, &source_type));
+        Some(Expr::Cast(CastExpr {
+            expr,
+            ty: res_type.clone()
+        }))
+    }
+}
+
 // TODO: Improve IfExpr formatting in printing
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfExpr {
@@ -727,6 +752,7 @@ pub enum ExprKind {
     Ident,
     #[allow(dead_code)]
     Assign,
+    __Nonexhaustive
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
