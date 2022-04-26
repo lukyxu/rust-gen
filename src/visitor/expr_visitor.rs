@@ -1,7 +1,12 @@
-use crate::ast::expr::{AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr};
+use crate::ast::expr::{
+    AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
+    UnaryExpr,
+};
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::ast::ty::Ty;
 use crate::visitor::base_visitor;
 use crate::Visitor;
+use std::collections::hash_map::{IntoIter, Iter};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -9,9 +14,9 @@ pub struct ExprVisitor {
     expr: Option<EvalExpr>,
     deadcode_mode: bool,
     full_symbol_table: ExprSymbolTable,
-    local_symbol_table: ExprSymbolTable,
+    pub local_symbol_table: ExprSymbolTable,
     prev_local_symbol_table: Vec<ExprSymbolTable>,
-    max_attempt_fix: usize
+    max_attempt_fix: usize,
 }
 
 impl ExprVisitor {
@@ -22,7 +27,7 @@ impl ExprVisitor {
             full_symbol_table: ExprSymbolTable::default(),
             local_symbol_table: ExprSymbolTable::default(),
             prev_local_symbol_table: vec![],
-            max_attempt_fix: 1
+            max_attempt_fix: 1,
         }
     }
 
@@ -32,11 +37,13 @@ impl ExprVisitor {
         self.expr.clone().unwrap()
     }
 
-    fn add_expr(&mut self, key: &str, value: &EvalExpr) {
+    fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
         if !self.deadcode_mode {
-            self.full_symbol_table.add_expr(key, value.clone());
+            self.full_symbol_table
+                .add_expr(key, value.clone(), ty.clone());
         }
-        self.local_symbol_table.add_expr(key, value.clone());
+        self.local_symbol_table
+            .add_expr(key, value.clone(), ty.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
@@ -66,7 +73,7 @@ impl Visitor for ExprVisitor {
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
-        self.add_expr(&stmt.name, &res_expr);
+        self.add_expr(&stmt.name, &res_expr, &stmt.ty);
         self.expr = Some(EvalExpr::unit_expr())
     }
 
@@ -105,7 +112,7 @@ impl Visitor for ExprVisitor {
                 expr.fix(err, &mut lhs, &mut rhs);
                 res = expr.op.apply(&lhs, &rhs);
             } else {
-                break
+                break;
             }
         }
         self.expr = Some(res.unwrap())
@@ -163,8 +170,9 @@ impl Visitor for ExprVisitor {
             // should never evaluated to unknown value
             assert!(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown))
         } else {
+            // assert!(self.full_symbol_table.get_expr_by_name(&expr.name).is_some());
             assert!(self.deadcode_mode);
-            // Not in the local symbol table
+            // Not in the local symbol table but in full symbol table
             self.expr = Some(EvalExpr::Unknown)
         }
     }
@@ -191,7 +199,15 @@ impl Visitor for ExprVisitor {
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
-        self.add_expr(&expr.name, &res_expr);
+        let sym_table = self.symbol_table();
+        if self.full_symbol_table.get_ty_by_name(&expr.name).is_none() {
+            println!("hmm")
+        };
+        self.add_expr(
+            &expr.name,
+            &res_expr,
+            &self.full_symbol_table.get_ty_by_name(&expr.name).unwrap(),
+        );
 
         self.expr = Some(EvalExpr::unit_expr())
     }
@@ -217,22 +233,39 @@ impl ExprVisitor {
 #[derive(Debug, Default, Clone)]
 pub struct ExprSymbolTable {
     expr_mapping: HashMap<String, EvalExpr>,
+    ty_mapping: HashMap<String, Ty>,
+}
+
+impl<'a> IntoIterator for &'a ExprSymbolTable {
+    type Item = (&'a String, &'a Ty);
+    type IntoIter = Iter<'a, String, Ty>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.ty_mapping).into_iter()
+    }
 }
 
 impl ExprSymbolTable {
-    pub fn get_expr_by_name(&self, name: &String) -> Option<EvalExpr> {
+    pub fn get_expr_by_name(&self, name: &str) -> Option<EvalExpr> {
         Some(self.expr_mapping.get(name)?.clone())
     }
 
-    pub fn add_expr(&mut self, key: &str, value: EvalExpr) {
+    pub fn get_ty_by_name(&self, name: &str) -> Option<Ty> {
+        Some(self.ty_mapping.get(name)?.clone())
+    }
+
+    pub fn add_expr(&mut self, key: &str, value: EvalExpr, ty: Ty) {
         self.expr_mapping.insert(key.to_owned(), value);
+        self.ty_mapping.insert(key.to_owned(), ty);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::expr::EvalExprError::{MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv};
+    use crate::ast::expr::EvalExprError::{
+        MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
+    };
     use crate::ast::expr::{BinaryOp, EvalExprError, UnaryOp};
 
     #[test]
@@ -286,7 +319,13 @@ mod tests {
 
     #[test]
     fn binary_expr_signed_fix() {
-        for op in [BinaryOp::Add, BinaryOp::Sub, BinaryOp::Mul, BinaryOp::Div, BinaryOp::Rem] {
+        for op in [
+            BinaryOp::Add,
+            BinaryOp::Sub,
+            BinaryOp::Mul,
+            BinaryOp::Div,
+            BinaryOp::Rem,
+        ] {
             for i in i8::MIN..=i8::MAX {
                 for j in i8::MIN..=i8::MAX {
                     let mut expr = BinaryExpr {
@@ -303,7 +342,13 @@ mod tests {
 
     #[test]
     fn binary_expr_unsigned_fix() {
-        for op in [BinaryOp::Add,BinaryOp::Sub,BinaryOp::Mul,BinaryOp::Div, BinaryOp::Rem] {
+        for op in [
+            BinaryOp::Add,
+            BinaryOp::Sub,
+            BinaryOp::Mul,
+            BinaryOp::Div,
+            BinaryOp::Rem,
+        ] {
             for i in u8::MIN..=u8::MAX {
                 for j in u8::MIN..=u8::MAX {
                     let mut expr = BinaryExpr {

@@ -32,7 +32,7 @@ impl Ty {
         // TODO: Add floats
         match self {
             Ty::Int(_) | Ty::UInt(_) => true,
-            _ => false
+            _ => false,
         }
     }
 

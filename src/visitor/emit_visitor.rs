@@ -1,4 +1,7 @@
-use crate::ast::expr::{AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, IdentExpr, IfExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::expr::{
+    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, IdentExpr, IfExpr, LitExpr, LitExprTy,
+    TupleExpr, UnaryExpr, UnaryOp,
+};
 use crate::ast::function::Function;
 use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
