@@ -27,6 +27,16 @@ impl Ty {
     pub fn unit_type() -> Ty {
         Ty::Tuple(Vec::new())
     }
+
+    pub fn is_primitive_number(&self) -> bool {
+        // TODO: Add floats
+        matches!(self, Ty::Int(_) | Ty::UInt(_))
+    }
+
+    pub fn compatible_cast(&self, target_type: &Ty) -> bool {
+        // TODO: More thorough casting
+        self.is_primitive_number() && target_type.is_primitive_number()
+    }
 }
 
 impl ToString for Ty {
@@ -101,6 +111,17 @@ impl IntTy {
             IntTy::I128 => rng.gen::<i128>() as u128,
         }
     }
+
+    pub fn recast(&self, value: u128) -> u128 {
+        match self {
+            IntTy::ISize => value as isize as u128,
+            IntTy::I8 => value as i8 as u128,
+            IntTy::I16 => value as i16 as u128,
+            IntTy::I32 => value as i32 as u128,
+            IntTy::I64 => value as i64 as u128,
+            IntTy::I128 => value as i128 as u128,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -137,6 +158,17 @@ impl UIntTy {
             UIntTy::U32 => rng.gen::<u32>() as u128,
             UIntTy::U64 => rng.gen::<u64>() as u128,
             UIntTy::U128 => rng.gen::<u128>(),
+        }
+    }
+
+    pub fn recast(&self, value: u128) -> u128 {
+        match self {
+            UIntTy::USize => value as usize as u128,
+            UIntTy::U8 => value as u8 as u128,
+            UIntTy::U16 => value as u16 as u128,
+            UIntTy::U32 => value as u32 as u128,
+            UIntTy::U64 => value as u64 as u128,
+            UIntTy::U128 => value as u128 as u128,
         }
     }
 }
