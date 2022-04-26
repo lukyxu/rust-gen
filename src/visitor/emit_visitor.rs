@@ -81,7 +81,7 @@ impl Visitor for EmitVisitor {
         self.output.push('(');
         self.visit_expr(&mut expr.expr);
         self.output.push_str(" as ");
-        self.visit_type(&mut expr.ty);
+        self.visit_type(&expr.ty);
         self.output.push(')');
     }
 

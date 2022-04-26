@@ -30,10 +30,7 @@ impl Ty {
 
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
-        match self {
-            Ty::Int(_) | Ty::UInt(_) => true,
-            _ => false,
-        }
+        matches!(self, Ty::Int(_) | Ty::UInt(_))
     }
 
     pub fn compatible_cast(&self, target_type: &Ty) -> bool {

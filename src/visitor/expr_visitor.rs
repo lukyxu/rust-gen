@@ -6,7 +6,7 @@ use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::Ty;
 use crate::visitor::base_visitor;
 use crate::Visitor;
-use std::collections::hash_map::{IntoIter, Iter};
+use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -199,7 +199,7 @@ impl Visitor for ExprVisitor {
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
-        let sym_table = self.symbol_table();
+        let _sym_table = self.symbol_table();
         if self.full_symbol_table.get_ty_by_name(&expr.name).is_none() {
             println!("hmm")
         };
@@ -241,7 +241,7 @@ impl<'a> IntoIterator for &'a ExprSymbolTable {
     type IntoIter = Iter<'a, String, Ty>;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.ty_mapping).into_iter()
+        (&self.ty_mapping).iter()
     }
 }
 
@@ -263,10 +263,8 @@ impl ExprSymbolTable {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ast::expr::EvalExprError::{
-        MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
-    };
-    use crate::ast::expr::{BinaryOp, EvalExprError, UnaryOp};
+
+    use crate::ast::expr::{BinaryOp, UnaryOp};
 
     #[test]
     fn unary_expr_ok_not() {

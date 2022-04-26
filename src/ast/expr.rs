@@ -138,12 +138,8 @@ impl LitExpr {
     pub fn cast(self, res_type: &Ty) -> LitExpr {
         if let LitExpr::Int(u128, _) = self {
             match res_type {
-                Ty::Int(s_int) => {
-                    LitExpr::Int(s_int.recast(u128), LitExprTy::Signed(s_int.clone()))
-                }
-                Ty::UInt(u_int) => {
-                    LitExpr::Int(u_int.recast(u128), LitExprTy::Unsigned(u_int.clone()))
-                }
+                Ty::Int(s_int) => LitExpr::Int(s_int.recast(u128), LitExprTy::Signed(*s_int)),
+                Ty::UInt(u_int) => LitExpr::Int(u_int.recast(u128), LitExprTy::Unsigned(*u_int)),
                 _ => panic!(),
             }
         } else {
@@ -205,12 +201,9 @@ impl BinaryExpr {
     }
     pub fn fix(&mut self, error: &EvalExprError, lhs: &mut EvalExpr, rhs: &mut EvalExpr) {
         if let EvalExprError::UnsignedOverflow = error {
-            match self.op {
-                BinaryOp::Sub => {
-                    swap(&mut self.lhs, &mut self.rhs);
-                    swap(lhs, rhs)
-                }
-                _ => {}
+            if self.op == BinaryOp::Sub {
+                swap(&mut self.lhs, &mut self.rhs);
+                swap(lhs, rhs)
             }
         }
         self.op = self.replacement_op(error)
@@ -852,8 +845,7 @@ impl EvalExpr {
                 LitExpr::Float(_, _) => todo!(),
                 LitExpr::Bool(_) => Ty::Bool,
             },
-            EvalExpr => todo!(), // EvalExpr::Tuple(_) => {}
-                                 // EvalExpr::Unknown => {}
+            _ => todo!(),
         }
     }
 }
