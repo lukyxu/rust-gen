@@ -14,6 +14,7 @@ pub enum Ty {
     #[allow(dead_code)]
     Str,
     Tuple(Vec<Ty>), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
+    Array(Box<Ty>, usize),
 }
 
 impl Ty {
@@ -75,6 +76,10 @@ impl ToString for Ty {
                         .collect::<Vec<String>>()
                         .join(",")
                 );
+                &tmp
+            }
+            Ty::Array(ty, count) => {
+                tmp = format!("[{};{}]", ty.to_string(), count);
                 &tmp
             }
         }

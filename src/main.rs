@@ -30,7 +30,7 @@ fn main() {
 
 fn run_generator(seed: Option<u64>) {
     // 16, 45
-    let mut ctx = Context::with_policy(seed, Policy::simple_debug());
+    let mut ctx = Context::with_policy(seed, Policy::array_debug());
     let mut main = Function::create_main_fn(&mut ctx);
     // Make program compilable
     let mut expr_visitor = ExprVisitor::new();

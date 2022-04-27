@@ -33,6 +33,7 @@ pub enum Expr {
     Ident(IdentExpr),
     Tuple(TupleExpr),
     Assign(AssignExpr),
+    Array(ArrayExpr),
 }
 
 impl Expr {
@@ -129,6 +130,7 @@ impl LitExpr {
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
             }
             tuple @ Ty::Tuple(_) => TupleExpr::generate_expr(ctx, tuple),
+            array @ Ty::Array(..) => ArrayExpr::generate_expr(ctx, array),
             _ => panic!(
                 "Literal type for {} not supported yet",
                 res_type.to_string()
@@ -191,9 +193,11 @@ impl BinaryExpr {
         let op = match res_type {
             Ty::Bool => ctx.choose_binary_bool_op(),
             Ty::Int(_) | Ty::UInt(_) => ctx.choose_binary_int_op(),
-            // TODO: UInt binary expressions
-            Ty::Tuple(_) => return None,
-            _ => panic!(),
+            Ty::Tuple(_) | Ty::Array(..) => return None,
+            _ => panic!(
+                "Binary operations for {} not supported",
+                res_type.to_string()
+            ),
         };
         let lhs = Box::new(Expr::generate_expr(ctx, res_type)?);
         let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
@@ -771,6 +775,30 @@ impl AssignExpr {
             name: ident_expr.name,
             rhs: Box::new(Expr::generate_expr_safe(ctx, &ident_expr.ty)),
         }))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ArrayExpr {
+    pub array: Vec<Expr>,
+}
+
+impl ArrayExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if let Ty::Array(ty, count) = res_type {
+            let mut res = vec![];
+            for _ in 0..*count {
+                for _ in 0..ctx.policy.max_expr_attempts {
+                    if let Some(expr) = Expr::generate_expr(ctx, ty) {
+                        res.push(expr);
+                        break;
+                    }
+                }
+            }
+            Some(Expr::Array(ArrayExpr { array: res }))
+        } else {
+            panic!()
+        }
     }
 }
 
