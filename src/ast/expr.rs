@@ -719,6 +719,7 @@ impl From<BlockExpr> for Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
+    // TODO: remove type
     pub ty: Ty,
 }
 
