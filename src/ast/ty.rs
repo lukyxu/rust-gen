@@ -14,6 +14,7 @@ pub enum Ty {
     #[allow(dead_code)]
     Str,
     Tuple(Vec<Ty>), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
+    Array(Box<Ty>, usize),
 }
 
 impl Ty {
@@ -71,10 +72,14 @@ impl ToString for Ty {
                     "({})",
                     tuple
                         .iter()
-                        .map(|t| t.to_string())
+                        .map(std::string::ToString::to_string)
                         .collect::<Vec<String>>()
                         .join(",")
                 );
+                &tmp
+            }
+            Ty::Array(ty, count) => {
+                tmp = format!("[{};{}]", ty.to_string(), count);
                 &tmp
             }
         }
@@ -100,7 +105,7 @@ pub enum IntTy {
 }
 
 impl IntTy {
-    pub fn rand_val(&self, ctx: &mut Context) -> u128 {
+    pub fn rand_val(self, ctx: &mut Context) -> u128 {
         let rng = &mut ctx.rng;
         match self {
             IntTy::ISize => rng.gen::<isize>() as u128,
@@ -112,7 +117,7 @@ impl IntTy {
         }
     }
 
-    pub fn recast(&self, value: u128) -> u128 {
+    pub fn recast(self, value: u128) -> u128 {
         match self {
             IntTy::ISize => value as isize as u128,
             IntTy::I8 => value as i8 as u128,
@@ -149,7 +154,7 @@ impl ToString for UIntTy {
 }
 
 impl UIntTy {
-    pub fn rand_val(&self, ctx: &mut Context) -> u128 {
+    pub fn rand_val(self, ctx: &mut Context) -> u128 {
         let rng = &mut ctx.rng;
         match self {
             UIntTy::USize => rng.gen::<usize>() as u128,
@@ -161,7 +166,7 @@ impl UIntTy {
         }
     }
 
-    pub fn recast(&self, value: u128) -> u128 {
+    pub fn recast(self, value: u128) -> u128 {
         match self {
             UIntTy::USize => value as usize as u128,
             UIntTy::U8 => value as u8 as u128,

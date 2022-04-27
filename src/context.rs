@@ -24,9 +24,9 @@ impl Context {
             StdRng::seed_from_u64(thread_rng().gen())
         };
         Context {
-            policy: Default::default(),
-            name_handler: Default::default(),
-            type_symbol_table: Default::default(),
+            policy: Policy::default(),
+            name_handler: NameHandler::default(),
+            type_symbol_table: TypeSymbolTable::default(),
             rng,
             if_else_depth: 0,
             block_depth: 0,

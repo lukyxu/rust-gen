@@ -25,12 +25,12 @@ struct Args {
 fn main() {
     let args: Args = Args::parse();
     // TODO: Parse configuation files as generation policies
-    run_generator(args.seed)
+    run_generator(args.seed);
 }
 
 fn run_generator(seed: Option<u64>) {
     // 16, 45
-    let mut ctx = Context::with_policy(seed, Policy::simple_debug());
+    let mut ctx = Context::with_policy(seed, Policy::array_debug());
     let mut main = Function::create_main_fn(&mut ctx);
     // Make program compilable
     let mut expr_visitor = ExprVisitor::new();
@@ -41,7 +41,7 @@ fn run_generator(seed: Option<u64>) {
     let mut checksum_eval_visitor = ChecksumEvalVisitor::new();
     checksum_eval_visitor.visit_function(&mut main);
     print_output(&mut main);
-    println!("{:?}", checksum_eval_visitor.res)
+    // println!("{:?}", checksum_eval_visitor.res)
 }
 
 fn print_output(main: &mut Function) {

@@ -1,6 +1,6 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, IdentExpr, IfExpr, LitExpr, LitExprTy,
-    TupleExpr, UnaryExpr, UnaryOp,
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, IdentExpr, IfExpr, LitExpr,
+    LitExprTy, TupleExpr, UnaryExpr, UnaryOp,
 };
 use crate::ast::function::Function;
 use crate::ast::stmt::{ExprStmt, InitLocalStmt, SemiStmt};
@@ -25,9 +25,7 @@ impl Default for EmitVisitor {
 
 impl EmitVisitor {
     pub fn output(&self) -> String {
-        if self.output.is_empty() {
-            panic!("Run visit before accessing emit visitor output")
-        }
+        assert!(!self.output.is_empty(), "Run visit before accessing emit visitor output");
         self.output.clone()
     }
 }
@@ -42,15 +40,15 @@ impl Visitor for EmitVisitor {
 
     fn visit_function(&mut self, function: &mut Function) {
         self.output.push_str(&format!("fn {}() ", function.name));
-        self.visit_block_expr(&mut function.block)
+        self.visit_block_expr(&mut function.block);
     }
 
     fn visit_name(&mut self, name: &str) {
-        self.output.push_str(name)
+        self.output.push_str(name);
     }
 
     fn visit_type(&mut self, ty: &Ty) {
-        self.output.push_str(&ty.to_string())
+        self.output.push_str(&ty.to_string());
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
@@ -77,17 +75,9 @@ impl Visitor for EmitVisitor {
         self.output.push(';');
     }
 
-    fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
-        self.output.push('(');
-        self.visit_expr(&mut expr.expr);
-        self.output.push_str(" as ");
-        self.visit_type(&expr.ty);
-        self.output.push(')');
-    }
-
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
         let expr = match expr {
-            LitExpr::Str(str) => str.to_string(),
+            LitExpr::Str(str) => (*str).to_string(),
             LitExpr::Byte(byte) => byte.to_string(),
             LitExpr::Char(char) => char.to_string(),
             // TODO: Tidy this logic up
@@ -120,10 +110,10 @@ impl Visitor for EmitVisitor {
                 };
                 to_emit
             }
-            LitExpr::Float(f_str, _float_type) => f_str.to_string(),
+            LitExpr::Float(f_str, _float_type) => (*f_str).to_string(),
             LitExpr::Bool(bool) => bool.to_string(),
         };
-        self.output.push_str(&expr)
+        self.output.push_str(&expr);
     }
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
@@ -140,6 +130,14 @@ impl Visitor for EmitVisitor {
         self.visit_unary_op(&mut expr.op);
         self.output.push('(');
         self.visit_expr(&mut expr.expr);
+        self.output.push(')');
+    }
+
+    fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
+        self.output.push('(');
+        self.visit_expr(&mut expr.expr);
+        self.output.push_str(" as ");
+        self.visit_type(&expr.ty);
         self.output.push(')');
     }
 
@@ -165,7 +163,7 @@ impl Visitor for EmitVisitor {
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
         self.output.push_str("{\n");
         self.enter_scope();
-        for stmt in expr.stmts.iter_mut() {
+        for stmt in &mut expr.stmts {
             // self.output
             //     .push_str(&format!("{}", " ".repeat(self.curr_indent)));
             self.visit_stmt(stmt);
@@ -177,18 +175,18 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
-        self.visit_name(&expr.name)
+        self.visit_name(&expr.name);
     }
 
     fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
         self.output.push('(');
         for (i, expr) in (&mut expr.tuple).iter_mut().enumerate() {
             if i != 0 {
-                self.output.push_str(", ")
+                self.output.push_str(", ");
             }
-            self.visit_expr(expr)
+            self.visit_expr(expr);
         }
-        self.output.push(')')
+        self.output.push(')');
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
@@ -197,11 +195,22 @@ impl Visitor for EmitVisitor {
         self.visit_expr(&mut expr.rhs);
     }
 
-    fn visit_binary_op(&mut self, op: &mut BinaryOp) {
-        self.output.push_str(&op.to_string())
+    fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
+        self.output.push('[');
+        for (i, expr) in (&mut expr.array).iter_mut().enumerate() {
+            if i != 0 {
+                self.output.push_str(", ");
+            }
+            self.visit_expr(expr);
+        }
+        self.output.push(']');
     }
 
     fn visit_unary_op(&mut self, op: &mut UnaryOp) {
-        self.output.push_str(&op.to_string())
+        self.output.push_str(&op.to_string());
+    }
+
+    fn visit_binary_op(&mut self, op: &mut BinaryOp) {
+        self.output.push_str(&op.to_string());
     }
 }

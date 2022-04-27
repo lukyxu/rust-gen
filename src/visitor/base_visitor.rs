@@ -1,6 +1,6 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, LitExpr,
-    TupleExpr, UnaryExpr, UnaryOp,
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr,
+    LitExpr, TupleExpr, UnaryExpr, UnaryOp,
 };
 
 use crate::ast::function::Function;
@@ -22,46 +22,49 @@ pub trait Visitor: Sized {
         walk_stmt(self, stmt);
     }
     fn visit_local_decl_stmt(&mut self, stmt: &mut DeclLocalStmt) {
-        walk_decl_local_stmt(self, stmt)
+        walk_decl_local_stmt(self, stmt);
     }
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
-        walk_init_local_stmt(self, stmt)
+        walk_init_local_stmt(self, stmt);
     }
     fn visit_expr_stmt(&mut self, stmt: &mut ExprStmt) {
-        walk_expr_stmt(self, stmt)
+        walk_expr_stmt(self, stmt);
     }
     fn visit_semi_stmt(&mut self, stmt: &mut SemiStmt) {
-        walk_semi_stmt(self, stmt)
+        walk_semi_stmt(self, stmt);
     }
 
     // Expressions
     fn visit_expr(&mut self, expr: &mut Expr) {
-        walk_expr(self, expr)
+        walk_expr(self, expr);
     }
     fn visit_literal_expr(&mut self, _expr: &mut LitExpr) {}
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
-        walk_binary_expr(self, expr)
+        walk_binary_expr(self, expr);
     }
     fn visit_unary_expr(&mut self, expr: &mut UnaryExpr) {
-        walk_unary_expr(self, expr)
+        walk_unary_expr(self, expr);
     }
     fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
-        walk_cast_expr(self, expr)
+        walk_cast_expr(self, expr);
     }
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
-        walk_if_expr(self, expr)
+        walk_if_expr(self, expr);
     }
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        walk_block_expr(self, expr)
+        walk_block_expr(self, expr);
     }
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
-        walk_ident_expr(self, expr)
+        walk_ident_expr(self, expr);
     }
     fn visit_tuple_expr(&mut self, expr: &mut TupleExpr) {
-        walk_tuple_expr(self, expr)
+        walk_tuple_expr(self, expr);
     }
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         walk_assign_expr(self, expr);
+    }
+    fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
+        walk_array_expr(self, expr);
     }
 
     // Operations
@@ -70,16 +73,16 @@ pub trait Visitor: Sized {
 }
 
 fn walk_function<V: Visitor>(visitor: &mut V, function: &mut Function) {
-    visitor.visit_block_expr(&mut function.block)
+    visitor.visit_block_expr(&mut function.block);
 }
 
 fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
     match stmt {
         Stmt::Local(LocalStmt::Decl(local_decl_stmt)) => {
-            visitor.visit_local_decl_stmt(local_decl_stmt)
+            visitor.visit_local_decl_stmt(local_decl_stmt);
         }
         Stmt::Local(LocalStmt::Init(local_init_stmt)) => {
-            visitor.visit_local_init_stmt(local_init_stmt)
+            visitor.visit_local_init_stmt(local_init_stmt);
         }
         Stmt::Expr(expr_stmt) => visitor.visit_expr_stmt(expr_stmt),
         Stmt::Semi(semi_stmt) => visitor.visit_semi_stmt(semi_stmt),
@@ -119,6 +122,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
         Expr::Ident(ident_expr) => visitor.visit_ident_expr(ident_expr),
         Expr::Tuple(tuple_expr) => visitor.visit_tuple_expr(tuple_expr),
         Expr::Assign(assign_expr) => visitor.visit_assign_expr(assign_expr),
+        Expr::Array(array_expr) => visitor.visit_array_expr(array_expr),
     }
 }
 
@@ -156,7 +160,7 @@ fn walk_if_expr<V: Visitor>(
 fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockExpr) {
     visitor.enter_scope();
     for stmt in stmts {
-        visitor.visit_stmt(stmt)
+        visitor.visit_stmt(stmt);
     }
     visitor.exit_scope();
 }
@@ -175,4 +179,10 @@ fn walk_tuple_expr<V: Visitor>(visitor: &mut V, TupleExpr { tuple }: &mut TupleE
 fn walk_assign_expr<V: Visitor>(visitor: &mut V, AssignExpr { name, rhs }: &mut AssignExpr) {
     visitor.visit_name(name);
     visitor.visit_expr(rhs);
+}
+
+fn walk_array_expr<V: Visitor>(visitor: &mut V, ArrayExpr { array }: &mut ArrayExpr) {
+    for expr in array {
+        visitor.visit_expr(expr);
+    }
 }
