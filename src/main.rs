@@ -25,7 +25,7 @@ struct Args {
 fn main() {
     let args: Args = Args::parse();
     // TODO: Parse configuation files as generation policies
-    run_generator(args.seed)
+    run_generator(args.seed);
 }
 
 fn run_generator(seed: Option<u64>) {

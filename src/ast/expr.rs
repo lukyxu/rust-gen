@@ -1,9 +1,9 @@
 use crate::ast::expr::EvalExprError::{MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv};
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
 use crate::ast::stmt::Stmt;
-use crate::ast::ty::IntTy::*;
+use crate::ast::ty::IntTy::{I128, I16, I32, I64, I8, ISize};
 
-use crate::ast::ty::UIntTy::*;
+use crate::ast::ty::UIntTy::{U128, U16, U32, U64, U8, USize};
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use crate::Context;
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
@@ -53,7 +53,7 @@ impl Expr {
                 ExprKind::Cast => CastExpr::generate_expr(ctx, res_type),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
-            num_failed_attempts += 1
+            num_failed_attempts += 1;
         }
         res
     }
@@ -203,17 +203,17 @@ impl BinaryExpr {
         let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
         Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
     }
-    pub fn fix(&mut self, error: &EvalExprError, lhs: &mut EvalExpr, rhs: &mut EvalExpr) {
+    pub fn fix(&mut self, error: EvalExprError, lhs: &mut EvalExpr, rhs: &mut EvalExpr) {
         if let EvalExprError::UnsignedOverflow = error {
             if self.op == BinaryOp::Sub {
                 swap(&mut self.lhs, &mut self.rhs);
-                swap(lhs, rhs)
+                swap(lhs, rhs);
             }
         }
-        self.op = self.replacement_op(error)
+        self.op = self.replacement_op(error);
     }
 
-    pub fn replacement_op(&self, error: &EvalExprError) -> BinaryOp {
+    pub fn replacement_op(&self, error: EvalExprError) -> BinaryOp {
         match self.op {
             BinaryOp::Add => BinaryOp::Sub,
             BinaryOp::Sub => match error {
@@ -285,9 +285,9 @@ macro_rules! apply_int {
         fn $fn_name(
             self,
             lhs_u128: u128,
-            lhs: &LitExprTy,
+            lhs: LitExprTy,
             rhs_u128: u128,
-            rhs: &LitExprTy,
+            rhs: LitExprTy,
         ) -> Result<LitExpr, EvalExprError> {
             match (lhs, rhs) {
                 (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
@@ -340,8 +340,7 @@ impl BinaryOp {
                     Err(error) => Err(error),
                 }
             }
-            (BinaryOp::Div, _, EvalExpr::Literal(rhs))
-            | (BinaryOp::Rem, _, EvalExpr::Literal(rhs)) => {
+            (BinaryOp::Div | BinaryOp::Rem, _, EvalExpr::Literal(rhs)) => {
                 if let LitExpr::Int(0, _) = rhs {
                     Err(ZeroDiv)
                 } else if let LitExpr::Int(_, _) = rhs {
@@ -355,10 +354,10 @@ impl BinaryOp {
     }
 
     pub fn apply_lit(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
-        use LitExpr::*;
+        use LitExpr::{Bool, Int};
         match (lhs, rhs) {
             (Int(lhs_u128, lhs_ty), Int(rhs_u128, rhs_ty)) => {
-                self.apply_int(*lhs_u128, lhs_ty, *rhs_u128, rhs_ty)
+                self.apply_int(*lhs_u128, *lhs_ty, *rhs_u128, *rhs_ty)
             }
             (Bool(lhs), Bool(rhs)) => Ok(self.apply_bool(*lhs, *rhs)),
             _ => panic!("Non integer/booleans"),
@@ -373,9 +372,9 @@ impl BinaryOp {
     fn apply_int(
         self,
         lhs_u128: u128,
-        lhs: &LitExprTy,
+        lhs: LitExprTy,
         rhs_u128: u128,
-        rhs: &LitExprTy,
+        rhs: LitExprTy,
     ) -> Result<LitExpr, EvalExprError> {
         match self {
             BinaryOp::Add => self.apply_add(lhs_u128, lhs, rhs_u128, rhs),
@@ -697,11 +696,11 @@ impl BlockExpr {
         let outer_symbol_table = ctx.type_symbol_table.clone();
         let mut num_stmts = ctx.choose_num_stmts();
         if !res_type.is_unit() {
-            num_stmts -= 1
+            num_stmts -= 1;
         }
         for _ in 0..num_stmts {
             // TODO: Make sure these statements are not expression statements
-            stmts.push(Stmt::generate_non_expr_stmt(ctx))
+            stmts.push(Stmt::generate_non_expr_stmt(ctx));
         }
         if !res_type.is_unit() {
             stmts.push(Stmt::generate_expr_stmt(ctx, res_type));
@@ -863,16 +862,13 @@ impl EvalExpr {
     pub fn get_type(&self) -> Ty {
         match self {
             EvalExpr::Literal(lit) => match lit {
-                LitExpr::Str(_) => todo!(),
-                LitExpr::Byte(_) => todo!(),
-                LitExpr::Char(_) => todo!(),
                 LitExpr::Int(_, int_ty) => match int_ty {
                     Signed(t) => Ty::Int(*t),
                     Unsigned(t) => Ty::UInt(*t),
                     Unsuffixed => todo!(),
                 },
-                LitExpr::Float(_, _) => todo!(),
                 LitExpr::Bool(_) => Ty::Bool,
+                LitExpr::Str(_) | LitExpr::Byte(_) | LitExpr::Char(_) | LitExpr::Float(_, _) => todo!(),
             },
             _ => todo!(),
         }

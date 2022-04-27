@@ -63,36 +63,36 @@ impl Visitor for ExprVisitor {
     }
 
     fn exit_scope(&mut self) {
-        self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap()
+        self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap();
     }
 
     // TODO: Implement local decl stmt
     fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
-        self.expr = Some(EvalExpr::unit_expr())
+        self.expr = Some(EvalExpr::unit_expr());
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         let res_expr = self.safe_expr_visit(&mut stmt.rhs);
         self.add_expr(&stmt.name, &res_expr, &stmt.ty);
-        self.expr = Some(EvalExpr::unit_expr())
+        self.expr = Some(EvalExpr::unit_expr());
     }
 
     fn visit_semi_stmt(&mut self, stmt: &mut SemiStmt) {
         self.visit_expr(&mut stmt.expr);
-        self.expr = Some(EvalExpr::unit_expr())
+        self.expr = Some(EvalExpr::unit_expr());
     }
 
     fn visit_expr(&mut self, expr: &mut Expr) {
         if let Expr::Unary(_) = expr {
             // visit_unary_expr can modify the expr to some other expr variant
-            self.visit_unary_expr(expr)
+            self.visit_unary_expr(expr);
         } else {
-            base_visitor::walk_expr(self, expr)
+            base_visitor::walk_expr(self, expr);
         }
     }
 
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
-        self.expr = Some(EvalExpr::Literal(expr.clone()))
+        self.expr = Some(EvalExpr::Literal(expr.clone()));
     }
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
@@ -109,20 +109,20 @@ impl Visitor for ExprVisitor {
         let mut res = expr.op.apply(&lhs, &rhs);
         for _ in 0..=self.max_attempt_fix {
             if let Err(err) = &res {
-                expr.fix(err, &mut lhs, &mut rhs);
+                expr.fix(*err, &mut lhs, &mut rhs);
                 res = expr.op.apply(&lhs, &rhs);
             } else {
                 break;
             }
         }
-        self.expr = Some(res.unwrap())
+        self.expr = Some(res.unwrap());
     }
     fn visit_unary_expr(&mut self, _expr: &mut UnaryExpr) {
         unreachable!()
     }
 
     fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
-        self.expr = Some(self.safe_expr_visit(&mut expr.expr).cast(&expr.ty))
+        self.expr = Some(self.safe_expr_visit(&mut expr.expr).cast(&expr.ty));
     }
 
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
@@ -168,12 +168,12 @@ impl Visitor for ExprVisitor {
             self.expr = Some(expr.clone());
             // When we are not in deadcode check mode then the result expression
             // should never evaluated to unknown value
-            assert!(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown))
+            assert!(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown));
         } else {
             // assert!(self.full_symbol_table.get_expr_by_name(&expr.name).is_some());
             assert!(self.deadcode_mode);
             // Not in the local symbol table but in full symbol table
-            self.expr = Some(EvalExpr::Unknown)
+            self.expr = Some(EvalExpr::Unknown);
         }
     }
 
@@ -185,7 +185,7 @@ impl Visitor for ExprVisitor {
             if let EvalExpr::Unknown = res_expr {
                 return_none = true;
             } else {
-                res.push(res_expr)
+                res.push(res_expr);
             }
         }
         let res_expr: EvalExpr = if return_none {
@@ -193,7 +193,7 @@ impl Visitor for ExprVisitor {
         } else {
             EvalExpr::Tuple(res)
         };
-        self.expr = Some(res_expr)
+        self.expr = Some(res_expr);
     }
 
     fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
@@ -202,9 +202,9 @@ impl Visitor for ExprVisitor {
         for inner_expr in &mut expr.array {
             let res_expr = self.safe_expr_visit(inner_expr);
             if let EvalExpr::Unknown = res_expr {
-                return_none = true
+                return_none = true;
             } else {
-                res.push(res_expr)
+                res.push(res_expr);
             }
         }
         let res_expr: EvalExpr = if return_none {
@@ -212,22 +212,19 @@ impl Visitor for ExprVisitor {
         } else {
             EvalExpr::Array(res)
         };
-        self.expr = Some(res_expr)
+        self.expr = Some(res_expr);
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
         let _sym_table = self.symbol_table();
-        if self.full_symbol_table.get_ty_by_name(&expr.name).is_none() {
-            println!("hmm")
-        };
         self.add_expr(
             &expr.name,
             &res_expr,
             &self.full_symbol_table.get_ty_by_name(&expr.name).unwrap(),
         );
 
-        self.expr = Some(EvalExpr::unit_expr())
+        self.expr = Some(EvalExpr::unit_expr());
     }
 }
 
@@ -241,9 +238,9 @@ impl ExprVisitor {
                 // TODO: See if you can improve this
                 *expr = *unary_expr.clone().expr;
             }
-            self.expr = Some(res.unwrap())
+            self.expr = Some(res.unwrap());
         } else {
-            panic!()
+            panic!();
         }
     }
 }
