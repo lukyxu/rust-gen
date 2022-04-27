@@ -41,7 +41,7 @@ fn run_generator(seed: Option<u64>) {
     let mut checksum_eval_visitor = ChecksumEvalVisitor::new();
     checksum_eval_visitor.visit_function(&mut main);
     print_output(&mut main);
-    println!("{:?}", checksum_eval_visitor.res)
+    // println!("{:?}", checksum_eval_visitor.res)
 }
 
 fn print_output(main: &mut Function) {

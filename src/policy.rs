@@ -176,6 +176,7 @@ impl Policy {
                 (ExprKind::Binary, 1.0),
                 (ExprKind::Unary, 5.0),
                 (ExprKind::Ident, 2.0),
+                (ExprKind::If, 1.0),
             ],
 
             max_if_else_depth: 2,

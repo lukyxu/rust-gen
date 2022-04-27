@@ -1,6 +1,6 @@
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr,
-    UnaryExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr,
+    TupleExpr, UnaryExpr,
 };
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::Ty;
@@ -184,7 +184,6 @@ impl Visitor for ExprVisitor {
             let res_expr = self.safe_expr_visit(inner_expr);
             if let EvalExpr::Unknown = res_expr {
                 return_none = true;
-                break;
             } else {
                 res.push(res_expr)
             }
@@ -193,6 +192,25 @@ impl Visitor for ExprVisitor {
             EvalExpr::Unknown
         } else {
             EvalExpr::Tuple(res)
+        };
+        self.expr = Some(res_expr)
+    }
+
+    fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
+        let mut res: Vec<EvalExpr> = vec![];
+        let mut return_none = false;
+        for inner_expr in &mut expr.array {
+            let res_expr = self.safe_expr_visit(inner_expr);
+            if let EvalExpr::Unknown = res_expr {
+                return_none = true
+            } else {
+                res.push(res_expr)
+            }
+        }
+        let res_expr: EvalExpr = if return_none {
+            EvalExpr::Unknown
+        } else {
+            EvalExpr::Array(res)
         };
         self.expr = Some(res_expr)
     }

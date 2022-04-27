@@ -843,6 +843,7 @@ pub enum EvalExpr {
     /// Literal such as `1`, `"foo"`
     Literal(LitExpr),
     Tuple(Vec<EvalExpr>),
+    Array(Vec<EvalExpr>),
     Unknown,
 }
 
