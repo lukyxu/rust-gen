@@ -3,6 +3,7 @@ use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{IntTy, Ty, UIntTy};
 use rand::distributions::Uniform;
 
+#[derive(Debug, Clone)]
 pub struct Policy {
     pub name: &'static str,
     pub stmt_dist: Vec<(StmtKind, f64)>,
@@ -36,6 +37,10 @@ impl Policy {
             Policy::array_debug(),
             Policy::default(),
         ]
+    }
+
+    pub fn get_policy(name: &str) -> Option<Policy> {
+        Policy::get_policies().iter().filter(|p|p.name == name).next().cloned()
     }
 
     pub fn stress_test() -> Self {

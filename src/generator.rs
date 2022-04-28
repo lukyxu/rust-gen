@@ -7,9 +7,9 @@ use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 
-pub fn run_generator(seed: Option<u64>) {
+pub fn run_generator(seed: Option<u64>, policy: Policy) {
     // 16, 45
-    let mut ctx = Context::with_policy(seed, Policy::array_debug());
+    let mut ctx = Context::with_policy(seed, policy);
     let mut main = Function::create_main_fn(&mut ctx);
     // Make program compilable
     let mut expr_visitor = ExprVisitor::new();
@@ -32,6 +32,6 @@ fn print_output(main: &mut Function) {
 #[test]
 fn test() {
     for i in 0..1000 {
-        run_generator(Some(i))
+        run_generator(Some(i), Policy::default())
     }
 }

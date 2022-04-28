@@ -7,6 +7,9 @@ struct Args {
     num_runs: Option<u64>,
     #[clap(short, long)]
     policy: String,
+    output_path: String,
 }
 
-pub fn main() {}
+pub fn main() {
+
+}
