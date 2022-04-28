@@ -66,17 +66,16 @@ pub fn main() {
             println!("Failed seed {}", i)
         } else {
             // Delete programs on pass
-            fs::remove_file(&rs_file).expect("Unable to remove file")
+            fs::remove_file(&rs_file).expect("Unable to remove file");
             println!("Passed seed {}", i)
         }
     }
 }
 
-
 struct CompilationError {
     input_file: String,
     status_code: i32,
-    std_err: String
+    std_err: String,
 }
 
 impl CompilationError {
@@ -84,8 +83,10 @@ impl CompilationError {
         return CompilationError {
             input_file: input.to_owned(),
             status_code: output.status.code().unwrap_or(-1),
-            std_err: String::from_utf8_lossy(output.stderr.as_ref()).parse().unwrap()
-        }
+            std_err: String::from_utf8_lossy(output.stderr.as_ref())
+                .parse()
+                .unwrap(),
+        };
     }
 
     fn print_compile_error(&self) {
@@ -105,7 +106,11 @@ impl CompilationError {
     }
 }
 
-fn compile_program(input_file: &str, output_file: &str, opt_level: &str) -> Result<(),CompilationError> {
+fn compile_program(
+    input_file: &str,
+    output_file: &str,
+    opt_level: &str,
+) -> Result<(), CompilationError> {
     let output = Command::new("rustc")
         .args([
             "-A",
@@ -122,7 +127,7 @@ fn compile_program(input_file: &str, output_file: &str, opt_level: &str) -> Resu
     if !output.status.success() {
         return Err(CompilationError::new(input_file, output));
     }
-    return Ok(())
+    return Ok(());
 }
 
 fn run_program(executable: &str) -> Result<u128, CompilationError> {
@@ -132,6 +137,10 @@ fn run_program(executable: &str) -> Result<u128, CompilationError> {
     if !output.status.success() {
         return Err(CompilationError::new(executable, output));
     }
-    Ok(u128::from_str(String::from_utf8(output.stdout).expect("Invalid stdout").trim_end()).expect("Unexpected execution output"))
+    Ok(u128::from_str(
+        String::from_utf8(output.stdout)
+            .expect("Invalid stdout")
+            .trim_end(),
+    )
+    .expect("Unexpected execution output"))
 }
-
