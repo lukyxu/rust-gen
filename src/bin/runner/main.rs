@@ -95,7 +95,7 @@ impl CompilationError {
     }
 
     fn print_run_error(&self) {
-        println!("Failed to compile {}", self.input_file);
+        println!("Failed to run {}", self.input_file);
         self.print_error();
     }
 
