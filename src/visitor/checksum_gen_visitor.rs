@@ -3,7 +3,7 @@ use crate::ast::expr::{
     AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, LitExpr,
 };
 use crate::ast::function::Function;
-use crate::ast::stmt::{InitLocalStmt, LocalStmt, SemiStmt, Stmt};
+use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 use crate::visitor::expr_visitor::ExprVisitor;
@@ -33,6 +33,9 @@ impl Visitor for ChecksumGenVisitor {
                 mutable: true,
             })),
         );
+        function.block.stmts.push(Stmt::Custom(CustomStmt {
+            stmt: format!("println!(\"{{}}\", {})", self.checksum_name),
+        }));
         self.visit_block_expr(&mut function.block);
     }
 

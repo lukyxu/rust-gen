@@ -112,9 +112,7 @@ impl From<LitExpr> for EvalExpr {
 impl LitExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
-            Ty::Bool => {
-                Some(LitExpr::Bool(ctx.choose_boolean_true()).into())
-            }
+            Ty::Bool => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
             Ty::Int(t) => {
                 let val = t.rand_val(ctx);
                 let expr_type = if matches!(t, IntTy::I32) && ctx.choose_unsuffixed_int() {

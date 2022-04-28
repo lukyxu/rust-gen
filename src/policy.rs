@@ -40,7 +40,11 @@ impl Policy {
     }
 
     pub fn get_policy(name: &str) -> Option<Policy> {
-        Policy::get_policies().iter().filter(|p|p.name == name).next().cloned()
+        Policy::get_policies()
+            .iter()
+            .filter(|p| p.name == name)
+            .next()
+            .cloned()
     }
 
     pub fn stress_test() -> Self {
@@ -149,7 +153,7 @@ impl Policy {
             max_block_depth: 3,
             max_arith_depth: 1,
 
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
+            num_stmt_dist: Uniform::new_inclusive(2, 3),
             ..policy
         }
     }
