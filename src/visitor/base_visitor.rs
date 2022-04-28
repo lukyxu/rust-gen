@@ -4,7 +4,9 @@ use crate::ast::expr::{
 };
 
 use crate::ast::function::Function;
-use crate::ast::stmt::{DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
+use crate::ast::stmt::{
+    CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
+};
 use crate::ast::ty::Ty;
 
 pub trait Visitor: Sized {
@@ -33,6 +35,7 @@ pub trait Visitor: Sized {
     fn visit_semi_stmt(&mut self, stmt: &mut SemiStmt) {
         walk_semi_stmt(self, stmt);
     }
+    fn visit_custom_stmt(&mut self, _stmt: &mut CustomStmt) {}
 
     // Expressions
     fn visit_expr(&mut self, expr: &mut Expr) {
@@ -86,6 +89,7 @@ fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
         }
         Stmt::Expr(expr_stmt) => visitor.visit_expr_stmt(expr_stmt),
         Stmt::Semi(semi_stmt) => visitor.visit_semi_stmt(semi_stmt),
+        Stmt::Custom(custom_stmt) => visitor.visit_custom_stmt(custom_stmt),
     }
 }
 

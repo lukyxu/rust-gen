@@ -222,6 +222,7 @@ name = "rust-gen"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "lazy_static",
  "num-traits",
  "rand",
 ]

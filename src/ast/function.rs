@@ -6,7 +6,6 @@ use crate::context::Context;
 // Make sure Expr is BlockExpr
 pub struct Function {
     pub name: String,
-    // TODO: Check If it's better to make this a BlockExpr
     pub block: BlockExpr,
 }
 

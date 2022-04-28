@@ -112,10 +112,7 @@ impl From<LitExpr> for EvalExpr {
 impl LitExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
-            Ty::Bool => {
-                // TODO(1): Add boolean
-                Some(LitExpr::Bool(ctx.choose_boolean_true()).into())
-            }
+            Ty::Bool => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
             Ty::Int(t) => {
                 let val = t.rand_val(ctx);
                 let expr_type = if matches!(t, IntTy::I32) && ctx.choose_unsuffixed_int() {
@@ -318,7 +315,6 @@ macro_rules! apply_int {
 }
 
 impl BinaryOp {
-    // TODO: try refactor this
     pub fn short_circuit_rhs(self, lhs: &EvalExpr) -> bool {
         let short_circuit_and = matches!(
             (self, lhs),
@@ -521,7 +517,6 @@ impl UnaryExpr {
         res
     }
 
-    // TODO: generate_expr_internal
     #[allow(dead_code)]
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let op = match res_type {
@@ -683,7 +678,6 @@ pub struct BlockExpr {
 }
 
 impl BlockExpr {
-    // TODO: Make this return an optional
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let block_expr = BlockExpr::generate_block_expr(ctx, res_type);
         block_expr.map(Expr::Block)
@@ -802,7 +796,6 @@ impl ArrayExpr {
     }
 }
 
-// TODO: Add tuple here instead of literal
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub enum ExprKind {

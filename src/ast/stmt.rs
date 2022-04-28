@@ -13,7 +13,7 @@ pub enum Stmt {
     Expr(ExprStmt),
     /// Expr with trailing semi-colon.
     Semi(SemiStmt),
-    // TODO: Macros and empty statements
+    Custom(CustomStmt), // TODO: Macros and empty statements
 }
 
 impl Stmt {
@@ -87,6 +87,11 @@ impl From<ExprStmt> for Stmt {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SemiStmt {
     pub expr: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CustomStmt {
+    pub stmt: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
