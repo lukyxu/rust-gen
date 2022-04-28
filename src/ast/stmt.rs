@@ -1,6 +1,6 @@
 use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
-use crate::Context;
+use crate::context::Context;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]

@@ -1,5 +1,4 @@
-use crate::Context;
-
+use crate::context::Context;
 use rand::Rng;
 
 #[derive(Debug, Clone, Eq, PartialEq)]

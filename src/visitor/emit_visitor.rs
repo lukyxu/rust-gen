@@ -25,7 +25,10 @@ impl Default for EmitVisitor {
 
 impl EmitVisitor {
     pub fn output(&self) -> String {
-        assert!(!self.output.is_empty(), "Run visit before accessing emit visitor output");
+        assert!(
+            !self.output.is_empty(),
+            "Run visit before accessing emit visitor output"
+        );
         self.output.clone()
     }
 }

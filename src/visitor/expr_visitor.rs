@@ -5,7 +5,7 @@ use crate::ast::expr::{
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::Ty;
 use crate::visitor::base_visitor;
-use crate::Visitor;
+use crate::visitor::base_visitor::Visitor;
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
 
