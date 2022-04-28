@@ -4,6 +4,7 @@ use crate::ast::ty::{IntTy, Ty, UIntTy};
 use rand::distributions::Uniform;
 
 pub struct Policy {
+    pub name: &'static str,
     pub stmt_dist: Vec<(StmtKind, f64)>,
     pub type_dist: Vec<(Ty, f64)>,
     pub expr_dist: Vec<(ExprKind, f64)>,
@@ -25,8 +26,20 @@ pub struct Policy {
 
 #[allow(dead_code)]
 impl Policy {
+    pub fn get_policies() -> Vec<Policy> {
+        vec![
+            Policy::stress_test(),
+            Policy::mutability_debug(),
+            Policy::tuple_debug(),
+            Policy::simple_debug(),
+            Policy::unary_debug(),
+            Policy::array_debug(),
+            Policy::default(),
+        ]
+    }
+
     pub fn stress_test() -> Self {
-        let policy = Policy::default();
+        let policy = Policy::default_with_name("stress_test");
         Policy {
             stmt_dist: vec![
                 (StmtKind::Local, 1.0),
@@ -55,7 +68,7 @@ impl Policy {
     }
 
     pub fn mutability_debug() -> Self {
-        let policy = Policy::default();
+        let policy = Policy::default_with_name("mutability_debug");
         Policy {
             stmt_dist: vec![
                 (StmtKind::Local, 1.0),
@@ -84,7 +97,7 @@ impl Policy {
     }
 
     pub fn tuple_debug() -> Self {
-        let policy = Policy::default();
+        let policy = Policy::default_with_name("tuple_debug");
         Policy {
             type_dist: vec![
                 (Ty::Int(IntTy::I8), 3.0),
@@ -115,7 +128,7 @@ impl Policy {
     }
 
     pub fn simple_debug() -> Self {
-        let policy = Policy::default();
+        let policy = Policy::default_with_name("simple_debug");
         Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             type_dist: vec![(Ty::Int(IntTy::I8), 1.0), (Ty::Tuple(vec![]), 1.0)],
@@ -137,7 +150,7 @@ impl Policy {
     }
 
     pub fn unary_debug() -> Self {
-        let policy = Policy::default();
+        let policy = Policy::default_with_name("unary_debug");
         Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             type_dist: vec![
@@ -163,7 +176,7 @@ impl Policy {
     }
 
     pub fn array_debug() -> Self {
-        let policy = Policy::default();
+        let policy = Policy::default_with_name("array_debug");
         Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             type_dist: vec![
@@ -190,9 +203,16 @@ impl Policy {
 }
 
 impl Default for Policy {
-    // TODO: Add assertions in policy after
     fn default() -> Self {
+        Policy::default_with_name("default")
+    }
+}
+
+impl Policy {
+    // TODO: Add assertions in policy after
+    fn default_with_name(name: &'static str) -> Self {
         Policy {
+            name,
             stmt_dist: vec![
                 (StmtKind::Local, 5.0),
                 (StmtKind::Semi, 1.0),

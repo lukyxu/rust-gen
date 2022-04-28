@@ -1,7 +1,9 @@
 use crate::ast::expr::{EvalExpr, LitExpr, LitExprTy};
+use crate::ast::function::Function;
 
 use crate::ast::ty::UIntTy;
-use crate::{ExprVisitor, Function, Visitor};
+use crate::visitor::base_visitor::Visitor;
+use crate::visitor::expr_visitor::ExprVisitor;
 
 pub struct ChecksumEvalVisitor {
     expr_visitor: ExprVisitor,

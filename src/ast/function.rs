@@ -1,6 +1,6 @@
 use crate::ast::expr::BlockExpr;
 use crate::ast::ty::Ty;
-use crate::Context;
+use crate::context::Context;
 
 #[non_exhaustive]
 // Make sure Expr is BlockExpr

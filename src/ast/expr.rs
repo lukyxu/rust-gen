@@ -1,14 +1,14 @@
 use crate::ast::expr::EvalExprError::{MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv};
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
 use crate::ast::stmt::Stmt;
-use crate::ast::ty::IntTy::{I128, I16, I32, I64, I8, ISize};
+use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 
-use crate::ast::ty::UIntTy::{U128, U16, U32, U64, U8, USize};
+use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
-use crate::Context;
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
+use crate::context::Context;
 use std::mem::swap;
 use std::{isize, u32, usize};
 
@@ -869,7 +869,9 @@ impl EvalExpr {
                     Unsuffixed => todo!(),
                 },
                 LitExpr::Bool(_) => Ty::Bool,
-                LitExpr::Str(_) | LitExpr::Byte(_) | LitExpr::Char(_) | LitExpr::Float(_, _) => todo!(),
+                LitExpr::Str(_) | LitExpr::Byte(_) | LitExpr::Char(_) | LitExpr::Float(_, _) => {
+                    todo!()
+                }
             },
             _ => todo!(),
         }

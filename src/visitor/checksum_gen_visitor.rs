@@ -2,9 +2,11 @@ use crate::ast::expr::LitExprTy::Unsigned;
 use crate::ast::expr::{
     AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, LitExpr,
 };
+use crate::ast::function::Function;
 use crate::ast::stmt::{InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
-use crate::{ExprVisitor, Function, Visitor};
+use crate::visitor::base_visitor::Visitor;
+use crate::visitor::expr_visitor::ExprVisitor;
 
 pub struct ChecksumGenVisitor {
     expr_visitor: ExprVisitor,
