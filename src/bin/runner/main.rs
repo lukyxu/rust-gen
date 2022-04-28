@@ -1,9 +1,9 @@
 use clap::Parser;
-use num_traits::AsPrimitive;
+
 use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
 use std::fs;
-use std::process::{exit, Command, Output};
+use std::process::{Command, Output};
 use std::str::FromStr;
 
 #[derive(Parser, Debug)]
