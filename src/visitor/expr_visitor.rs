@@ -279,7 +279,11 @@ impl ExprSymbolTable {
 mod tests {
     use super::*;
 
-    use crate::ast::expr::{BinaryOp, UnaryOp};
+    use crate::ast::expr::{BinaryOp, BlockExpr, LitExprTy, UnaryOp};
+    use crate::ast::function::Function;
+    use crate::ast::stmt::{LocalStmt, Stmt};
+    use crate::ast::ty::IntTy;
+    use crate::visitor::emit_visitor::EmitVisitor;
 
     #[test]
     fn unary_expr_ok_not() {
@@ -374,5 +378,58 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn assign_scope_test() {
+        let mut func = Function {
+            name: "main".to_owned(),
+            block: BlockExpr {
+                stmts: vec![
+                    Stmt::Local(LocalStmt::Init(InitLocalStmt {
+                        name: "var_0".to_owned(),
+                        ty: Ty::Int(IntTy::I8),
+                        rhs: Expr::Literal(LitExpr::Int(127, LitExprTy::Signed(IntTy::I8))),
+                        mutable: true,
+                    })),
+                    Stmt::Semi(SemiStmt {
+                        expr: Expr::Block(BlockExpr {
+                            stmts: vec![
+                                Stmt::Semi(SemiStmt {
+                                    expr: Expr::Assign(AssignExpr {
+                                        name: "var_0".to_owned(),
+                                        rhs: Box::new(Expr::Literal(LitExpr::Int(
+                                            127,
+                                            LitExprTy::Signed(IntTy::I8),
+                                        ))),
+                                    }),
+                                })
+                            ]
+                        })
+                    }),
+                    Stmt::Semi(SemiStmt {
+                        expr: Expr::Assign(AssignExpr {
+                            name: "var_0".to_owned(),
+                            rhs: Box::new(Expr::Binary(BinaryExpr {
+                                lhs: Box::new(Expr::Ident(IdentExpr {
+                                    name: "var_0".to_owned(),
+                                    ty: Ty::Int(IntTy::I8),
+                                })),
+                                rhs: Box::new(Expr::Literal(LitExpr::Int(
+                                    1,
+                                    LitExprTy::Signed(IntTy::I8),
+                                ))),
+                                op: BinaryOp::Add,
+                            })),
+                        }),
+                    }),
+                ],
+            },
+        };
+        let mut expr_visitor = ExprVisitor::new();
+        expr_visitor.visit_function(&mut func);
+        let mut emit_visitor = EmitVisitor::default();
+        emit_visitor.visit_function(&mut func);
+        println!("{}", emit_visitor.output())
     }
 }
