@@ -15,7 +15,8 @@ pub struct ExprVisitor {
     deadcode_mode: bool,
     full_symbol_table: ExprSymbolTable,
     pub local_symbol_table: ExprSymbolTable,
-    prev_local_symbol_table: Vec<ExprSymbolTable>,
+    prev_local_symbol_tables: Vec<ExprSymbolTable>,
+    prev_full_symbol_tables: Vec<ExprSymbolTable>,
     max_attempt_fix: usize,
 }
 
@@ -26,7 +27,8 @@ impl ExprVisitor {
             deadcode_mode: false,
             full_symbol_table: ExprSymbolTable::default(),
             local_symbol_table: ExprSymbolTable::default(),
-            prev_local_symbol_table: vec![],
+            prev_local_symbol_tables: vec![],
+            prev_full_symbol_tables: vec![],
             max_attempt_fix: 1,
         }
     }
@@ -57,13 +59,28 @@ impl ExprVisitor {
 
 impl Visitor for ExprVisitor {
     fn enter_scope(&mut self) {
-        self.prev_local_symbol_table
+        self.prev_local_symbol_tables
             .push(self.local_symbol_table.clone());
+        self.prev_full_symbol_tables
+            .push(self.full_symbol_table.clone());
         self.local_symbol_table = ExprSymbolTable::default();
     }
 
     fn exit_scope(&mut self) {
-        self.local_symbol_table = self.prev_local_symbol_table.pop().unwrap();
+        let mut prev_local_symbol_table = self.prev_local_symbol_tables.pop().unwrap();
+        let mut prev_full_symbol_table = self.prev_full_symbol_tables.pop().unwrap();
+        // if !self.deadcode_mode {
+        //     for (name, expr) in &self.local_symbol_table.expr_mapping {
+        //         if let Some(ty) = prev_full_symbol_table.get_ty_by_name(name) {
+        //             prev_full_symbol_table.add_expr(name, expr.clone(), ty)
+        //         }
+        //         if let Some(ty) = prev_local_symbol_table.get_ty_by_name(name) {
+        //             prev_local_symbol_table.add_expr(name, expr.clone(), ty)
+        //         }
+        //     }
+        // }
+        self.local_symbol_table = prev_local_symbol_table;
+        self.full_symbol_table = prev_full_symbol_table;
     }
 
     // TODO: Implement local decl stmt
@@ -196,6 +213,18 @@ impl Visitor for ExprVisitor {
         self.expr = Some(res_expr);
     }
 
+    fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
+        let res_expr = self.safe_expr_visit(&mut expr.rhs);
+        let _sym_table = self.symbol_table();
+        self.add_expr(
+            &expr.name,
+            &res_expr,
+            &self.full_symbol_table.get_ty_by_name(&expr.name).unwrap(),
+        );
+
+        self.expr = Some(EvalExpr::unit_expr());
+    }
+
     fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
         let mut res: Vec<EvalExpr> = vec![];
         let mut return_none = false;
@@ -213,18 +242,6 @@ impl Visitor for ExprVisitor {
             EvalExpr::Array(res)
         };
         self.expr = Some(res_expr);
-    }
-
-    fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
-        let res_expr = self.safe_expr_visit(&mut expr.rhs);
-        let _sym_table = self.symbol_table();
-        self.add_expr(
-            &expr.name,
-            &res_expr,
-            &self.full_symbol_table.get_ty_by_name(&expr.name).unwrap(),
-        );
-
-        self.expr = Some(EvalExpr::unit_expr());
     }
 }
 
@@ -379,6 +396,14 @@ mod tests {
             }
         }
     }
+
+    // fn main() {
+    //     let mut var_0 = 0_i8;
+    //     {
+    //         var_0 = 127_i8;
+    //     }
+    //     var_0 = var_0 + 1_i8;
+    // }
 
     #[test]
     fn assign_scope_test() {
