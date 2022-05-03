@@ -23,6 +23,9 @@ pub fn run_generator(seed: Option<u64>, policy: Policy) -> GeneratorOutput {
     expr_visitor.visit_function(&mut main);
     let mut checksum_gen_visitor = ChecksumGenVisitor::new();
     checksum_gen_visitor.visit_function(&mut main);
+    let mut emit_visitor = EmitVisitor::default();
+    emit_visitor.visit_function(&mut main);
+    println!("{}", emit_visitor.output());
     let mut checksum_eval_visitor = ChecksumEvalVisitor::new();
     checksum_eval_visitor.visit_function(&mut main);
     let mut emit_visitor = EmitVisitor::default();

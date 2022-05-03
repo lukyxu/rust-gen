@@ -1,13 +1,11 @@
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr,
-    TupleExpr, UnaryExpr,
-};
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::Ty;
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
+use crate::ast::function::Function;
 
 #[derive(Clone)]
 pub struct ExprVisitor {
@@ -29,7 +27,7 @@ impl ExprVisitor {
             local_symbol_table: ExprSymbolTable::default(),
             prev_local_symbol_tables: vec![],
             prev_full_symbol_tables: vec![],
-            max_attempt_fix: 1,
+            max_attempt_fix: 2,
         }
     }
 
@@ -40,10 +38,7 @@ impl ExprVisitor {
     }
 
     fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
-        if !self.deadcode_mode {
-            self.full_symbol_table
-                .add_expr(key, value.clone(), ty.clone());
-        }
+        self.full_symbol_table.add_expr(key, value.clone(), ty.clone());
         self.local_symbol_table
             .add_expr(key, value.clone(), ty.clone());
     }
@@ -54,6 +49,21 @@ impl ExprVisitor {
         } else {
             &self.full_symbol_table
         }
+    }
+
+    fn visit_block_internal(&mut self, block_expr: &mut BlockExpr) -> (ExprSymbolTable, ExprSymbolTable) {
+        self.enter_scope();
+        for stmt in &mut block_expr.stmts {
+            self.visit_stmt(stmt)
+        }
+        let res = (self.local_symbol_table.clone(), self.full_symbol_table.clone());
+        self.exit_scope();
+        res
+    }
+
+    fn update_symbol_table(&mut self, prev_local_symbol_table: &ExprSymbolTable, prev_full_symbol_table: &ExprSymbolTable) {
+        self.local_symbol_table.update_symbol_table(prev_local_symbol_table);
+        self.full_symbol_table.update_symbol_table(prev_full_symbol_table);
     }
 }
 
@@ -66,21 +76,19 @@ impl Visitor for ExprVisitor {
         self.local_symbol_table = ExprSymbolTable::default();
     }
 
+    // Block statements
+    // -> New scope
+    // -> Exit scope -> Update values
+    // If statement
+    // -> Visit condition
+    // -> New scope for true cond
+    // -> New scope for false cond
+    // -> Exit scope -> Update values with correct scope
+    // -> Unknown
+
     fn exit_scope(&mut self) {
-        let mut prev_local_symbol_table = self.prev_local_symbol_tables.pop().unwrap();
-        let mut prev_full_symbol_table = self.prev_full_symbol_tables.pop().unwrap();
-        // if !self.deadcode_mode {
-        //     for (name, expr) in &self.local_symbol_table.expr_mapping {
-        //         if let Some(ty) = prev_full_symbol_table.get_ty_by_name(name) {
-        //             prev_full_symbol_table.add_expr(name, expr.clone(), ty)
-        //         }
-        //         if let Some(ty) = prev_local_symbol_table.get_ty_by_name(name) {
-        //             prev_local_symbol_table.add_expr(name, expr.clone(), ty)
-        //         }
-        //     }
-        // }
-        self.local_symbol_table = prev_local_symbol_table;
-        self.full_symbol_table = prev_full_symbol_table;
+        self.local_symbol_table = self.prev_local_symbol_tables.pop().unwrap();
+        self.full_symbol_table = self.prev_full_symbol_tables.pop().unwrap();
     }
 
     // TODO: Implement local decl stmt
@@ -124,7 +132,7 @@ impl Visitor for ExprVisitor {
         }
         let mut rhs = self.safe_expr_visit(&mut expr.rhs);
         let mut res = expr.op.apply(&lhs, &rhs);
-        for _ in 0..=self.max_attempt_fix {
+        for _ in 0..self.max_attempt_fix {
             if let Err(err) = &res {
                 expr.fix(*err, &mut lhs, &mut rhs);
                 res = expr.op.apply(&lhs, &rhs);
@@ -152,26 +160,34 @@ impl Visitor for ExprVisitor {
             _ => panic!(),
         };
         // TODO: convert this to safe_visit_expr
-        self.visit_block_expr(&mut expr.then);
-        // true_expr and false_expr can be none
+        let (true_local_sym_t, true_full_sym_t) = self.visit_block_internal(&mut expr.then);
         let true_expr: EvalExpr = self.expr.clone().unwrap();
-        let false_expr: EvalExpr = if let Some(otherwise) = &mut expr.otherwise {
+
+        let (false_expr, false_sym_tables) = if let Some(otherwise) = &mut expr.otherwise {
             self.deadcode_mode = match &cond_expr {
                 EvalExpr::Literal(LitExpr::Bool(false)) => prev_deadcode_check_move,
                 EvalExpr::Literal(LitExpr::Bool(true)) | EvalExpr::Unknown => true,
                 _ => panic!(),
             };
-            self.visit_block_expr(otherwise);
-            self.expr.clone().unwrap()
+            let false_sym_tables = Some(self.visit_block_internal(otherwise));
+            (self.expr.clone().unwrap(), false_sym_tables)
         } else {
-            EvalExpr::unit_expr()
+            (EvalExpr::unit_expr(), None)
         };
 
         self.deadcode_mode = prev_deadcode_check_move;
 
         self.expr = Some(match &cond_expr {
-            EvalExpr::Literal(LitExpr::Bool(true)) => true_expr,
-            EvalExpr::Literal(LitExpr::Bool(false)) => false_expr,
+            EvalExpr::Literal(LitExpr::Bool(true)) => {
+                self.update_symbol_table(&true_local_sym_t, &true_full_sym_t);
+                true_expr
+            },
+            EvalExpr::Literal(LitExpr::Bool(false)) => {
+                if let Some((false_local_sym_t, false_full_sym_t)) = false_sym_tables {
+                    self.update_symbol_table(&false_local_sym_t, &false_full_sym_t);
+                }
+                false_expr
+            },
             EvalExpr::Unknown => EvalExpr::Unknown,
             _ => panic!(),
         });
@@ -185,6 +201,9 @@ impl Visitor for ExprVisitor {
             self.expr = Some(expr.clone());
             // When we are not in deadcode check mode then the result expression
             // should never evaluated to unknown value
+            if !(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown)) {
+                println!("hmm")
+            }
             assert!(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown));
         } else {
             // assert!(self.full_symbol_table.get_expr_by_name(&expr.name).is_some());
@@ -243,6 +262,11 @@ impl Visitor for ExprVisitor {
         };
         self.expr = Some(res_expr);
     }
+
+    fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
+        let (local,full) = self.visit_block_internal(expr);
+        self.update_symbol_table(&local, &full);
+    }
 }
 
 impl ExprVisitor {
@@ -289,6 +313,14 @@ impl ExprSymbolTable {
     pub fn add_expr(&mut self, key: &str, value: EvalExpr, ty: Ty) {
         self.expr_mapping.insert(key.to_owned(), value);
         self.ty_mapping.insert(key.to_owned(), ty);
+    }
+
+    pub fn update_symbol_table(&mut self, other: &ExprSymbolTable) {
+        for (name, expr) in &other.expr_mapping {
+            if let Some(ty) = self.get_ty_by_name(name) {
+                self.add_expr(name, expr.clone(), ty)
+            }
+        }
     }
 }
 
@@ -414,7 +446,7 @@ mod tests {
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
                         name: "var_0".to_owned(),
                         ty: Ty::Int(IntTy::I8),
-                        rhs: Expr::Literal(LitExpr::Int(127, LitExprTy::Signed(IntTy::I8))),
+                        rhs: Expr::i8(0),
                         mutable: true,
                     })),
                     Stmt::Semi(SemiStmt {
@@ -444,6 +476,146 @@ mod tests {
                                     1,
                                     LitExprTy::Signed(IntTy::I8),
                                 ))),
+                                op: BinaryOp::Add,
+                            })),
+                        }),
+                    }),
+                ],
+            },
+        };
+        let mut expr_visitor = ExprVisitor::new();
+        expr_visitor.visit_function(&mut func);
+        let mut emit_visitor = EmitVisitor::default();
+        emit_visitor.visit_function(&mut func);
+        println!("{}", emit_visitor.output())
+    }
+
+    // fn main() {
+    //     let mut var_0 = 0_i8;
+    //     if true {
+    //         var_0 = 127_i8;
+    //     } else {
+    //         var_0 = 0_i8;
+    //     }
+    //     var_0 = var_0 + 1_i8;
+    // }
+
+    #[test]
+    fn assign_if_true_test() {
+        let mut func = Function {
+            name: "main".to_owned(),
+            block: BlockExpr {
+                stmts: vec![
+                    Stmt::Local(LocalStmt::Init(InitLocalStmt {
+                        name: "var_0".to_owned(),
+                        ty: Ty::Int(IntTy::I8),
+                        rhs: Expr::i8(0),
+                        mutable: true,
+                    })),
+                    Stmt::Semi(SemiStmt {
+                        expr: Expr::If(IfExpr {
+                            condition: Box::new(Expr::bool(true)),
+                            then: Box::new(BlockExpr {
+                                stmts: vec![
+                                    Stmt::Semi(SemiStmt {
+                                        expr: Expr::Assign(AssignExpr {
+                                            name: "var_0".to_owned(),
+                                            rhs: Box::new(Expr::i8(127)),
+                                        }),
+                                    })
+                                ]
+                            }),
+                            otherwise: Some(Box::new(BlockExpr {
+                                stmts: vec![
+                                    Stmt::Semi(SemiStmt {
+                                        expr: Expr::Assign(AssignExpr {
+                                            name: "var_0".to_owned(),
+                                            rhs: Box::new(Expr::i8(0)),
+                                        }),
+                                    })
+                                ]
+                            }))
+                        })
+                    }),
+                    Stmt::Semi(SemiStmt {
+                        expr: Expr::Assign(AssignExpr {
+                            name: "var_0".to_owned(),
+                            rhs: Box::new(Expr::Binary(BinaryExpr {
+                                lhs: Box::new(Expr::Ident(IdentExpr {
+                                    name: "var_0".to_owned(),
+                                    ty: Ty::Int(IntTy::I8),
+                                })),
+                                rhs: Box::new(Expr::i8(1)),
+                                op: BinaryOp::Add,
+                            })),
+                        }),
+                    }),
+                ],
+            },
+        };
+        let mut expr_visitor = ExprVisitor::new();
+        expr_visitor.visit_function(&mut func);
+        let mut emit_visitor = EmitVisitor::default();
+        emit_visitor.visit_function(&mut func);
+        println!("{}", emit_visitor.output())
+    }
+
+    // fn main() {
+    //     let mut var_0 = 0_i8;
+    //     if false {
+    //         var_0 = 127_i8;
+    //     } else {
+    //         var_0 = 0_i8;
+    //     }
+    //     var_0 = var_0 + 1_i8;
+    // }
+
+    #[test]
+    fn assign_if_false_test() {
+        let mut func = Function {
+            name: "main".to_owned(),
+            block: BlockExpr {
+                stmts: vec![
+                    Stmt::Local(LocalStmt::Init(InitLocalStmt {
+                        name: "var_0".to_owned(),
+                        ty: Ty::Int(IntTy::I8),
+                        rhs: Expr::i8(0),
+                        mutable: true,
+                    })),
+                    Stmt::Semi(SemiStmt {
+                        expr: Expr::If(IfExpr {
+                            condition: Box::new(Expr::bool(false)),
+                            then: Box::new(BlockExpr {
+                                stmts: vec![
+                                    Stmt::Semi(SemiStmt {
+                                        expr: Expr::Assign(AssignExpr {
+                                            name: "var_0".to_owned(),
+                                            rhs: Box::new(Expr::i8(127)),
+                                        }),
+                                    })
+                                ]
+                            }),
+                            otherwise: Some(Box::new(BlockExpr {
+                                stmts: vec![
+                                    Stmt::Semi(SemiStmt {
+                                        expr: Expr::Assign(AssignExpr {
+                                            name: "var_0".to_owned(),
+                                            rhs: Box::new(Expr::i8(0)),
+                                        }),
+                                    })
+                                ]
+                            }))
+                        })
+                    }),
+                    Stmt::Semi(SemiStmt {
+                        expr: Expr::Assign(AssignExpr {
+                            name: "var_0".to_owned(),
+                            rhs: Box::new(Expr::Binary(BinaryExpr {
+                                lhs: Box::new(Expr::Ident(IdentExpr {
+                                    name: "var_0".to_owned(),
+                                    ty: Ty::Int(IntTy::I8),
+                                })),
+                                rhs: Box::new(Expr::i8(1)),
                                 op: BinaryOp::Add,
                             })),
                         }),
