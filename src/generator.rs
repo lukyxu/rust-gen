@@ -29,7 +29,7 @@ pub fn run_generator(seed: Option<u64>, policy: Policy) -> GeneratorOutput {
     emit_visitor.visit_function(&mut main);
     GeneratorOutput {
         program: emit_visitor.output(),
-        expected_checksum: 0,
+        expected_checksum: checksum_eval_visitor.res.unwrap(),
     }
 }
 
