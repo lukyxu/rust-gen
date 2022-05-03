@@ -38,7 +38,7 @@ impl ExprVisitor {
     }
 
     fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
-        if self.deadcode_mode {
+        if !self.deadcode_mode {
             self.full_symbol_table.add_expr(key, value.clone(), ty.clone());
         }
         self.local_symbol_table

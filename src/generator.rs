@@ -28,7 +28,7 @@ pub fn run_generator(seed: Option<u64>, policy: Policy) -> GeneratorOutput {
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_function(&mut main);
     GeneratorOutput {
-        program: String::new(),
+        program: emit_visitor.output(),
         expected_checksum: 0,
     }
 }
