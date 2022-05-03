@@ -8,6 +8,7 @@ use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
 use std::str::FromStr;
+use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -107,6 +108,12 @@ pub fn main() {
     let num_rums = args.num_runs.unwrap_or(u64::MAX);
     let output_path = args.output_path;
     let base_name = "prog";
+    let progress_bar = ProgressBar::new(num_rums);
+    progress_bar.set_style(ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:50.cyan/blue}] Program {pos:>5}/{len:5} (ETA {eta})")
+        .progress_chars("#>-"));
+
+
     if Path::exists(Path::new(&output_path)) {
         fs::remove_dir_all(&output_path).expect("Unable to remove directory");
     }
@@ -181,6 +188,7 @@ pub fn main() {
                 }
             }
         }
+        progress_bar.inc(1);
     }
 }
 
