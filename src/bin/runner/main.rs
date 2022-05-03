@@ -18,11 +18,14 @@ struct Args {
 
 pub fn main() {
     let args: Args = Args::parse();
-    let policy = Policy::stress_test();
+    let policy = Policy::simple_debug();
     let num_rums = args.num_runs.unwrap_or(u64::MAX);
     let base_name = "prog";
 
     for i in 0..num_rums {
+        if i % 50 == 0 {
+            println!("{i}");
+        }
         let mut fail = false;
         // Generate program
         let GeneratorOutput {
@@ -55,19 +58,21 @@ pub fn main() {
 
             output.push(checksum)
         }
-
+        // let expected_checksum = output[0];
         // Compare outputs
         if !fail {
             fail = !output.iter().all(|output| *output == expected_checksum);
         }
 
+        // println!("{:?}", output);
+        // println!("{}", expected_checksum);
         if fail {
             // Store programs on failure
-            println!("Failed seed {}", i)
+            println!("Failed seed {}", i);
         } else {
             // Delete programs on pass
             fs::remove_file(&rs_file).expect("Unable to remove file");
-            println!("Passed seed {}", i)
+            // println!("Passed seed {}", i);
         }
     }
 }
