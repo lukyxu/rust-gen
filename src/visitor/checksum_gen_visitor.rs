@@ -78,10 +78,4 @@ impl Visitor for ChecksumGenVisitor {
         self.visit_stmt((&mut expr.stmts).last_mut().unwrap());
         self.expr_visitor.exit_scope();
     }
-
-    // fn visit_if_expr(&mut self, expr: &mut IfExpr) {
-    //     let true_expr_visitor = self.expr_visitor.clone();
-    //     let false_expr_visitor = self.expr_visitor.clone();
-    //
-    // }
 }

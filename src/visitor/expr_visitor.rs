@@ -38,7 +38,9 @@ impl ExprVisitor {
     }
 
     fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
-        self.full_symbol_table.add_expr(key, value.clone(), ty.clone());
+        if self.deadcode_mode {
+            self.full_symbol_table.add_expr(key, value.clone(), ty.clone());
+        }
         self.local_symbol_table
             .add_expr(key, value.clone(), ty.clone());
     }
@@ -75,16 +77,6 @@ impl Visitor for ExprVisitor {
             .push(self.full_symbol_table.clone());
         self.local_symbol_table = ExprSymbolTable::default();
     }
-
-    // Block statements
-    // -> New scope
-    // -> Exit scope -> Update values
-    // If statement
-    // -> Visit condition
-    // -> New scope for true cond
-    // -> New scope for false cond
-    // -> Exit scope -> Update values with correct scope
-    // -> Unknown
 
     fn exit_scope(&mut self) {
         self.local_symbol_table = self.prev_local_symbol_tables.pop().unwrap();
@@ -193,6 +185,11 @@ impl Visitor for ExprVisitor {
         });
     }
 
+    fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
+        let (local,full) = self.visit_block_internal(expr);
+        self.update_symbol_table(&local, &full);
+    }
+
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
     //     walk_block_expr(self, expr)
     // }
@@ -201,9 +198,6 @@ impl Visitor for ExprVisitor {
             self.expr = Some(expr.clone());
             // When we are not in deadcode check mode then the result expression
             // should never evaluated to unknown value
-            if !(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown)) {
-                println!("hmm")
-            }
             assert!(self.deadcode_mode || !matches!(expr, EvalExpr::Unknown));
         } else {
             // assert!(self.full_symbol_table.get_expr_by_name(&expr.name).is_some());
@@ -261,11 +255,6 @@ impl Visitor for ExprVisitor {
             EvalExpr::Array(res)
         };
         self.expr = Some(res_expr);
-    }
-
-    fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        let (local,full) = self.visit_block_internal(expr);
-        self.update_symbol_table(&local, &full);
     }
 }
 
