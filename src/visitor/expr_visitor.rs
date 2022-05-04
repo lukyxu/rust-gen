@@ -1,11 +1,14 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, LitExpr, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr,
+    IfExpr, LitExpr, TupleExpr, UnaryExpr, UnaryOp,
+};
+use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::Ty;
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
-use crate::ast::function::Function;
 
 #[derive(Clone)]
 pub struct ExprVisitor {
@@ -39,7 +42,8 @@ impl ExprVisitor {
 
     fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
         if !self.deadcode_mode {
-            self.full_symbol_table.add_expr(key, value.clone(), ty.clone());
+            self.full_symbol_table
+                .add_expr(key, value.clone(), ty.clone());
         }
         self.local_symbol_table
             .add_expr(key, value.clone(), ty.clone());
@@ -53,19 +57,31 @@ impl ExprVisitor {
         }
     }
 
-    fn visit_block_internal(&mut self, block_expr: &mut BlockExpr) -> (ExprSymbolTable, ExprSymbolTable) {
+    fn visit_block_internal(
+        &mut self,
+        block_expr: &mut BlockExpr,
+    ) -> (ExprSymbolTable, ExprSymbolTable) {
         self.enter_scope();
         for stmt in &mut block_expr.stmts {
             self.visit_stmt(stmt)
         }
-        let res = (self.local_symbol_table.clone(), self.full_symbol_table.clone());
+        let res = (
+            self.local_symbol_table.clone(),
+            self.full_symbol_table.clone(),
+        );
         self.exit_scope();
         res
     }
 
-    fn update_symbol_table(&mut self, prev_local_symbol_table: &ExprSymbolTable, prev_full_symbol_table: &ExprSymbolTable) {
-        self.local_symbol_table.update_symbol_table(prev_local_symbol_table);
-        self.full_symbol_table.update_symbol_table(prev_full_symbol_table);
+    fn update_symbol_table(
+        &mut self,
+        prev_local_symbol_table: &ExprSymbolTable,
+        prev_full_symbol_table: &ExprSymbolTable,
+    ) {
+        self.local_symbol_table
+            .update_symbol_table(prev_local_symbol_table);
+        self.full_symbol_table
+            .update_symbol_table(prev_full_symbol_table);
     }
 }
 
@@ -173,20 +189,20 @@ impl Visitor for ExprVisitor {
             EvalExpr::Literal(LitExpr::Bool(true)) => {
                 self.update_symbol_table(&true_local_sym_t, &true_full_sym_t);
                 true_expr
-            },
+            }
             EvalExpr::Literal(LitExpr::Bool(false)) => {
                 if let Some((false_local_sym_t, false_full_sym_t)) = false_sym_tables {
                     self.update_symbol_table(&false_local_sym_t, &false_full_sym_t);
                 }
                 false_expr
-            },
+            }
             EvalExpr::Unknown => EvalExpr::Unknown,
             _ => panic!(),
         });
     }
 
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        let (local,full) = self.visit_block_internal(expr);
+        let (local, full) = self.visit_block_internal(expr);
         self.update_symbol_table(&local, &full);
     }
 
@@ -440,18 +456,16 @@ mod tests {
                     })),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Block(BlockExpr {
-                            stmts: vec![
-                                Stmt::Semi(SemiStmt {
-                                    expr: Expr::Assign(AssignExpr {
-                                        name: "var_0".to_owned(),
-                                        rhs: Box::new(Expr::Literal(LitExpr::Int(
-                                            127,
-                                            LitExprTy::Signed(IntTy::I8),
-                                        ))),
-                                    }),
-                                })
-                            ]
-                        })
+                            stmts: vec![Stmt::Semi(SemiStmt {
+                                expr: Expr::Assign(AssignExpr {
+                                    name: "var_0".to_owned(),
+                                    rhs: Box::new(Expr::Literal(LitExpr::Int(
+                                        127,
+                                        LitExprTy::Signed(IntTy::I8),
+                                    ))),
+                                }),
+                            })],
+                        }),
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
@@ -505,26 +519,22 @@ mod tests {
                         expr: Expr::If(IfExpr {
                             condition: Box::new(Expr::bool(true)),
                             then: Box::new(BlockExpr {
-                                stmts: vec![
-                                    Stmt::Semi(SemiStmt {
-                                        expr: Expr::Assign(AssignExpr {
-                                            name: "var_0".to_owned(),
-                                            rhs: Box::new(Expr::i8(127)),
-                                        }),
-                                    })
-                                ]
+                                stmts: vec![Stmt::Semi(SemiStmt {
+                                    expr: Expr::Assign(AssignExpr {
+                                        name: "var_0".to_owned(),
+                                        rhs: Box::new(Expr::i8(127)),
+                                    }),
+                                })],
                             }),
                             otherwise: Some(Box::new(BlockExpr {
-                                stmts: vec![
-                                    Stmt::Semi(SemiStmt {
-                                        expr: Expr::Assign(AssignExpr {
-                                            name: "var_0".to_owned(),
-                                            rhs: Box::new(Expr::i8(0)),
-                                        }),
-                                    })
-                                ]
-                            }))
-                        })
+                                stmts: vec![Stmt::Semi(SemiStmt {
+                                    expr: Expr::Assign(AssignExpr {
+                                        name: "var_0".to_owned(),
+                                        rhs: Box::new(Expr::i8(0)),
+                                    }),
+                                })],
+                            })),
+                        }),
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
@@ -575,26 +585,22 @@ mod tests {
                         expr: Expr::If(IfExpr {
                             condition: Box::new(Expr::bool(false)),
                             then: Box::new(BlockExpr {
-                                stmts: vec![
-                                    Stmt::Semi(SemiStmt {
-                                        expr: Expr::Assign(AssignExpr {
-                                            name: "var_0".to_owned(),
-                                            rhs: Box::new(Expr::i8(127)),
-                                        }),
-                                    })
-                                ]
+                                stmts: vec![Stmt::Semi(SemiStmt {
+                                    expr: Expr::Assign(AssignExpr {
+                                        name: "var_0".to_owned(),
+                                        rhs: Box::new(Expr::i8(127)),
+                                    }),
+                                })],
                             }),
                             otherwise: Some(Box::new(BlockExpr {
-                                stmts: vec![
-                                    Stmt::Semi(SemiStmt {
-                                        expr: Expr::Assign(AssignExpr {
-                                            name: "var_0".to_owned(),
-                                            rhs: Box::new(Expr::i8(0)),
-                                        }),
-                                    })
-                                ]
-                            }))
-                        })
+                                stmts: vec![Stmt::Semi(SemiStmt {
+                                    expr: Expr::Assign(AssignExpr {
+                                        name: "var_0".to_owned(),
+                                        rhs: Box::new(Expr::i8(0)),
+                                    }),
+                                })],
+                            })),
+                        }),
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
