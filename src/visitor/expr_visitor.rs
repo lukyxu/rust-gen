@@ -9,14 +9,13 @@ use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
+use crate::symbol_table::expr::ExprSymbolTable;
 
 #[derive(Clone)]
 pub struct ExprVisitor {
     expr: Option<EvalExpr>,
     deadcode_mode: bool,
-    pub full_symbol_table: ExprSymbolTable,
-    pub local_symbol_table: ExprSymbolTable,
-    prev_local_symbol_tables: Vec<ExprSymbolTable>,
+    pub symbol_table: ExprSymbolTable,
     prev_full_symbol_tables: Vec<ExprSymbolTable>,
     max_attempt_fix: usize,
 }
@@ -26,9 +25,7 @@ impl ExprVisitor {
         ExprVisitor {
             expr: None,
             deadcode_mode: false,
-            full_symbol_table: ExprSymbolTable::default(),
-            local_symbol_table: ExprSymbolTable::default(),
-            prev_local_symbol_tables: vec![],
+            symbol_table: ExprSymbolTable::default(),
             prev_full_symbol_tables: vec![],
             max_attempt_fix: 2,
         }
@@ -41,62 +38,43 @@ impl ExprVisitor {
     }
 
     fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
-        if !self.deadcode_mode {
-            self.full_symbol_table
-                .add_expr(key, value.clone(), ty.clone());
-        }
-        self.local_symbol_table
-            .add_expr(key, value.clone(), ty.clone());
+        self.symbol_table.add_expr(key, value.clone(), ty.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
-        if self.deadcode_mode {
-            &self.local_symbol_table
-        } else {
-            &self.full_symbol_table
-        }
+        &self.symbol_table
     }
 
     fn visit_block_internal(
         &mut self,
         block_expr: &mut BlockExpr,
-    ) -> (ExprSymbolTable, ExprSymbolTable) {
+    ) -> ExprSymbolTable {
         self.enter_scope();
         for stmt in &mut block_expr.stmts {
             self.visit_stmt(stmt)
         }
-        let res = (
-            self.local_symbol_table.clone(),
-            self.full_symbol_table.clone(),
-        );
+        let res = self.symbol_table.clone();
         self.exit_scope();
         res
     }
 
     fn update_symbol_table(
         &mut self,
-        prev_local_symbol_table: &ExprSymbolTable,
-        prev_full_symbol_table: &ExprSymbolTable,
+        new_symbol_table: &ExprSymbolTable,
     ) {
-        self.local_symbol_table
-            .update_symbol_table(prev_local_symbol_table);
-        self.full_symbol_table
-            .update_symbol_table(prev_full_symbol_table);
+        self.symbol_table
+            .update_symbol_table(new_symbol_table);
     }
 }
 
 impl Visitor for ExprVisitor {
     fn enter_scope(&mut self) {
-        self.prev_local_symbol_tables
-            .push(self.local_symbol_table.clone());
         self.prev_full_symbol_tables
-            .push(self.full_symbol_table.clone());
-        self.local_symbol_table = ExprSymbolTable::default();
+            .push(self.symbol_table.clone());
     }
 
     fn exit_scope(&mut self) {
-        self.local_symbol_table = self.prev_local_symbol_tables.pop().unwrap();
-        self.full_symbol_table = self.prev_full_symbol_tables.pop().unwrap();
+        self.symbol_table = self.prev_full_symbol_tables.pop().unwrap();
     }
 
     // TODO: Implement local decl stmt
@@ -168,17 +146,17 @@ impl Visitor for ExprVisitor {
             _ => panic!(),
         };
         // TODO: convert this to safe_visit_expr
-        let (true_local_sym_t, true_full_sym_t) = self.visit_block_internal(&mut expr.then);
+        let true_sym_table = self.visit_block_internal(&mut expr.then);
         let true_expr: EvalExpr = self.expr.clone().unwrap();
 
-        let (false_expr, false_sym_tables) = if let Some(otherwise) = &mut expr.otherwise {
+        let (false_expr, false_sym_table) = if let Some(otherwise) = &mut expr.otherwise {
             self.deadcode_mode = match &cond_expr {
                 EvalExpr::Literal(LitExpr::Bool(false)) => prev_deadcode_check_move,
                 EvalExpr::Literal(LitExpr::Bool(true)) | EvalExpr::Unknown => true,
                 _ => panic!(),
             };
-            let false_sym_tables = Some(self.visit_block_internal(otherwise));
-            (self.expr.clone().unwrap(), false_sym_tables)
+            let false_sym_table = Some(self.visit_block_internal(otherwise));
+            (self.expr.clone().unwrap(), false_sym_table)
         } else {
             (EvalExpr::unit_expr(), None)
         };
@@ -187,12 +165,12 @@ impl Visitor for ExprVisitor {
 
         self.expr = Some(match &cond_expr {
             EvalExpr::Literal(LitExpr::Bool(true)) => {
-                self.update_symbol_table(&true_local_sym_t, &true_full_sym_t);
+                self.update_symbol_table(&true_sym_table);
                 true_expr
             }
             EvalExpr::Literal(LitExpr::Bool(false)) => {
-                if let Some((false_local_sym_t, false_full_sym_t)) = false_sym_tables {
-                    self.update_symbol_table(&false_local_sym_t, &false_full_sym_t);
+                if let Some(false_sym_table) = false_sym_table {
+                    self.update_symbol_table(&false_sym_table);
                 }
                 false_expr
             }
@@ -202,8 +180,8 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        let (local, full) = self.visit_block_internal(expr);
-        self.update_symbol_table(&local, &full);
+        let scoped_symbol_table = self.visit_block_internal(expr);
+        self.update_symbol_table(&scoped_symbol_table);
     }
 
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
@@ -282,44 +260,6 @@ impl ExprVisitor {
             self.expr = Some(res.unwrap());
         } else {
             panic!();
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct ExprSymbolTable {
-    expr_mapping: HashMap<String, EvalExpr>,
-    ty_mapping: HashMap<String, Ty>,
-}
-
-impl<'a> IntoIterator for &'a ExprSymbolTable {
-    type Item = (&'a String, &'a Ty);
-    type IntoIter = Iter<'a, String, Ty>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        (&self.ty_mapping).iter()
-    }
-}
-
-impl ExprSymbolTable {
-    pub fn get_expr_by_name(&self, name: &str) -> Option<EvalExpr> {
-        Some(self.expr_mapping.get(name)?.clone())
-    }
-
-    pub fn get_ty_by_name(&self, name: &str) -> Option<Ty> {
-        Some(self.ty_mapping.get(name)?.clone())
-    }
-
-    pub fn add_expr(&mut self, key: &str, value: EvalExpr, ty: Ty) {
-        self.expr_mapping.insert(key.to_owned(), value);
-        self.ty_mapping.insert(key.to_owned(), ty);
-    }
-
-    pub fn update_symbol_table(&mut self, other: &ExprSymbolTable) {
-        for (name, expr) in &other.expr_mapping {
-            if let Some(ty) = self.get_ty_by_name(name) {
-                self.add_expr(name, expr.clone(), ty)
-            }
         }
     }
 }

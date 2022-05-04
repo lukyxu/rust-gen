@@ -48,38 +48,38 @@ impl Visitor for ChecksumGenVisitor {
             self.expr_visitor.visit_stmt(stmt);
             self.visit_stmt(stmt);
         }
-        for (name, ty) in &self.expr_visitor.local_symbol_table {
-            if name == self.checksum_name {
-                continue;
-            }
-            let cast_expr = match ty {
-                Ty::Int(_) | Ty::UInt(_) => Expr::Cast(CastExpr {
-                    expr: {
-                        Box::new(Expr::Ident(IdentExpr {
-                            name: name.clone(),
-                            ty: ty.clone(),
-                        }))
-                    },
-                    ty: Ty::UInt(UIntTy::U128),
-                }),
-                // TODO: Hash other types too
-                _ => continue,
-            };
-            let stmt = Stmt::Semi(SemiStmt {
-                expr: Expr::Assign(AssignExpr {
-                    name: self.checksum_name.to_owned(),
-                    rhs: Box::new(Expr::Binary(BinaryExpr {
-                        lhs: Box::new(Expr::Ident(IdentExpr {
-                            name: self.checksum_name.to_owned(),
-                            ty: Ty::UInt(UIntTy::U128),
-                        })),
-                        rhs: Box::new(cast_expr),
-                        op: BinaryOp::Add,
-                    })),
-                }),
-            });
-            expr.stmts.insert(expr.stmts.len() - 1, stmt);
-        }
+        // for (name, ty) in &self.expr_visitor.local_symbol_table {
+        //     if name == self.checksum_name {
+        //         continue;
+        //     }
+        //     let cast_expr = match ty {
+        //         Ty::Int(_) | Ty::UInt(_) => Expr::Cast(CastExpr {
+        //             expr: {
+        //                 Box::new(Expr::Ident(IdentExpr {
+        //                     name: name.clone(),
+        //                     ty: ty.clone(),
+        //                 }))
+        //             },
+        //             ty: Ty::UInt(UIntTy::U128),
+        //         }),
+        //         // TODO: Hash other types too
+        //         _ => continue,
+        //     };
+        //     let stmt = Stmt::Semi(SemiStmt {
+        //         expr: Expr::Assign(AssignExpr {
+        //             name: self.checksum_name.to_owned(),
+        //             rhs: Box::new(Expr::Binary(BinaryExpr {
+        //                 lhs: Box::new(Expr::Ident(IdentExpr {
+        //                     name: self.checksum_name.to_owned(),
+        //                     ty: Ty::UInt(UIntTy::U128),
+        //                 })),
+        //                 rhs: Box::new(cast_expr),
+        //                 op: BinaryOp::Add,
+        //             })),
+        //         }),
+        //     });
+        //     expr.stmts.insert(expr.stmts.len() - 1, stmt);
+        // }
         self.visit_stmt((&mut expr.stmts).last_mut().unwrap());
         self.expr_visitor.exit_scope();
     }
