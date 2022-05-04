@@ -2,9 +2,9 @@ use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::Ty;
 use crate::policy::Policy;
-use rand::prelude::{Distribution, SliceRandom, StdRng};
-use rand::{Rng, SeedableRng, thread_rng};
 use crate::symbol_table::ty::TypeSymbolTable;
+use rand::prelude::{Distribution, SliceRandom, StdRng};
+use rand::{thread_rng, Rng, SeedableRng};
 
 pub struct Context {
     pub policy: Policy,

@@ -5,11 +5,11 @@ use crate::ast::expr::{
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::Ty;
+use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
 use std::collections::hash_map::Iter;
 use std::collections::HashMap;
-use crate::symbol_table::expr::ExprSymbolTable;
 
 #[derive(Clone)]
 pub struct ExprVisitor {
@@ -45,10 +45,7 @@ impl ExprVisitor {
         &self.symbol_table
     }
 
-    fn visit_block_internal(
-        &mut self,
-        block_expr: &mut BlockExpr,
-    ) -> ExprSymbolTable {
+    fn visit_block_internal(&mut self, block_expr: &mut BlockExpr) -> ExprSymbolTable {
         self.enter_scope();
         for stmt in &mut block_expr.stmts {
             self.visit_stmt(stmt)
@@ -58,19 +55,14 @@ impl ExprVisitor {
         res
     }
 
-    fn update_symbol_table(
-        &mut self,
-        new_symbol_table: &ExprSymbolTable,
-    ) {
-        self.symbol_table
-            .update_symbol_table(new_symbol_table);
+    fn update_symbol_table(&mut self, new_symbol_table: &ExprSymbolTable) {
+        self.symbol_table.update_symbol_table(new_symbol_table);
     }
 }
 
 impl Visitor for ExprVisitor {
     fn enter_scope(&mut self) {
-        self.prev_full_symbol_tables
-            .push(self.symbol_table.clone());
+        self.prev_full_symbol_tables.push(self.symbol_table.clone());
     }
 
     fn exit_scope(&mut self) {
@@ -222,7 +214,11 @@ impl Visitor for ExprVisitor {
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
-        self.add_expr(&expr.name, &res_expr, &self.symbol_table().get_ty_by_name(&expr.name).unwrap());
+        self.add_expr(
+            &expr.name,
+            &res_expr,
+            &self.symbol_table().get_ty_by_name(&expr.name).unwrap(),
+        );
 
         self.expr = Some(EvalExpr::unit_expr());
     }

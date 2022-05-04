@@ -8,24 +8,36 @@ use crate::ast::stmt::{
     CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
 };
 use crate::ast::ty::{Ty, UIntTy};
+use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
-use crate::visitor::expr_visitor::ExprVisitor;
 
 pub struct ChecksumGenVisitor {
-    expr_visitor: ExprVisitor,
+    local_type_symbol_table: TypeSymbolTable,
+    prev_local_type_symbol_tables: Vec<TypeSymbolTable>,
     checksum_name: &'static str,
 }
 
 impl ChecksumGenVisitor {
     pub fn new() -> ChecksumGenVisitor {
         ChecksumGenVisitor {
-            expr_visitor: ExprVisitor::new(),
+            local_type_symbol_table: TypeSymbolTable::default(),
+            prev_local_type_symbol_tables: vec![],
             checksum_name: "checksum",
         }
     }
 }
 
 impl Visitor for ChecksumGenVisitor {
+    fn enter_scope(&mut self) {
+        self.prev_local_type_symbol_tables
+            .push(self.local_type_symbol_table.clone());
+        self.local_type_symbol_table = TypeSymbolTable::default();
+    }
+
+    fn exit_scope(&mut self) {
+        self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap()
+    }
+
     fn visit_function(&mut self, function: &mut Function) {
         function.block.stmts.insert(
             0,
@@ -42,45 +54,51 @@ impl Visitor for ChecksumGenVisitor {
         self.visit_block_expr(&mut function.block);
     }
 
+    fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
+        self.local_type_symbol_table
+            .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
+        self.visit_expr(&mut stmt.rhs);
+    }
+
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        self.expr_visitor.enter_scope();
+        self.enter_scope();
         for stmt in (&mut expr.stmts).split_last_mut().unwrap().1 {
-            self.expr_visitor.visit_stmt(stmt);
             self.visit_stmt(stmt);
         }
-        // for (name, ty) in &self.expr_visitor.local_symbol_table {
-        //     if name == self.checksum_name {
-        //         continue;
-        //     }
-        //     let cast_expr = match ty {
-        //         Ty::Int(_) | Ty::UInt(_) => Expr::Cast(CastExpr {
-        //             expr: {
-        //                 Box::new(Expr::Ident(IdentExpr {
-        //                     name: name.clone(),
-        //                     ty: ty.clone(),
-        //                 }))
-        //             },
-        //             ty: Ty::UInt(UIntTy::U128),
-        //         }),
-        //         // TODO: Hash other types too
-        //         _ => continue,
-        //     };
-        //     let stmt = Stmt::Semi(SemiStmt {
-        //         expr: Expr::Assign(AssignExpr {
-        //             name: self.checksum_name.to_owned(),
-        //             rhs: Box::new(Expr::Binary(BinaryExpr {
-        //                 lhs: Box::new(Expr::Ident(IdentExpr {
-        //                     name: self.checksum_name.to_owned(),
-        //                     ty: Ty::UInt(UIntTy::U128),
-        //                 })),
-        //                 rhs: Box::new(cast_expr),
-        //                 op: BinaryOp::Add,
-        //             })),
-        //         }),
-        //     });
-        //     expr.stmts.insert(expr.stmts.len() - 1, stmt);
-        // }
+        for (name, ty_mapping) in &self.local_type_symbol_table {
+            if name == self.checksum_name {
+                continue;
+            }
+            let ty = ty_mapping.ty.clone();
+            let cast_expr = match ty {
+                Ty::Int(_) | Ty::UInt(_) => Expr::Cast(CastExpr {
+                    expr: {
+                        Box::new(Expr::Ident(IdentExpr {
+                            name: name.clone(),
+                            ty,
+                        }))
+                    },
+                    ty: Ty::UInt(UIntTy::U128),
+                }),
+                // TODO: Hash other types too
+                _ => continue,
+            };
+            let stmt = Stmt::Semi(SemiStmt {
+                expr: Expr::Assign(AssignExpr {
+                    name: self.checksum_name.to_owned(),
+                    rhs: Box::new(Expr::Binary(BinaryExpr {
+                        lhs: Box::new(Expr::Ident(IdentExpr {
+                            name: self.checksum_name.to_owned(),
+                            ty: Ty::UInt(UIntTy::U128),
+                        })),
+                        rhs: Box::new(cast_expr),
+                        op: BinaryOp::Add,
+                    })),
+                }),
+            });
+            expr.stmts.insert(expr.stmts.len() - 1, stmt);
+        }
         self.visit_stmt((&mut expr.stmts).last_mut().unwrap());
-        self.expr_visitor.exit_scope();
+        self.exit_scope();
     }
 }

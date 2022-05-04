@@ -18,7 +18,7 @@ pub fn run_generator(seed: Option<u64>, policy: Policy) -> GeneratorOutput {
     let mut ctx = Context::with_policy(seed, policy);
     let mut main = Function::create_main_fn(&mut ctx);
     // Make program compilable
-    _print_program(&mut main);
+    // _print_program(&mut main);
     let mut expr_visitor = ExprVisitor::new();
     // Fix runtime errors
     expr_visitor.visit_function(&mut main);
