@@ -104,7 +104,7 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str) -> RunOutput {
 
 pub fn main() {
     let args: Args = Args::parse();
-    let policy = Policy::simple_debug();
+    let policy = Policy::simple_debug_with_assignments();
     let num_rums = args.num_runs.unwrap_or(u64::MAX);
     let output_path = args.output_path;
     let base_name = "prog";

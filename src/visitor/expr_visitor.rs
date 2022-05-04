@@ -14,7 +14,7 @@ use std::collections::HashMap;
 pub struct ExprVisitor {
     expr: Option<EvalExpr>,
     deadcode_mode: bool,
-    full_symbol_table: ExprSymbolTable,
+    pub full_symbol_table: ExprSymbolTable,
     pub local_symbol_table: ExprSymbolTable,
     prev_local_symbol_tables: Vec<ExprSymbolTable>,
     prev_full_symbol_tables: Vec<ExprSymbolTable>,
@@ -244,12 +244,7 @@ impl Visitor for ExprVisitor {
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
-        let _sym_table = self.symbol_table();
-        self.add_expr(
-            &expr.name,
-            &res_expr,
-            &self.full_symbol_table.get_ty_by_name(&expr.name).unwrap(),
-        );
+        self.add_expr(&expr.name, &res_expr, &self.symbol_table().get_ty_by_name(&expr.name).unwrap());
 
         self.expr = Some(EvalExpr::unit_expr());
     }
@@ -624,4 +619,14 @@ mod tests {
         emit_visitor.visit_function(&mut func);
         println!("{}", emit_visitor.output())
     }
+
+    // fn main() {
+    //     let mut var_0 = 0_i8;
+    //     if false {
+    //         var_0 = 127_i8;
+    //     } else {
+    //         var_0 = 0_i8;
+    //     }
+    //     var_0 = var_0 + 1_i8;
+    // }
 }
