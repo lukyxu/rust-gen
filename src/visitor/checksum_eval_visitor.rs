@@ -28,11 +28,14 @@ impl Visitor for ChecksumEvalVisitor {
         }
         self.res = self
             .expr_visitor
-            .local_symbol_table
+            .symbol_table
             .get_expr_by_name(self.checksum_name)
             .map(|eval_expr| match eval_expr {
                 EvalExpr::Literal(LitExpr::Int(u128, LitExprTy::Unsigned(UIntTy::U128))) => u128,
-                _ => panic!(),
+                _ => {
+                    dbg!(eval_expr);
+                    panic!()
+                }
             });
     }
 }

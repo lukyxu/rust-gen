@@ -2,9 +2,9 @@ use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::Ty;
 use crate::policy::Policy;
+use crate::symbol_table::ty::TypeSymbolTable;
 use rand::prelude::{Distribution, SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
-use std::collections::HashMap;
 
 pub struct Context {
     pub policy: Policy,
@@ -106,61 +106,6 @@ impl NameHandler {
         let res = format!("var_{}", self.var_counter);
         self.var_counter += 1;
         res
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TypeMapping {
-    ty: Ty,
-    mutable: bool,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct TypeSymbolTable {
-    var_type_mapping: HashMap<String, TypeMapping>,
-}
-
-// TODO: Change this to a bidirectional map
-impl TypeSymbolTable {
-    pub fn add_var(&mut self, key: String, ty: Ty, mutable: bool) {
-        self.var_type_mapping
-            .insert(key, TypeMapping { ty, mutable });
-    }
-
-    #[allow(dead_code)]
-    pub fn contains(&self, key: &String) -> bool {
-        self.var_type_mapping.contains_key(key)
-    }
-
-    #[allow(dead_code)]
-    pub fn get_ident_expr_by_name(&self, key: &String) -> Option<IdentExpr> {
-        self.var_type_mapping.get(key).map(|ty_mapping| IdentExpr {
-            name: key.clone(),
-            ty: ty_mapping.ty.clone(),
-        })
-    }
-
-    // TODO: refactor
-    pub fn get_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
-        self.var_type_mapping
-            .iter()
-            .filter(|&(_k, v)| v.ty == *ty)
-            .map(|(name, ty_mapping)| IdentExpr {
-                name: name.clone(),
-                ty: ty_mapping.ty.clone(),
-            })
-            .collect()
-    }
-
-    pub fn get_mut_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
-        self.var_type_mapping
-            .iter()
-            .filter(|&(_k, v)| v.mutable && v.ty == *ty)
-            .map(|(name, ty_mapping)| IdentExpr {
-                name: name.clone(),
-                ty: ty_mapping.ty.clone(),
-            })
-            .collect()
     }
 }
 

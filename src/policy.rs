@@ -33,6 +33,7 @@ impl Policy {
             Policy::mutability_debug(),
             Policy::tuple_debug(),
             Policy::simple_debug(),
+            Policy::simple_debug_with_assignments(),
             Policy::unary_debug(),
             Policy::array_debug(),
             Policy::default(),
@@ -156,6 +157,17 @@ impl Policy {
             num_stmt_dist: Uniform::new_inclusive(2, 3),
             ..policy
         }
+    }
+
+    pub fn simple_debug_with_assignments() -> Self {
+        let mut policy = Policy::simple_debug();
+        policy.name = "simple_debug_with_assignments";
+        policy.expr_dist.push((ExprKind::Assign, 4.0));
+        policy.mutability_prob = 1.0;
+        policy.max_if_else_depth = 3;
+        policy.max_arith_depth = 3;
+        policy.num_stmt_dist = Uniform::new_inclusive(2, 5);
+        policy
     }
 
     pub fn unary_debug() -> Self {

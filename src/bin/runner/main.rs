@@ -1,14 +1,14 @@
 use clap::Parser;
 use std::error::Error;
-use std::fmt::{Debug, Display, Formatter, Pointer};
+use std::fmt::{Debug, Display, Formatter};
 
+use indicatif::{ProgressBar, ProgressStyle};
 use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
 use std::str::FromStr;
-use indicatif::{ProgressBar, ProgressStyle};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -104,7 +104,7 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str) -> RunOutput {
 
 pub fn main() {
     let args: Args = Args::parse();
-    let policy = Policy::simple_debug();
+    let policy = Policy::default();
     let num_rums = args.num_runs.unwrap_or(u64::MAX);
     let output_path = args.output_path;
     let base_name = "prog";
@@ -112,7 +112,6 @@ pub fn main() {
     progress_bar.set_style(ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{bar:50.cyan/blue}] Program {pos:>5}/{len:5} (ETA {eta})")
         .progress_chars("#>-"));
-
 
     if Path::exists(Path::new(&output_path)) {
         fs::remove_dir_all(&output_path).expect("Unable to remove directory");
@@ -122,7 +121,8 @@ pub fn main() {
         match &run(Some(i), policy.clone(), base_name) {
             Ok(files) => {
                 if args.store_passing_programs {
-                    fs::create_dir_all(format!("{}/pass/{}", output_path, i)).expect("Unable to create directory");
+                    fs::create_dir_all(format!("{}/pass/{}", output_path, i))
+                        .expect("Unable to create directory");
                 }
                 for file in files {
                     if args.store_passing_programs {
@@ -136,7 +136,8 @@ pub fn main() {
             Err(err) => {
                 println!("Failed seed {}", i);
                 println!("{}", err);
-                fs::create_dir_all(format!("{}/fail/{}/{}", &output_path, err.folder_name(), i)).expect("Unable to create directory");
+                fs::create_dir_all(format!("{}/fail/{}/{}", &output_path, err.folder_name(), i))
+                    .expect("Unable to create directory");
                 match err {
                     RunnerError::Compilation(compilation_err) => {
                         fs::rename(
@@ -180,7 +181,13 @@ pub fn main() {
                         for file in files {
                             fs::rename(
                                 file,
-                                format!("{}/fail/{}/{}/{}", output_path, err.folder_name(), i, file),
+                                format!(
+                                    "{}/fail/{}/{}/{}",
+                                    output_path,
+                                    err.folder_name(),
+                                    i,
+                                    file
+                                ),
                             )
                             .expect("Cannot move file");
                         }
