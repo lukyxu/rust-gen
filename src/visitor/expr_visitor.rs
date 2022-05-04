@@ -1,14 +1,14 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr,
-    IfExpr, LitExpr, TupleExpr, UnaryExpr, UnaryOp,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr,
+    IfExpr, LitExpr, TupleExpr, UnaryExpr,
 };
-use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::Ty;
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
-use std::collections::hash_map::Iter;
-use std::collections::HashMap;
+
+
 
 #[derive(Clone)]
 pub struct ExprVisitor {

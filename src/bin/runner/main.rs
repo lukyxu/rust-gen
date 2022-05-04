@@ -1,6 +1,6 @@
 use clap::Parser;
 use std::error::Error;
-use std::fmt::{Debug, Display, Formatter, Pointer};
+use std::fmt::{Debug, Display, Formatter};
 
 use indicatif::{ProgressBar, ProgressStyle};
 use rust_gen::generator::{run_generator, GeneratorOutput};
