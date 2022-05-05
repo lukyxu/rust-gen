@@ -1,7 +1,7 @@
 use crate::ast::expr::LitExprTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, LitExpr,
-    Member,
+    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr,
+    LitExpr, LitExprTy, Member,
 };
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
@@ -107,7 +107,7 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
             ty: ty.clone(),
         })),
         Ty::Tuple(tuples) => {
-            for (i, ty) in tuples.iter().enumerate() {
+            for (i, t) in tuples.iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
                         name: name.clone(),
@@ -115,10 +115,24 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
                     })),
                     member: Member::Unnamed(i),
                 });
-                exprs_from_exprs(tuple_access, ty, &mut accumulator)
+                exprs_from_exprs(tuple_access, t, &mut accumulator)
             }
         }
-        Ty::Array(_, _) => {}
+        Ty::Array(t, size) => {
+            for i in 0..*size {
+                let array_access = Expr::Index(IndexExpr {
+                    base: Box::new(Expr::Ident(IdentExpr {
+                        name: name.clone(),
+                        ty: ty.clone(),
+                    })),
+                    index: Box::new(Expr::Literal(LitExpr::Int(
+                        i as u128,
+                        LitExprTy::Unsigned(UIntTy::USize),
+                    ))),
+                });
+                exprs_from_exprs(array_access, t, &mut accumulator)
+            }
+        }
         _ => {}
     }
     accumulator
@@ -136,7 +150,18 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                 exprs_from_exprs(tuple_access, ty, accumulator)
             }
         }
-        Ty::Array(_, _) => {}
+        Ty::Array(ty, size) => {
+            for i in 0..*size {
+                let array_access = Expr::Index(IndexExpr {
+                    base: Box::new(expr.clone()),
+                    index: Box::new(Expr::Literal(LitExpr::Int(
+                        i as u128,
+                        LitExprTy::Unsigned(UIntTy::USize),
+                    ))),
+                });
+                exprs_from_exprs(array_access, ty, accumulator)
+            }
+        }
         _ => {}
     }
 }
