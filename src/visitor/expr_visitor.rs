@@ -1,9 +1,9 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, FieldExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, EvalExpr, Expr, FieldExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr,
 };
-use crate::ast::function::Function;
-use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+
+use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
@@ -233,7 +233,7 @@ impl Visitor for ExprVisitor {
             (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
                 self.expr = Some(exprs[*index].clone());
             }
-            (_, Member::Unnamed(index)) => panic!(),
+            (_, Member::Unnamed(_index)) => panic!(),
         }
     }
 
