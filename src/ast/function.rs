@@ -11,9 +11,11 @@ pub struct Function {
 
 impl Function {
     pub fn create_main_fn(ctx: &mut Context) -> Function {
+        let block = BlockExpr::generate_block_expr(ctx, &Ty::unit_type()).unwrap();
+        ctx.statistics.main_fn_stmts = block.stmts.len();
         Function {
             name: String::from("main"),
-            block: BlockExpr::generate_block_expr(ctx, &Ty::unit_type()).unwrap(),
+            block
         }
     }
 }

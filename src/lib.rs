@@ -4,4 +4,4 @@ pub mod generator;
 pub mod policy;
 pub mod symbol_table;
 pub mod visitor;
-pub mod statistic;
+pub mod statistics;

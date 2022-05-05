@@ -19,7 +19,8 @@ pub enum Stmt {
 impl Stmt {
     pub fn generate_non_expr_stmt(ctx: &mut Context) -> Stmt {
         let ty = ctx.choose_type();
-        match ctx.choose_stmt_kind() {
+        let stmt_kind = ctx.choose_stmt_kind();
+        let stmt = match stmt_kind {
             StmtKind::Local => {
                 // TODO: Decl statements
                 let name = ctx.create_var_name();
@@ -39,7 +40,9 @@ impl Stmt {
             StmtKind::Expr => {
                 panic!("Non expression statement cannot be expression")
             }
-        }
+        };
+        *ctx.statistics.stmt_counter.entry(stmt_kind).or_insert(0) += 1;
+        stmt
     }
 
     pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Stmt {
@@ -94,7 +97,7 @@ pub struct CustomStmt {
     pub stmt: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum StmtKind {
     Local,

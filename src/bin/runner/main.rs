@@ -36,7 +36,7 @@ struct Args {
     #[clap(short, long, help = "Output path", default_value = "output")]
     output_path: String,
     #[clap(short, long, help = "Store passing programs in output path")]
-    store_passing_programs: bool,
+    save_passing_programs: bool,
     #[clap(long, help = "Do not run differential testing with different optimizations")]
     no_opt: bool,
 }
@@ -60,12 +60,12 @@ pub fn main() {
         let opts = if args.no_opt {vec!["0"]} else {vec!["0", "1", "2", "3", "s"]};
         match &run(Some(i), policy.clone(), &base_name, opts) {
             Ok(files) => {
-                if args.store_passing_programs {
+                if args.save_passing_programs {
                     fs::create_dir_all(format!("{}/pass/{}", output_path, i))
                         .expect("Unable to create directory");
                 }
                 for file in files {
-                    if args.store_passing_programs {
+                    if args.save_passing_programs {
                         fs::rename(file, format!("{}/pass/{}/{}", output_path, i, file))
                             .expect("Cannot move file")
                     } else {
@@ -146,6 +146,7 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str, opts: Vec<&'static st
     // Generate program
     let GeneratorOutput {
         program,
+        statistics,
         expected_checksum,
     } = run_generator(seed, &policy);
 
@@ -153,9 +154,12 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str, opts: Vec<&'static st
     let rust_file = base_name.to_string() + ".rs";
     fs::write(&rust_file, program).expect("Unable to write file");
 
+    let stats_file = "statistics.txt".to_owned();
+    fs::write(&stats_file, format!("{:#?}", statistics)).expect("Unable to write file");
+
     // Compile program (with multiple optimizations
     let mut runs: Vec<(&str, u128)> = vec![];
-    let mut files: Vec<String> = vec![rust_file.clone()];
+    let mut files: Vec<String> = vec![rust_file.clone(), stats_file.clone()];
 
     for opt in opts {
         let output_file = base_name.to_string() + "-" + opt.to_string().as_str();

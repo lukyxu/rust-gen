@@ -19,10 +19,10 @@ pub struct Policy {
     pub bool_true_prob: f64,
     pub mutability_prob: f64,
 
-    pub max_if_else_depth: u32,
-    pub max_block_depth: u32,
-    pub max_arith_depth: u32,
-    pub max_expr_attempts: u32,
+    pub max_if_else_depth: usize,
+    pub max_block_depth: usize,
+    pub max_arith_depth: usize,
+    pub max_expr_attempts: usize,
 }
 
 #[allow(dead_code)]
