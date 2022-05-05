@@ -32,6 +32,7 @@ impl Policy {
             Policy::stress_test(),
             Policy::mutability_debug(),
             Policy::tuple_debug(),
+            Policy::tuple_field_debug(),
             Policy::simple_debug(),
             Policy::simple_debug_with_assignments(),
             Policy::unary_debug(),
@@ -138,6 +139,13 @@ impl Policy {
         }
     }
 
+    pub fn tuple_field_debug() -> Self {
+        let mut policy = Policy::array_debug();
+        policy.name = "tuple_field_debug";
+        policy.expr_dist.push((ExprKind::Field, 0.5));
+        policy
+    }
+
     pub fn simple_debug() -> Self {
         let policy = Policy::default_with_name("simple_debug");
         Policy {
@@ -226,7 +234,7 @@ impl Policy {
     pub fn array_index_debug() -> Self {
         let mut policy = Policy::array_debug();
         policy.name = "array_index_debug";
-        policy.expr_dist.push((ExprKind::Index, 0.1));
+        policy.expr_dist.push((ExprKind::Index, 0.5));
         policy
     }
 }
