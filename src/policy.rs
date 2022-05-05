@@ -162,7 +162,7 @@ impl Policy {
     }
 
     pub fn tuple_field_debug() -> Self {
-        let mut policy = Policy::array_debug();
+        let mut policy = Policy::tuple_debug();
         policy.name = "tuple_field_debug";
         policy.expr_dist.push((ExprKind::Field, 0.5));
         policy

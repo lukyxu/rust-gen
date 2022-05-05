@@ -1,6 +1,7 @@
 use crate::ast::expr::LitExprTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, LitExpr,
+    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, LitExpr,
+    Member,
 };
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
@@ -66,36 +67,76 @@ impl Visitor for ChecksumGenVisitor {
             if name == self.checksum_name {
                 continue;
             }
-            let ty = ty_mapping.ty.clone();
-            let cast_expr = match ty {
-                Ty::Int(_) | Ty::UInt(_) => Expr::Cast(CastExpr {
-                    expr: {
-                        Box::new(Expr::Ident(IdentExpr {
-                            name: name.clone(),
-                            ty,
-                        }))
-                    },
-                    ty: Ty::UInt(UIntTy::U128),
-                }),
-                // TODO: Hash other types too
-                _ => continue,
-            };
-            let stmt = Stmt::Semi(SemiStmt {
-                expr: Expr::Assign(AssignExpr {
-                    name: self.checksum_name.to_owned(),
-                    rhs: Box::new(Expr::Binary(BinaryExpr {
-                        lhs: Box::new(Expr::Ident(IdentExpr {
-                            name: self.checksum_name.to_owned(),
-                            ty: Ty::UInt(UIntTy::U128),
+            let exprs = exprs_from_ident(name, &ty_mapping.ty);
+            let cast_exprs: Vec<Expr> = exprs
+                .into_iter()
+                .map(|expr| {
+                    Expr::Cast(CastExpr {
+                        expr: Box::new(expr),
+                        ty: Ty::UInt(UIntTy::U128),
+                    })
+                })
+                .collect();
+            for cast_expr in cast_exprs {
+                let stmt = Stmt::Semi(SemiStmt {
+                    expr: Expr::Assign(AssignExpr {
+                        name: self.checksum_name.to_owned(),
+                        rhs: Box::new(Expr::Binary(BinaryExpr {
+                            lhs: Box::new(Expr::Ident(IdentExpr {
+                                name: self.checksum_name.to_owned(),
+                                ty: Ty::UInt(UIntTy::U128),
+                            })),
+                            rhs: Box::new(cast_expr),
+                            op: BinaryOp::Add,
                         })),
-                        rhs: Box::new(cast_expr),
-                        op: BinaryOp::Add,
-                    })),
-                }),
-            });
-            expr.stmts.insert(expr.stmts.len() - 1, stmt);
+                    }),
+                });
+                expr.stmts.insert(expr.stmts.len() - 1, stmt);
+            }
         }
         self.visit_stmt((&mut expr.stmts).last_mut().unwrap());
         self.exit_scope();
+    }
+}
+
+fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
+    let mut accumulator = vec![];
+    match ty {
+        Ty::Int(_) | Ty::UInt(_) => accumulator.push(Expr::Ident(IdentExpr {
+            name: name.clone(),
+            ty: ty.clone(),
+        })),
+        Ty::Tuple(tuples) => {
+            for (i, ty) in tuples.iter().enumerate() {
+                let tuple_access = Expr::Field(FieldExpr {
+                    base: Box::new(Expr::Ident(IdentExpr {
+                        name: name.clone(),
+                        ty: ty.clone(),
+                    })),
+                    member: Member::Unnamed(i),
+                });
+                exprs_from_exprs(tuple_access, ty, &mut accumulator)
+            }
+        }
+        Ty::Array(_, _) => {}
+        _ => {}
+    }
+    accumulator
+}
+
+fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
+    match ty {
+        Ty::Int(_) | Ty::UInt(_) => accumulator.push(expr),
+        Ty::Tuple(tuples) => {
+            for (i, ty) in tuples.iter().enumerate() {
+                let tuple_access = Expr::Field(FieldExpr {
+                    base: Box::new(expr.clone()),
+                    member: Member::Unnamed(i),
+                });
+                exprs_from_exprs(tuple_access, ty, accumulator)
+            }
+        }
+        Ty::Array(_, _) => {}
+        _ => {}
     }
 }
