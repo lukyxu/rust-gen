@@ -42,6 +42,6 @@ fn _print_program(main: &mut Function) {
 #[test]
 fn generator_bench() {
     for i in 0..100 {
-        run_generator(Some(i), Policy::default());
+        run_generator(Some(i), &Policy::default());
     }
 }
