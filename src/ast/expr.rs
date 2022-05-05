@@ -8,10 +8,10 @@ use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
+use crate::ast::expr::ExprKind::Index;
 use crate::context::Context;
 use std::mem::swap;
 use std::{isize, u32, usize};
-use crate::ast::expr::ExprKind::Index;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -68,6 +68,20 @@ impl Expr {
             None => panic!("Failed to generate non expression statement"),
             Some(expr) => expr,
         }
+    }
+
+    fn generate_arith_expr(
+        ctx: &mut Context,
+        res_type: &Ty,
+        f: fn(&mut Context, &Ty) -> Option<Expr>,
+    ) -> Option<Expr> {
+        if ctx.arith_depth > ctx.policy.max_arith_depth {
+            return None;
+        }
+        ctx.arith_depth += 1;
+        let res = f(ctx, res_type);
+        ctx.arith_depth -= 1;
+        res
     }
 }
 
@@ -180,14 +194,7 @@ pub struct BinaryExpr {
 
 impl BinaryExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if ctx.arith_depth > ctx.policy.max_arith_depth {
-            return None;
-        }
-        ctx.arith_depth += 1;
-        // Binary op depth
-        let res = BinaryExpr::generate_expr_internal(ctx, res_type);
-        ctx.arith_depth -= 1;
-        res
+        Expr::generate_arith_expr(ctx, res_type, BinaryExpr::generate_expr_internal)
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
@@ -512,13 +519,7 @@ pub struct UnaryExpr {
 impl UnaryExpr {
     #[allow(dead_code)]
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if ctx.arith_depth > ctx.policy.max_arith_depth {
-            return None;
-        }
-        ctx.arith_depth += 1;
-        let res = UnaryExpr::generate_expr_internal(ctx, res_type);
-        ctx.arith_depth -= 1;
-        res
+        Expr::generate_arith_expr(ctx, res_type, UnaryExpr::generate_expr_internal)
     }
 
     #[allow(dead_code)]
@@ -614,13 +615,7 @@ pub struct CastExpr {
 
 impl CastExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if ctx.arith_depth > ctx.policy.max_arith_depth {
-            return None;
-        }
-        ctx.arith_depth += 1;
-        let res = CastExpr::generate_expr_internal(ctx, res_type);
-        ctx.arith_depth -= 1;
-        res
+        Expr::generate_arith_expr(ctx, res_type, CastExpr::generate_expr_internal)
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
@@ -803,13 +798,13 @@ impl ArrayExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Member {
     Named(String),
-    Unnamed(usize)
+    Unnamed(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldExpr {
     pub base: Box<Expr>,
-    pub member: Member
+    pub member: Member,
 }
 
 impl FieldExpr {
@@ -823,19 +818,33 @@ impl FieldExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IndexExpr {
     pub base: Box<Expr>,
-    pub index: Box<Expr>
+    pub index: Box<Expr>,
 }
 
 impl IndexExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        // i8
-        let base_ty = Ty::Array(Box::new(res_type.clone()), 3);
-        let base = Box::new(Expr::generate_expr(ctx, &base_ty)?);
-        let index = Box::new(Expr::Literal(LitExpr::Int(0, LitExprTy::Unsigned(USize))));
-        Some(Expr::Index(IndexExpr{ base, index}))
+        Expr::generate_arith_expr(ctx, res_type, IndexExpr::generate_expr_internal)
+    }
+
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let array_type = Ty::Array(Box::new(res_type.clone()), 3);
+        let array_size: u128 = 3 as u128;
+        let base = Box::new(Expr::generate_expr(ctx, &array_type)?);
+        let index = Box::new(Expr::generate_expr(ctx, &Ty::UInt(UIntTy::USize))?);
+        let inbound_index = Box::new(Expr::Binary(BinaryExpr {
+            lhs: index,
+            rhs: Box::new(Expr::Literal(LitExpr::Int(
+                array_size,
+                LitExprTy::Unsigned(UIntTy::USize),
+            ))),
+            op: BinaryOp::Rem,
+        }));
+        Some(Expr::Index(IndexExpr {
+            base,
+            index: inbound_index,
+        }))
     }
 }
-
 
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]

@@ -31,6 +31,6 @@ pub fn main() {
     } else {
         Policy::default()
     };
-    let prog = run_generator(args.seed, policy).program;
+    let prog = run_generator(args.seed, &policy).program;
     println!("{}", prog)
 }

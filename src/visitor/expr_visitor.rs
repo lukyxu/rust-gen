@@ -1,12 +1,13 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr,
+    IfExpr, IndexExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp,
+};
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
-
-
 
 #[derive(Clone)]
 pub struct ExprVisitor {
@@ -226,7 +227,10 @@ impl Visitor for ExprVisitor {
         let base = self.safe_expr_visit(&mut expr.base);
         let index = self.safe_expr_visit(&mut expr.index);
         match (base, index) {
-            (EvalExpr::Array(exprs), EvalExpr::Literal(LitExpr::Int(index, LitExprTy::Unsigned(UIntTy::USize)))) => {
+            (
+                EvalExpr::Array(exprs),
+                EvalExpr::Literal(LitExpr::Int(index, LitExprTy::Unsigned(UIntTy::USize))),
+            ) => {
                 self.expr = Some(exprs[index as usize].clone());
             }
             _ => {}

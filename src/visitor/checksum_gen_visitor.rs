@@ -1,12 +1,9 @@
 use crate::ast::expr::LitExprTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr,
-    LitExpr,
+    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, LitExpr,
 };
 use crate::ast::function::Function;
-use crate::ast::stmt::{
-    CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
-};
+use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
