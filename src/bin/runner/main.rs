@@ -18,15 +18,15 @@ mod error;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    #[clap(short, long)]
+    #[clap(short, long, help = "Number of programs to be generated, compiled and run")]
     num_runs: Option<u64>,
-    #[clap(short, long)]
+    #[clap(short, long, help = "Generation policy [default: default]")]
     policy: Option<String>,
-    #[clap(short, long, default_value = "base")]
+    #[clap(short, long, help = "Output base name of generated program", default_value = "base")]
     base_name: String,
-    #[clap(short, long, default_value = "output")]
+    #[clap(short, long, help = "Output path", default_value = "output")]
     output_path: String,
-    #[clap(short, long)]
+    #[clap(short, long, help = "Store passing programs in output path")]
     store_passing_programs: bool,
 }
 
