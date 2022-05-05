@@ -37,6 +37,8 @@ struct Args {
     output_path: String,
     #[clap(short, long, help = "Store passing programs in output path")]
     store_passing_programs: bool,
+    #[clap(long, help = "Do not run differential testing with different optimizations")]
+    no_opt: bool,
 }
 
 pub fn main() {
@@ -55,7 +57,8 @@ pub fn main() {
     }
 
     for i in 0..num_rums {
-        match &run(Some(i), policy.clone(), &base_name) {
+        let opts = if args.no_opt {vec!["0"]} else {vec!["0", "1", "2", "3", "s"]};
+        match &run(Some(i), policy.clone(), &base_name, opts) {
             Ok(files) => {
                 if args.store_passing_programs {
                     fs::create_dir_all(format!("{}/pass/{}", output_path, i))
@@ -139,7 +142,7 @@ pub fn main() {
 type RunOutput = Result<Vec<String>, RunnerError>;
 
 // TODO: Make policy take in a pointer
-fn run(seed: Option<u64>, policy: Policy, base_name: &str) -> RunOutput {
+fn run(seed: Option<u64>, policy: Policy, base_name: &str, opts: Vec<&'static str>) -> RunOutput {
     // Generate program
     let GeneratorOutput {
         program,
@@ -154,7 +157,7 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str) -> RunOutput {
     let mut runs: Vec<(&str, u128)> = vec![];
     let mut files: Vec<String> = vec![rust_file.clone()];
 
-    for opt in ["0", "1", "2", "3", "s"] {
+    for opt in opts {
         let output_file = base_name.to_string() + "-" + opt.to_string().as_str();
         files.push(output_file.to_owned());
         compile_program(&rust_file, &output_file, opt)?;
