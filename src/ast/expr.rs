@@ -11,6 +11,7 @@ use rand::prelude::SliceRandom;
 use crate::context::Context;
 use std::mem::swap;
 use std::{isize, u32, usize};
+use crate::ast::expr::ExprKind::Index;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -34,6 +35,8 @@ pub enum Expr {
     Tuple(TupleExpr),
     Assign(AssignExpr),
     Array(ArrayExpr),
+    Field(FieldExpr),
+    Index(IndexExpr),
 }
 
 impl Expr {
@@ -51,6 +54,7 @@ impl Expr {
                 ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
                 ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Cast => CastExpr::generate_expr(ctx, res_type),
+                ExprKind::Index => IndexExpr::generate_expr(ctx, res_type),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
             num_failed_attempts += 1;
@@ -796,19 +800,55 @@ impl ArrayExpr {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Member {
+    Named(String),
+    Unnamed(usize)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldExpr {
+    pub base: Box<Expr>,
+    pub member: Member
+}
+
+impl FieldExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        // i8
+        // Expr::generate_expr(ctx, res_type)?
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct IndexExpr {
+    pub base: Box<Expr>,
+    pub index: Box<Expr>
+}
+
+impl IndexExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        // i8
+        let base_ty = Ty::Array(Box::new(res_type.clone()), 3);
+        let base = Box::new(Expr::generate_expr(ctx, &base_ty)?);
+        let index = Box::new(Expr::Literal(LitExpr::Int(0, LitExprTy::Unsigned(USize))));
+        Some(Expr::Index(IndexExpr{ base, index}))
+    }
+}
+
+
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub enum ExprKind {
     Literal,
     Binary,
     Unary,
-    #[allow(dead_code)]
     Cast,
     If,
     Block,
     Ident,
-    #[allow(dead_code)]
     Assign,
+    Index,
     __Nonexhaustive,
 }
 

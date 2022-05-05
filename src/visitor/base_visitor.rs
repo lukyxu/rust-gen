@@ -1,7 +1,4 @@
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr,
-    LitExpr, TupleExpr, UnaryExpr, UnaryOp,
-};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr, IndexExpr, LitExpr, TupleExpr, UnaryExpr, UnaryOp};
 
 use crate::ast::function::Function;
 use crate::ast::stmt::{
@@ -69,6 +66,9 @@ pub trait Visitor: Sized {
     fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
         walk_array_expr(self, expr);
     }
+    fn visit_index_expr(&mut self, expr: &mut IndexExpr) {
+        walk_index_expr(self, expr);
+    }
 
     // Operations
     fn visit_unary_op(&mut self, _op: &mut UnaryOp) {}
@@ -127,6 +127,8 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
         Expr::Tuple(tuple_expr) => visitor.visit_tuple_expr(tuple_expr),
         Expr::Assign(assign_expr) => visitor.visit_assign_expr(assign_expr),
         Expr::Array(array_expr) => visitor.visit_array_expr(array_expr),
+        Expr::Field(field_expr) => todo!(),
+        Expr::Index(index_expr) => visitor.visit_index_expr(index_expr),
     }
 }
 
@@ -189,4 +191,9 @@ fn walk_array_expr<V: Visitor>(visitor: &mut V, ArrayExpr { array }: &mut ArrayE
     for expr in array {
         visitor.visit_expr(expr);
     }
+}
+
+fn walk_index_expr<V: Visitor>(visitor: &mut V, IndexExpr { index, base }: &mut IndexExpr) {
+    visitor.visit_expr(index);
+    visitor.visit_expr(base);
 }
