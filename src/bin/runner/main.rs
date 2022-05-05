@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use std::fmt::{Debug};
+use std::fmt::Debug;
 
 use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
@@ -10,7 +10,7 @@ use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
 use std::fs;
 use std::path::Path;
-use std::process::{Command};
+use std::process::Command;
 use std::str::FromStr;
 
 mod error;
@@ -18,11 +18,20 @@ mod error;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
-    #[clap(short, long, help = "Number of programs to be generated, compiled and run")]
+    #[clap(
+        short,
+        long,
+        help = "Number of programs to be generated, compiled and run"
+    )]
     num_runs: Option<u64>,
     #[clap(short, long, help = "Generation policy [default: default]")]
     policy: Option<String>,
-    #[clap(short, long, help = "Output base name of generated program", default_value = "base")]
+    #[clap(
+        short,
+        long,
+        help = "Output base name of generated program",
+        default_value = "base"
+    )]
     base_name: String,
     #[clap(short, long, help = "Output path", default_value = "output")]
     output_path: String,

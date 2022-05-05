@@ -8,7 +8,6 @@ use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
-
 use crate::context::Context;
 use rand::Rng;
 use std::mem::swap;
