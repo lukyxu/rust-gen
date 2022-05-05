@@ -1,4 +1,7 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, FieldExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp,
+};
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
@@ -150,7 +153,7 @@ impl Visitor for ExprVisitor {
             _ => {
                 dbg!(cond_expr);
                 panic!("unexpected condition value");
-            },
+            }
         });
     }
 
@@ -230,7 +233,7 @@ impl Visitor for ExprVisitor {
             (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
                 self.expr = Some(exprs[*index].clone());
             }
-            (_, Member::Unnamed(index)) => panic!()
+            (_, Member::Unnamed(index)) => panic!(),
         }
     }
 
@@ -244,7 +247,7 @@ impl Visitor for ExprVisitor {
             ) => {
                 self.expr = Some(exprs[index as usize].clone());
             }
-            _ => panic!()
+            _ => panic!(),
         };
     }
 }

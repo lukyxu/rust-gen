@@ -10,9 +10,9 @@ use rand::prelude::SliceRandom;
 
 use crate::ast::expr::ExprKind::Index;
 use crate::context::Context;
+use rand::Rng;
 use std::mem::swap;
 use std::{isize, u32, usize};
-use rand::Rng;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -817,12 +817,9 @@ impl FieldExpr {
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let field_tuple = Ty::Tuple(vec![res_type.clone(), res_type.clone()]);
 
-        let base = Box::new( Expr::generate_expr(ctx, &field_tuple)?);
+        let base = Box::new(Expr::generate_expr(ctx, &field_tuple)?);
         let member = Member::Unnamed(ctx.rng.gen_range(0..2));
-        Some(Expr::Field(FieldExpr {
-            base,
-            member,
-        }))
+        Some(Expr::Field(FieldExpr { base, member }))
     }
 }
 

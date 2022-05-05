@@ -42,12 +42,34 @@ impl Policy {
         ]
     }
 
+    pub fn get_policy_names() -> Vec<&'static str> {
+        Policy::get_policies()
+            .iter()
+            .map(|p| p.name)
+            .collect::<Vec<&str>>()
+    }
+
     pub fn get_policy(name: &str) -> Option<Policy> {
         Policy::get_policies()
             .iter()
             .filter(|p| p.name == name)
             .next()
             .cloned()
+    }
+
+    pub fn parse_policy_args(policy: Option<String>) -> Policy {
+        let policy = if let Some(policy) = policy {
+            Policy::get_policy(&policy)
+        } else {
+            Some(Policy::default())
+        };
+        policy.unwrap_or_else(|| {
+            eprintln!(
+                "Invalid policy, choose from from {:?}",
+                Policy::get_policy_names()
+            );
+            std::process::exit(2)
+        })
     }
 
     pub fn stress_test() -> Self {
