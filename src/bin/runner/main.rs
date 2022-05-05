@@ -1,6 +1,6 @@
 use clap::Parser;
-use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
+
+use std::fmt::{Debug};
 
 use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
@@ -10,7 +10,7 @@ use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
 use std::fs;
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::{Command};
 use std::str::FromStr;
 
 mod error;
