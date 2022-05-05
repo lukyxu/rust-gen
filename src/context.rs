@@ -2,6 +2,7 @@ use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::Ty;
 use crate::policy::Policy;
+use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
 use rand::prelude::{Distribution, SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
@@ -10,10 +11,11 @@ pub struct Context {
     pub policy: Policy,
     pub name_handler: NameHandler,
     pub type_symbol_table: TypeSymbolTable,
+    pub statistics: Statistics,
     pub rng: StdRng,
-    pub if_else_depth: u32,
-    pub block_depth: u32,
-    pub arith_depth: u32,
+    pub if_else_depth: usize,
+    pub block_depth: usize,
+    pub arith_depth: usize,
 }
 
 impl Context {
@@ -27,6 +29,7 @@ impl Context {
             policy: Policy::default(),
             name_handler: NameHandler::default(),
             type_symbol_table: TypeSymbolTable::default(),
+            statistics: Statistics::default(),
             rng,
             if_else_depth: 0,
             block_depth: 0,

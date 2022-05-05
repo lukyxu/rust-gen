@@ -10,6 +10,7 @@ use rand::prelude::SliceRandom;
 
 use crate::context::Context;
 use rand::Rng;
+use std::cmp::max;
 use std::mem::swap;
 use std::{isize, u32, usize};
 
@@ -58,7 +59,17 @@ impl Expr {
                 ExprKind::Index => IndexExpr::generate_expr(ctx, res_type),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
-            num_failed_attempts += 1;
+            if res.is_none() {
+                num_failed_attempts += 1;
+                ctx.statistics.failed_expr_generations += 1;
+                ctx.statistics.max_failed_generation_depth = max(
+                    num_failed_attempts,
+                    ctx.statistics.max_failed_generation_depth,
+                );
+            } else {
+                *ctx.statistics.expr_counter.entry(expr_kind).or_insert(0) += 1;
+                ctx.statistics.total_exprs += 1;
+            }
         }
         res
     }
@@ -210,6 +221,7 @@ impl BinaryExpr {
         };
         let lhs = Box::new(Expr::generate_expr(ctx, res_type)?);
         let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
+        *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
     }
     pub fn fix(&mut self, error: EvalExprError, lhs: &mut EvalExpr, rhs: &mut EvalExpr) {
@@ -251,7 +263,7 @@ impl BinaryExpr {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum BinaryOp {
     Add,
@@ -531,11 +543,12 @@ impl UnaryExpr {
             _ => return None,
         };
         let expr = Box::new(Expr::generate_expr(ctx, res_type)?);
+        *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(Expr::Unary(UnaryExpr { expr, op }))
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(dead_code)]
 pub enum UnaryOp {
     // TODO: Deref when adding pointer types
@@ -853,7 +866,7 @@ impl IndexExpr {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ExprKind {
     Literal,

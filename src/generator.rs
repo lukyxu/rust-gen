@@ -1,6 +1,7 @@
 use crate::ast::function::Function;
 use crate::context::Context;
 use crate::policy::Policy;
+use crate::statistics::Statistics;
 use crate::visitor::base_visitor::Visitor;
 use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
 use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
@@ -9,6 +10,7 @@ use crate::visitor::expr_visitor::ExprVisitor;
 
 pub struct GeneratorOutput {
     pub program: String,
+    pub statistics: Statistics,
     pub expected_checksum: u128,
 }
 
@@ -29,6 +31,7 @@ pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
     emit_visitor.visit_function(&mut main);
     GeneratorOutput {
         program: emit_visitor.output(),
+        statistics: std::mem::take(&mut ctx.statistics),
         expected_checksum: checksum_eval_visitor.res.unwrap(),
     }
 }
