@@ -20,8 +20,10 @@ mod error;
 struct Args {
     #[clap(short, long)]
     num_runs: Option<u64>,
-    // #[clap(short, long)]
-    // policy: Option<String>,
+    #[clap(short, long)]
+    policy: Option<String>,
+    #[clap(short, long, default_value = "base")]
+    base_name: String,
     #[clap(short, long, default_value = "output")]
     output_path: String,
     #[clap(short, long)]
@@ -30,10 +32,10 @@ struct Args {
 
 pub fn main() {
     let args: Args = Args::parse();
-    let policy = Policy::default();
+    let policy = Policy::parse_policy_args(args.policy);
     let num_rums = args.num_runs.unwrap_or(u64::MAX);
     let output_path = args.output_path;
-    let base_name = "prog";
+    let base_name = args.base_name;
     let progress_bar = ProgressBar::new(num_rums);
     progress_bar.set_style(ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{bar:50.cyan/blue}] Program {pos:>5}/{len:5} (ETA {eta})")
@@ -44,7 +46,7 @@ pub fn main() {
     }
 
     for i in 0..num_rums {
-        match &run(Some(i), policy.clone(), base_name) {
+        match &run(Some(i), policy.clone(), &base_name) {
             Ok(files) => {
                 if args.store_passing_programs {
                     fs::create_dir_all(format!("{}/pass/{}", output_path, i))
