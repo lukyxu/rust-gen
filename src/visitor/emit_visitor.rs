@@ -1,7 +1,4 @@
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, IdentExpr, IfExpr,
-    IndexExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp,
-};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp};
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
@@ -212,6 +209,17 @@ impl Visitor for EmitVisitor {
             self.visit_expr(expr);
         }
         self.output.push(']');
+    }
+
+    fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
+        self.output.push('(');
+        self.visit_expr(&mut expr.base);
+        self.output.push('.');
+        match &expr.member {
+            Member::Named(name) => self.visit_name(name),
+            Member::Unnamed(usize) => self.output.push_str(&usize.to_string()),
+        }
+        self.output.push(')');
     }
 
     fn visit_index_expr(&mut self, expr: &mut IndexExpr) {

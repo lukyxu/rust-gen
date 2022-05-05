@@ -1,7 +1,4 @@
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr,
-    IfExpr, IndexExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp,
-};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp};
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
@@ -150,7 +147,10 @@ impl Visitor for ExprVisitor {
                 false_expr
             }
             EvalExpr::Unknown => EvalExpr::Unknown,
-            _ => panic!(),
+            _ => {
+                dbg!(cond_expr);
+                panic!("unexpected condition value");
+            },
         });
     }
 
@@ -221,6 +221,17 @@ impl Visitor for ExprVisitor {
             EvalExpr::Array(res)
         };
         self.expr = Some(res_expr);
+    }
+
+    fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
+        let base = self.safe_expr_visit(&mut expr.base);
+        match (base, &expr.member) {
+            (_, Member::Named(_)) => todo!(),
+            (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
+                self.expr = Some(exprs[*index].clone());
+            }
+            (_, Member::Unnamed(index)) => panic!()
+        }
     }
 
     fn visit_index_expr(&mut self, expr: &mut IndexExpr) {

@@ -12,6 +12,7 @@ use crate::ast::expr::ExprKind::Index;
 use crate::context::Context;
 use std::mem::swap;
 use std::{isize, u32, usize};
+use rand::Rng;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -54,6 +55,7 @@ impl Expr {
                 ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
                 ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Cast => CastExpr::generate_expr(ctx, res_type),
+                ExprKind::Field => FieldExpr::generate_expr(ctx, res_type),
                 ExprKind::Index => IndexExpr::generate_expr(ctx, res_type),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
@@ -809,9 +811,18 @@ pub struct FieldExpr {
 
 impl FieldExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        // i8
-        // Expr::generate_expr(ctx, res_type)?
-        todo!()
+        Expr::generate_arith_expr(ctx, res_type, FieldExpr::generate_expr_internal)
+    }
+
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let field_tuple = Ty::Tuple(vec![res_type.clone(), res_type.clone()]);
+
+        let base = Box::new( Expr::generate_expr(ctx, &field_tuple)?);
+        let member = Member::Unnamed(ctx.rng.gen_range(0..2));
+        Some(Expr::Field(FieldExpr {
+            base,
+            member,
+        }))
     }
 }
 
@@ -858,6 +869,7 @@ pub enum ExprKind {
     Ident,
     Assign,
     Index,
+    Field,
     __Nonexhaustive,
 }
 
