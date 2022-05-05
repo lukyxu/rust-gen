@@ -205,17 +205,17 @@ impl Visitor for ExprVisitor {
 
     fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
         let mut res: Vec<EvalExpr> = vec![];
-        let mut return_none = false;
+        let mut _return_none = false;
         for inner_expr in &mut expr.array {
             let res_expr = self.safe_expr_visit(inner_expr);
             if let EvalExpr::Unknown = res_expr {
-                return_none = true;
+                _return_none = true;
+                panic!()
             } else {
                 res.push(res_expr);
             }
         }
-        let res_expr: EvalExpr = if return_none {
-            panic!();
+        let res_expr: EvalExpr = if _return_none {
             EvalExpr::Unknown
         } else {
             EvalExpr::Array(res)
@@ -233,13 +233,8 @@ impl Visitor for ExprVisitor {
             ) => {
                 self.expr = Some(exprs[index as usize].clone());
             }
-            _ => {}
+            _ => panic!()
         };
-        // if let  = base {
-        //     self.expr = Some(exprs[])
-        // } else {
-        //     panic!()
-        // }
     }
 }
 
