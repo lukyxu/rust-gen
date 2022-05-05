@@ -34,9 +34,9 @@ impl Context {
         }
     }
 
-    pub fn with_policy(seed: Option<u64>, policy: Policy) -> Context {
+    pub fn with_policy(seed: Option<u64>, policy: &Policy) -> Context {
         let mut context = Context::new(seed);
-        context.policy = policy;
+        context.policy = policy.clone();
         context
     }
 }

@@ -12,9 +12,8 @@ pub struct GeneratorOutput {
     pub expected_checksum: u128,
 }
 
-// TODO: Take in reference to policy
-pub fn run_generator(seed: Option<u64>, policy: Policy) -> GeneratorOutput {
-    let mut ctx = Context::with_policy(seed, policy);
+pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
+    let mut ctx = Context::with_policy(seed, &policy);
     let mut main = Function::create_main_fn(&mut ctx);
     // Make program compilable
     // _print_program(&mut main);

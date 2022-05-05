@@ -36,6 +36,7 @@ impl Policy {
             Policy::simple_debug_with_assignments(),
             Policy::unary_debug(),
             Policy::array_debug(),
+            Policy::array_index_debug(),
             Policy::default(),
         ]
     }
@@ -220,6 +221,13 @@ impl Policy {
             num_stmt_dist: Uniform::new_inclusive(2, 10),
             ..policy
         }
+    }
+
+    pub fn array_index_debug() -> Self {
+        let mut policy = Policy::array_debug();
+        policy.name = "array_index_debug";
+        policy.expr_dist.push((ExprKind::Index, 0.1));
+        policy
     }
 }
 

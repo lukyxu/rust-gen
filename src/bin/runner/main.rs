@@ -63,7 +63,7 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str) -> RunOutput {
     let GeneratorOutput {
         program,
         expected_checksum,
-    } = run_generator(seed, policy);
+    } = run_generator(seed, &policy);
 
     // Save program
     let rust_file = base_name.to_string() + ".rs";

@@ -1,14 +1,13 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr,
-    IfExpr, LitExpr, TupleExpr, UnaryExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, EvalExpr, Expr, IdentExpr,
+    IfExpr, IndexExpr, LitExpr, LitExprTy, TupleExpr, UnaryExpr, UnaryOp,
 };
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
-use crate::ast::ty::Ty;
+use crate::ast::function::Function;
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
-
-
 
 #[derive(Clone)]
 pub struct ExprVisitor {
@@ -185,6 +184,7 @@ impl Visitor for ExprVisitor {
             }
         }
         let res_expr: EvalExpr = if return_none {
+            panic!();
             EvalExpr::Unknown
         } else {
             EvalExpr::Tuple(res)
@@ -215,11 +215,31 @@ impl Visitor for ExprVisitor {
             }
         }
         let res_expr: EvalExpr = if return_none {
+            panic!();
             EvalExpr::Unknown
         } else {
             EvalExpr::Array(res)
         };
         self.expr = Some(res_expr);
+    }
+
+    fn visit_index_expr(&mut self, expr: &mut IndexExpr) {
+        let base = self.safe_expr_visit(&mut expr.base);
+        let index = self.safe_expr_visit(&mut expr.index);
+        match (base, index) {
+            (
+                EvalExpr::Array(exprs),
+                EvalExpr::Literal(LitExpr::Int(index, LitExprTy::Unsigned(UIntTy::USize))),
+            ) => {
+                self.expr = Some(exprs[index as usize].clone());
+            }
+            _ => {}
+        };
+        // if let  = base {
+        //     self.expr = Some(exprs[])
+        // } else {
+        //     panic!()
+        // }
     }
 }
 
