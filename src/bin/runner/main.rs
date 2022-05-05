@@ -37,7 +37,10 @@ struct Args {
     output_path: String,
     #[clap(short, long, help = "Store passing programs in output path")]
     save_passing_programs: bool,
-    #[clap(long, help = "Do not run differential testing with different optimizations")]
+    #[clap(
+        long,
+        help = "Do not run differential testing with different optimizations"
+    )]
     no_opt: bool,
 }
 
@@ -57,7 +60,11 @@ pub fn main() {
     }
 
     for i in 0..num_rums {
-        let opts = if args.no_opt {vec!["0"]} else {vec!["0", "1", "2", "3", "s"]};
+        let opts = if args.no_opt {
+            vec!["0"]
+        } else {
+            vec!["0", "1", "2", "3", "s"]
+        };
         match &run(Some(i), policy.clone(), &base_name, opts) {
             Ok(files) => {
                 if args.save_passing_programs {

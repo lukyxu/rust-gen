@@ -10,9 +10,9 @@ use rand::prelude::SliceRandom;
 
 use crate::context::Context;
 use rand::Rng;
+use std::cmp::max;
 use std::mem::swap;
 use std::{isize, u32, usize};
-use std::cmp::max;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -61,11 +61,14 @@ impl Expr {
             };
             if res.is_none() {
                 num_failed_attempts += 1;
-                ctx.statistics.failed_generations += 1;
-                ctx.statistics.max_failed_generation_depth = max(num_failed_attempts, ctx.statistics.max_failed_generation_depth);
+                ctx.statistics.failed_expr_generations += 1;
+                ctx.statistics.max_failed_generation_depth = max(
+                    num_failed_attempts,
+                    ctx.statistics.max_failed_generation_depth,
+                );
             } else {
                 *ctx.statistics.expr_counter.entry(expr_kind).or_insert(0) += 1;
-                ctx.statistics.successful_generations += 1;
+                ctx.statistics.total_exprs += 1;
             }
         }
         res

@@ -15,7 +15,7 @@ impl Function {
         ctx.statistics.main_fn_stmts = block.stmts.len();
         Function {
             name: String::from("main"),
-            block
+            block,
         }
     }
 }
