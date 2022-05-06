@@ -13,6 +13,8 @@ pub struct Context {
     pub type_symbol_table: TypeSymbolTable,
     pub statistics: Statistics,
     pub rng: StdRng,
+    pub disable_new_array_gen: bool,
+    pub disable_new_tuple_gen: bool,
     pub if_else_depth: usize,
     pub block_depth: usize,
     pub arith_depth: usize,
@@ -39,6 +41,8 @@ impl Context {
             type_symbol_table: TypeSymbolTable::default(),
             statistics: Statistics::default(),
             rng,
+            disable_new_array_gen: false,
+            disable_new_tuple_gen: false,
             if_else_depth: 0,
             block_depth: 0,
             arith_depth: 0,
@@ -87,6 +91,7 @@ impl Context {
     }
 
     pub fn add_new_array_type(&mut self) -> Option<Ty> {
+        self.disable_new_array_gen = true;
         let len = self.choose_array_length();
         for _ in 0..self.policy.max_expr_attempts {
             let base_type = Box::new(self.choose_type());
@@ -97,9 +102,11 @@ impl Context {
             if self.array_type_dist.iter().any(|(t, _)| t == &array_type) {
                 continue;
             }
+            let weight = 1.0;
+            self.array_type_dist.push((array_type.clone(), weight));
+            self.disable_new_array_gen = false;
             return Some(array_type);
         }
-        self.policy.new_array_prob = 0.0;
         None
     }
 
@@ -117,6 +124,7 @@ impl Context {
     }
 
     pub fn add_new_tuple_type(&mut self) -> Option<Ty> {
+        self.disable_new_tuple_gen = true;
         let len = self.choose_tuple_length();
         for _ in 0..self.policy.max_expr_attempts {
             let mut types: Vec<Ty> = vec![];
@@ -134,6 +142,10 @@ impl Context {
             if self.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
                 continue;
             }
+            // TODO: Weight
+            let weight = 1.0;
+            self.tuple_type_dist.push((tuple_type.clone(), weight));
+            self.disable_new_tuple_gen = false;
             return Some(tuple_type);
         }
         None
@@ -146,6 +158,11 @@ impl Context {
             .iter()
             .filter_map(|(expr_kind, w)| {
                 if expr_kind.is_base_expr() {
+                    if (matches!(expr_kind, ExprKind::Array) && self.disable_new_array_gen)
+                        || (matches!(expr_kind, ExprKind::Tuple) && self.disable_new_tuple_gen)
+                    {
+                        return None;
+                    }
                     Some((*expr_kind, *w))
                 } else {
                     None
