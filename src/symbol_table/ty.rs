@@ -1,7 +1,7 @@
 use crate::ast::expr::IdentExpr;
 use crate::ast::ty::Ty;
-use std::collections::hash_map::Iter;
-use std::collections::HashMap;
+use std::collections::btree_map::Iter;
+use std::collections::{BTreeMap};
 
 #[derive(Debug, Clone)]
 pub struct TypeMapping {
@@ -11,7 +11,7 @@ pub struct TypeMapping {
 
 #[derive(Debug, Default, Clone)]
 pub struct TypeSymbolTable {
-    var_type_mapping: HashMap<String, TypeMapping>,
+    var_type_mapping: BTreeMap<String, TypeMapping>,
 }
 
 // TODO: Change this to a bidirectional map

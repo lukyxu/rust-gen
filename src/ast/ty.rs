@@ -37,6 +37,26 @@ impl Ty {
         // TODO: More thorough casting
         self.is_primitive_number() && target_type.is_primitive_number()
     }
+
+    pub fn array_depth(&self) -> usize {
+        match self {
+            Ty::Array(types, _) => 1 + types.array_depth(),
+            _ => 0,
+        }
+    }
+
+    pub fn tuple_depth(&self) -> usize {
+        match self {
+            Ty::Tuple(types) => {
+                1 + types
+                    .iter()
+                    .map(|ty| ty.tuple_depth())
+                    .max()
+                    .unwrap_or_default()
+            }
+            _ => 0,
+        }
+    }
 }
 
 impl ToString for Ty {

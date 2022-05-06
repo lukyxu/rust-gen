@@ -16,17 +16,25 @@ pub struct Context {
     pub if_else_depth: usize,
     pub block_depth: usize,
     pub arith_depth: usize,
+    pub array_depth: usize,
+    pub tuple_depth: usize,
+    pub array_type_dist: Vec<(Ty, f64)>,
+    pub tuple_type_dist: Vec<(Ty, f64)>,
 }
 
 impl Context {
     pub fn new(seed: Option<u64>) -> Context {
+        Context::with_policy(seed, &Policy::default())
+    }
+
+    pub fn with_policy(seed: Option<u64>, policy: &Policy) -> Context {
         let rng = if let Some(seed) = seed {
             StdRng::seed_from_u64(seed)
         } else {
             StdRng::seed_from_u64(thread_rng().gen())
         };
         Context {
-            policy: Policy::default(),
+            policy: policy.clone(),
             name_handler: NameHandler::default(),
             type_symbol_table: TypeSymbolTable::default(),
             statistics: Statistics::default(),
@@ -34,13 +42,11 @@ impl Context {
             if_else_depth: 0,
             block_depth: 0,
             arith_depth: 0,
+            array_depth: 0,
+            tuple_depth: 0,
+            array_type_dist: policy.default_array_type_dist.clone(),
+            tuple_type_dist: policy.default_tuple_type_dist.clone(),
         }
-    }
-
-    pub fn with_policy(seed: Option<u64>, policy: &Policy) -> Context {
-        let mut context = Context::new(seed);
-        context.policy = policy.clone();
-        context
     }
 }
 
@@ -54,7 +60,99 @@ impl Context {
     }
 
     pub fn choose_type(&mut self) -> Ty {
-        choose(&self.policy.type_dist, &mut self.rng)
+        let base_expr = self.choose_base_expr_kind();
+        match base_expr {
+            ExprKind::Literal => self.choose_prim_type(),
+            ExprKind::Array => self.choose_array_type(),
+            ExprKind::Tuple => self.choose_tuple_type(),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn choose_prim_type(&mut self) -> Ty {
+        choose(&self.policy.prim_type_dist, &mut self.rng)
+    }
+
+    pub fn choose_array_type(&mut self) -> Ty {
+        if self.choose_new_array_type() {
+            if let Some(ty) = self.add_new_array_type() {
+                return ty;
+            }
+        }
+        choose(&self.array_type_dist, &mut self.rng)
+    }
+
+    pub fn choose_array_length(&mut self) -> usize {
+        self.policy.array_length_dist.sample(&mut self.rng)
+    }
+
+    pub fn add_new_array_type(&mut self) -> Option<Ty> {
+        let len = self.choose_array_length();
+        for _ in 0..self.policy.max_expr_attempts {
+            let base_type = Box::new(self.choose_type());
+            if base_type.array_depth() + 1 > self.policy.max_array_depth {
+                continue;
+            }
+            let array_type = Ty::Array(base_type, len);
+            if self.array_type_dist.iter().any(|(t, _)| t == &array_type) {
+                continue;
+            }
+            return Some(array_type);
+        }
+        self.policy.new_array_prob = 0.0;
+        None
+    }
+
+    pub fn choose_tuple_type(&mut self) -> Ty {
+        if self.choose_new_tuple_type() {
+            if let Some(ty) = self.add_new_tuple_type() {
+                return ty;
+            }
+        }
+        choose(&self.tuple_type_dist, &mut self.rng)
+    }
+
+    pub fn choose_tuple_length(&mut self) -> usize {
+        self.policy.tuple_length_dist.sample(&mut self.rng)
+    }
+
+    pub fn add_new_tuple_type(&mut self) -> Option<Ty> {
+        let len = self.choose_tuple_length();
+        for _ in 0..self.policy.max_expr_attempts {
+            let mut types: Vec<Ty> = vec![];
+            for _ in 0..len {
+                for _ in 0..self.policy.max_expr_attempts {
+                    let base_type = self.choose_type();
+                    if base_type.tuple_depth() + 1 > self.policy.max_tuple_depth {
+                        continue;
+                    }
+                    types.push(base_type);
+                    break;
+                }
+            }
+            let tuple_type = Ty::Tuple(types);
+            if self.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
+                continue;
+            }
+            return Some(tuple_type);
+        }
+        None
+    }
+
+    pub fn choose_base_expr_kind(&mut self) -> ExprKind {
+        let base_expr_dist: Vec<(ExprKind, f64)> = self
+            .policy
+            .expr_dist
+            .iter()
+            .filter_map(|(expr_kind, w)| {
+                if expr_kind.is_base_expr() {
+                    Some((*expr_kind, *w))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        choose(&base_expr_dist, &mut self.rng)
     }
 
     pub fn choose_expr_kind(&mut self) -> ExprKind {
@@ -75,6 +173,14 @@ impl Context {
 
     pub fn create_var_name(&mut self) -> String {
         self.name_handler.create_var_name()
+    }
+
+    pub fn choose_new_array_type(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.new_array_prob)
+    }
+
+    pub fn choose_new_tuple_type(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.new_tuple_prob)
     }
 
     pub fn choose_otherwise_if_stmt(&mut self) -> bool {

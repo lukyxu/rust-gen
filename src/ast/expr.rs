@@ -55,6 +55,8 @@ impl Expr {
                 ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
                 ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Cast => CastExpr::generate_expr(ctx, res_type),
+                ExprKind::Array => ArrayExpr::generate_expr(ctx, res_type),
+                ExprKind::Tuple => TupleExpr::generate_expr(ctx, res_type),
                 ExprKind::Field => FieldExpr::generate_expr(ctx, res_type),
                 ExprKind::Index => IndexExpr::generate_expr(ctx, res_type),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
@@ -633,7 +635,7 @@ impl CastExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let source_type = ctx.choose_type();
+        let source_type = ctx.choose_prim_type();
         if !source_type.compatible_cast(res_type) {
             return None;
         }
@@ -755,7 +757,7 @@ impl TupleExpr {
             }
             Some(Expr::Tuple(TupleExpr { tuple: res }))
         } else {
-            panic!()
+            None
         }
     }
 }
@@ -771,7 +773,7 @@ impl AssignExpr {
         if *res_type != Ty::unit_type() {
             return None;
         };
-        let ty = ctx.choose_type();
+        let ty = ctx.choose_prim_type();
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
         if mut_ident_exprs.is_empty() {
             return None;
@@ -804,7 +806,7 @@ impl ArrayExpr {
             }
             Some(Expr::Array(ArrayExpr { array: res }))
         } else {
-            panic!()
+            None
         }
     }
 }
@@ -877,9 +879,20 @@ pub enum ExprKind {
     Block,
     Ident,
     Assign,
+    Array,
+    Tuple,
     Index,
     Field,
     __Nonexhaustive,
+}
+
+impl ExprKind {
+    pub fn is_base_expr(self) -> bool {
+        match self {
+            ExprKind::Literal | ExprKind::Array | ExprKind::Tuple => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
