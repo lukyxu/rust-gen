@@ -86,6 +86,24 @@ impl Context {
         choose(&self.array_type_dist, &mut self.rng)
     }
 
+    pub fn choose_array_type_with_elem_type(&mut self, ty: &Ty) -> Ty {
+        let filtered_dist: Vec<(Ty, f64)> = self
+            .array_type_dist
+            .iter()
+            .filter(|(t, w)| t == ty)
+            .cloned()
+            .collect();
+        if !self.choose_new_array_type() && !filtered_dist.is_empty() {
+            choose(&filtered_dist, &mut self.rng);
+        }
+        if let Some(ty) = self.add_new_array_type_with_type(ty) {
+            return ty;
+        }
+        let len = self.choose_array_length();
+        let base_type = Box::new(ty.clone());
+        Ty::Array(base_type, len)
+    }
+
     pub fn choose_array_length(&mut self) -> usize {
         self.policy.array_length_dist.sample(&mut self.rng)
     }
@@ -108,6 +126,18 @@ impl Context {
             return Some(array_type);
         }
         None
+    }
+
+    pub fn add_new_array_type_with_type(&mut self, ty: &Ty) -> Option<Ty> {
+        let len = self.choose_array_length();
+        let base_type = Box::new(ty.clone());
+        let array_type = Ty::Array(base_type, len);
+        if self.array_type_dist.iter().any(|(t, _)| t == &array_type) {
+            return None;
+        }
+        let weight = 1.0;
+        self.array_type_dist.push((array_type.clone(), weight));
+        Some(array_type)
     }
 
     pub fn choose_tuple_type(&mut self) -> Ty {
@@ -156,18 +186,12 @@ impl Context {
             .policy
             .expr_dist
             .iter()
-            .filter_map(|(expr_kind, w)| {
-                if expr_kind.is_base_expr() {
-                    if (matches!(expr_kind, ExprKind::Array) && self.disable_new_array_gen)
-                        || (matches!(expr_kind, ExprKind::Tuple) && self.disable_new_tuple_gen)
-                    {
-                        return None;
-                    }
-                    Some((*expr_kind, *w))
-                } else {
-                    None
-                }
+            .filter(|(expr_kind, w)| {
+                expr_kind.is_base_expr()
+                    && !((matches!(expr_kind, ExprKind::Array) && self.disable_new_array_gen)
+                        || (matches!(expr_kind, ExprKind::Tuple) && self.disable_new_tuple_gen))
             })
+            .cloned()
             .collect();
         choose(&base_expr_dist, &mut self.rng)
     }

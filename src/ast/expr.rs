@@ -849,8 +849,12 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let array_type = Ty::Array(Box::new(res_type.clone()), 3);
-        let array_size: u128 = 3 as u128;
+        let array_type = ctx.choose_array_type_with_elem_type(res_type);
+        let array_size = if let Ty::Array (_, array_size) = array_type {
+            array_size as u128
+        } else {
+            panic!()
+        };
         let base = Box::new(Expr::generate_expr(ctx, &array_type)?);
         let index = Box::new(Expr::generate_expr(ctx, &Ty::UInt(UIntTy::USize))?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
