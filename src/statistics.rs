@@ -14,3 +14,6 @@ pub struct Statistics {
     pub un_op_counter: HashMap<UnaryOp, usize>,
     pub max_failed_generation_depth: usize,
 }
+
+#[derive(Default, Debug)]
+pub struct DerivedStatistics {}

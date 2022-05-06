@@ -90,11 +90,17 @@ impl Context {
         let filtered_dist: Vec<(Ty, f64)> = self
             .array_type_dist
             .iter()
-            .filter(|(t, w)| t == ty)
+            .filter(|(t, _)| {
+                if let Ty::Array(t, _) = t {
+                    &**t == ty
+                } else {
+                    panic!()
+                }
+            })
             .cloned()
             .collect();
         if !self.choose_new_array_type() && !filtered_dist.is_empty() {
-            choose(&filtered_dist, &mut self.rng);
+            return choose(&filtered_dist, &mut self.rng);
         }
         if let Some(ty) = self.add_new_array_type_with_type(ty) {
             return ty;
@@ -149,11 +155,33 @@ impl Context {
         choose(&self.tuple_type_dist, &mut self.rng)
     }
 
+    pub fn choose_tuple_type_with_elem_type(&mut self, ty: &Ty) -> Ty {
+        let filtered_dist: Vec<(Ty, f64)> = self
+            .tuple_type_dist
+            .iter()
+            .filter(|(t, _)| {
+                if let Ty::Tuple(tys) = t {
+                    tys.contains(ty)
+                } else {
+                    panic!()
+                }
+            })
+            .cloned()
+            .collect();
+        if !self.choose_new_tuple_type() && !filtered_dist.is_empty() {
+            return choose(&filtered_dist, &mut self.rng);
+        }
+        if let Some(ty) = self.add_new_tuple_type_with_type(ty) {
+            return ty;
+        }
+        Ty::Tuple(vec![ty.clone(), ty.clone()])
+    }
+
     pub fn choose_tuple_length(&mut self) -> usize {
         self.policy.tuple_length_dist.sample(&mut self.rng)
     }
 
-    pub fn add_new_tuple_type(&mut self) -> Option<Ty> {
+    pub fn new_tuple_type(&mut self) -> Option<Ty> {
         self.disable_new_tuple_gen = true;
         let len = self.choose_tuple_length();
         for _ in 0..self.policy.max_expr_attempts {
@@ -172,13 +200,35 @@ impl Context {
             if self.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
                 continue;
             }
-            // TODO: Weight
-            let weight = 1.0;
-            self.tuple_type_dist.push((tuple_type.clone(), weight));
             self.disable_new_tuple_gen = false;
             return Some(tuple_type);
         }
         None
+    }
+
+    pub fn add_new_tuple_type(&mut self) -> Option<Ty> {
+        let tuple_type = self.new_tuple_type();
+        if let Some(tuple_type) = &tuple_type {
+            let weight = 1.0;
+            self.tuple_type_dist.push((tuple_type.clone(), weight));
+        };
+        tuple_type
+    }
+
+    pub fn add_new_tuple_type_with_type(&mut self, ty: &Ty) -> Option<Ty> {
+        let mut tuple_type = self.new_tuple_type();
+        if let Some(types) = &mut tuple_type {
+            let tys = if let Ty::Tuple(tys) = types {
+                tys
+            } else {
+                panic!()
+            };
+            let index = self.rng.gen_range(0..tys.len());
+            tys[index] = ty.clone();
+            let weight = 1.0;
+            self.tuple_type_dist.push((Ty::Tuple(tys.clone()), weight));
+        };
+        tuple_type
     }
 
     pub fn choose_base_expr_kind(&mut self) -> ExprKind {
@@ -186,7 +236,7 @@ impl Context {
             .policy
             .expr_dist
             .iter()
-            .filter(|(expr_kind, w)| {
+            .filter(|(expr_kind, _)| {
                 expr_kind.is_base_expr()
                     && !((matches!(expr_kind, ExprKind::Array) && self.disable_new_array_gen)
                         || (matches!(expr_kind, ExprKind::Tuple) && self.disable_new_tuple_gen))

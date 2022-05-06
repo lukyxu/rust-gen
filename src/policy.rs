@@ -144,13 +144,21 @@ impl Policy {
         let policy = Policy::default_with_name("tuple_debug");
         Policy {
             prim_type_dist: vec![(Ty::Int(IntTy::I8), 3.0)],
-            new_tuple_prob: 0.1,
+            new_tuple_prob: 1.0,
             default_tuple_type_dist: vec![
                 (Ty::Tuple(vec![]), 3.0),
                 (Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]), 1.0),
             ],
             tuple_length_dist: Uniform::new_inclusive(3, 4),
             max_tuple_depth: 3,
+            expr_dist: vec![
+                (ExprKind::Literal, 3.0),
+                (ExprKind::Binary, 1.0),
+                (ExprKind::Unary, 1.0),
+                (ExprKind::Ident, 2.0),
+                (ExprKind::If, 1.0),
+                (ExprKind::Tuple, 2.0),
+            ],
 
             max_if_else_depth: 2,
             max_block_depth: 4,
@@ -257,7 +265,7 @@ impl Policy {
     pub fn array_index_debug() -> Self {
         let mut policy = Policy::array_debug();
         policy.name = "array_index_debug";
-        policy.expr_dist.push((ExprKind::Index, 0.5));
+        policy.expr_dist.push((ExprKind::Index, 1.0));
         policy
     }
 }
@@ -307,7 +315,7 @@ impl Policy {
                 (ExprKind::Block, 0.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
-                (ExprKind::Tuple, 1.0),
+                (ExprKind::Tuple, 3.0),
             ],
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
