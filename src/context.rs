@@ -13,8 +13,8 @@ pub struct Context {
     pub type_symbol_table: TypeSymbolTable,
     pub statistics: Statistics,
     pub rng: StdRng,
-    pub disable_new_array_gen: bool,
-    pub disable_new_tuple_gen: bool,
+    pub gen_new_array_types: bool,
+    pub gen_new_tuple_types: bool,
     pub if_else_depth: usize,
     pub block_depth: usize,
     pub arith_depth: usize,
@@ -41,8 +41,8 @@ impl Context {
             type_symbol_table: TypeSymbolTable::default(),
             statistics: Statistics::default(),
             rng,
-            disable_new_array_gen: false,
-            disable_new_tuple_gen: false,
+            gen_new_array_types: true,
+            gen_new_tuple_types: true,
             if_else_depth: 0,
             block_depth: 0,
             arith_depth: 0,
@@ -79,9 +79,13 @@ impl Context {
 
     pub fn choose_array_type(&mut self) -> Ty {
         if self.choose_new_array_type() {
+            let prev_gen_new_array_types = self.gen_new_array_types;
+            self.gen_new_array_types = false;
             if let Some(ty) = self.add_new_array_type() {
+                self.gen_new_array_types = prev_gen_new_array_types;
                 return ty;
             }
+            self.gen_new_array_types = prev_gen_new_array_types;
         }
         choose(&self.array_type_dist, &mut self.rng)
     }
@@ -115,10 +119,10 @@ impl Context {
     }
 
     pub fn add_new_array_type(&mut self) -> Option<Ty> {
-        self.disable_new_array_gen = true;
-        let len = self.choose_array_length();
-        for _ in 0..self.policy.max_expr_attempts {
+        let mut res: Option<Ty> = None;
+        for _ in 0..10 {
             let base_type = Box::new(self.choose_type());
+            let len = self.choose_array_length();
             if base_type.array_depth() + 1 > self.policy.max_array_depth {
                 continue;
             }
@@ -128,10 +132,10 @@ impl Context {
             }
             let weight = 1.0;
             self.array_type_dist.push((array_type.clone(), weight));
-            self.disable_new_array_gen = false;
-            return Some(array_type);
+            res = Some(array_type);
+            break;
         }
-        None
+        res
     }
 
     pub fn add_new_array_type_with_type(&mut self, ty: &Ty) -> Option<Ty> {
@@ -148,9 +152,13 @@ impl Context {
 
     pub fn choose_tuple_type(&mut self) -> Ty {
         if self.choose_new_tuple_type() {
+            let prev_gen_new_array_types = self.gen_new_tuple_types;
+            self.gen_new_tuple_types = false;
             if let Some(ty) = self.add_new_tuple_type() {
+                self.gen_new_tuple_types = prev_gen_new_array_types;
                 return ty;
             }
+            self.gen_new_tuple_types = prev_gen_new_array_types;
         }
         choose(&self.tuple_type_dist, &mut self.rng)
     }
@@ -182,7 +190,6 @@ impl Context {
     }
 
     pub fn new_tuple_type(&mut self) -> Option<Ty> {
-        self.disable_new_tuple_gen = true;
         let len = self.choose_tuple_length();
         for _ in 0..self.policy.max_expr_attempts {
             let mut types: Vec<Ty> = vec![];
@@ -200,7 +207,6 @@ impl Context {
             if self.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
                 continue;
             }
-            self.disable_new_tuple_gen = false;
             return Some(tuple_type);
         }
         None
@@ -236,11 +242,7 @@ impl Context {
             .policy
             .expr_dist
             .iter()
-            .filter(|(expr_kind, _)| {
-                expr_kind.is_base_expr()
-                    && !((matches!(expr_kind, ExprKind::Array) && self.disable_new_array_gen)
-                        || (matches!(expr_kind, ExprKind::Tuple) && self.disable_new_tuple_gen))
-            })
+            .filter(|(expr_kind, _)| expr_kind.is_base_expr())
             .cloned()
             .collect();
         choose(&base_expr_dist, &mut self.rng)
@@ -267,11 +269,11 @@ impl Context {
     }
 
     pub fn choose_new_array_type(&mut self) -> bool {
-        self.rng.gen_bool(self.policy.new_array_prob)
+        self.gen_new_tuple_types && self.rng.gen_bool(self.policy.new_array_prob)
     }
 
     pub fn choose_new_tuple_type(&mut self) -> bool {
-        self.rng.gen_bool(self.policy.new_tuple_prob)
+        self.gen_new_tuple_types && self.rng.gen_bool(self.policy.new_tuple_prob)
     }
 
     pub fn choose_otherwise_if_stmt(&mut self) -> bool {

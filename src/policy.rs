@@ -150,7 +150,7 @@ impl Policy {
                 (Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]), 1.0),
             ],
             tuple_length_dist: Uniform::new_inclusive(3, 4),
-            max_tuple_depth: 3,
+            max_tuple_depth: 2,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
                 (ExprKind::Binary, 1.0),
@@ -238,9 +238,9 @@ impl Policy {
         Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             prim_type_dist: vec![(Ty::Int(IntTy::I8), 1.0)],
-            new_array_prob: 0.1,
+            new_array_prob: 0.5,
             default_array_type_dist: vec![(Ty::Array(Box::new(Ty::Int(IntTy::I8)), 3), 0.5)],
-            array_length_dist: Uniform::new_inclusive(3, 5),
+            array_length_dist: Uniform::new_inclusive(3, 4),
             max_array_depth: 3,
 
             mutability_prob: 0.2,
