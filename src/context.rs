@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{PrimTy, Ty};
+use crate::ast::ty::{PrimTy, TupleTy, Ty};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
@@ -21,7 +21,7 @@ pub struct Context {
     pub array_depth: usize,
     pub tuple_depth: usize,
     pub array_type_dist: Vec<(Ty, f64)>,
-    pub tuple_type_dist: Vec<(Ty, f64)>,
+    pub tuple_type_dist: Vec<(TupleTy, f64)>,
 }
 
 impl Context {
@@ -68,7 +68,7 @@ impl Context {
         match base_expr {
             ExprKind::Literal => self.choose_prim_type().into(),
             ExprKind::Array => self.choose_array_type(),
-            ExprKind::Tuple => self.choose_tuple_type(),
+            ExprKind::Tuple => self.choose_tuple_type().into(),
             _ => unreachable!(),
         }
     }
@@ -148,46 +148,45 @@ impl Context {
         Some(array_type)
     }
 
-    pub fn choose_tuple_type(&mut self) -> Ty {
-        if self.choose_new_tuple_type() {
-            let prev_gen_new_array_types = self.gen_new_tuple_types;
-            self.gen_new_tuple_types = false;
-            if let Some(ty) = self.add_new_tuple_type() {
-                self.gen_new_tuple_types = prev_gen_new_array_types;
-                return ty;
-            }
-            self.gen_new_tuple_types = prev_gen_new_array_types;
+    pub fn choose_tuple_type(&mut self) -> TupleTy {
+        if !self.choose_new_tuple_type() && !self.tuple_type_dist.is_empty() {
+            return choose(&self.tuple_type_dist, &mut self.rng)
         }
-        choose(&self.tuple_type_dist, &mut self.rng)
+        let prev_gen_new_tuple_types = self.gen_new_tuple_types;
+        self.gen_new_tuple_types = false;
+        if let Some(ty) = self.add_new_tuple_type() {
+            self.gen_new_tuple_types = prev_gen_new_tuple_types;
+            return ty
+        }
+        panic!()
+
     }
 
-    pub fn choose_tuple_type_with_elem_type(&mut self, ty: &Ty) -> Ty {
-        let filtered_dist: Vec<(Ty, f64)> = self
+    pub fn choose_tuple_type_with_elem_type(&mut self, ty: &Ty) -> TupleTy {
+        let filtered_dist: Vec<(TupleTy, f64)> = self
             .tuple_type_dist
             .iter()
             .filter(|(t, _)| {
-                if let Ty::Tuple(tys) = t {
-                    tys.contains(ty)
-                } else {
-                    panic!()
-                }
+                t.tuple.contains(ty)
             })
             .cloned()
             .collect();
         if !self.choose_new_tuple_type() && !filtered_dist.is_empty() {
-            return choose(&filtered_dist, &mut self.rng);
-        }
+            return choose(&filtered_dist, &mut self.rng).into();
+        };
         if let Some(ty) = self.add_new_tuple_type_with_type(ty) {
             return ty;
+        };
+        TupleTy{
+            tuple: vec![ty.clone()]
         }
-        Ty::Tuple(vec![ty.clone()])
     }
 
     pub fn choose_tuple_length(&mut self) -> usize {
         self.policy.tuple_length_dist.sample(&mut self.rng)
     }
 
-    pub fn new_tuple_type(&mut self) -> Option<Ty> {
+    pub fn new_tuple_type(&mut self) -> Option<TupleTy> {
         let len = self.choose_tuple_length();
         for _ in 0..self.policy.max_expr_attempts {
             let mut types: Vec<Ty> = vec![];
@@ -201,7 +200,7 @@ impl Context {
                     break;
                 }
             }
-            let tuple_type = Ty::Tuple(types);
+            let tuple_type = TupleTy{tuple: types};
             if self.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
                 continue;
             }
@@ -210,7 +209,7 @@ impl Context {
         None
     }
 
-    pub fn add_new_tuple_type(&mut self) -> Option<Ty> {
+    pub fn add_new_tuple_type(&mut self) -> Option<TupleTy> {
         let tuple_type = self.new_tuple_type();
         if let Some(tuple_type) = &tuple_type {
             let weight = 1.0;
@@ -219,18 +218,13 @@ impl Context {
         tuple_type
     }
 
-    pub fn add_new_tuple_type_with_type(&mut self, ty: &Ty) -> Option<Ty> {
+    pub fn add_new_tuple_type_with_type(&mut self, ty: &Ty) -> Option<TupleTy> {
         let mut tuple_type = self.new_tuple_type();
-        if let Some(types) = &mut tuple_type {
-            let tys = if let Ty::Tuple(tys) = types {
-                tys
-            } else {
-                panic!()
-            };
-            let index = self.rng.gen_range(0..tys.len());
-            tys[index] = ty.clone();
+        if let Some(tys) = &mut tuple_type {
+            let index = self.rng.gen_range(0..tys.tuple.len());
+            tys.tuple[index] = ty.clone();
             let weight = 1.0;
-            self.tuple_type_dist.push((Ty::Tuple(tys.clone()), weight));
+            self.tuple_type_dist.push((tys.clone(), weight));
         };
         tuple_type
     }

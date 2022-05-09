@@ -110,8 +110,8 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
             name: name.clone(),
             ty: ty.clone(),
         })),
-        Ty::Tuple(tuples) => {
-            for (i, t) in tuples.iter().enumerate() {
+        Ty::Tuple(tuple_ty) => {
+            for (i, t) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
                         name: name.clone(),
@@ -145,8 +145,8 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
 fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
     match ty {
         Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => accumulator.push(expr),
-        Ty::Tuple(tuples) => {
-            for (i, ty) in tuples.iter().enumerate() {
+        Ty::Tuple(tuple_ty) => {
+            for (i, ty) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(expr.clone()),
                     member: Member::Unnamed(i),

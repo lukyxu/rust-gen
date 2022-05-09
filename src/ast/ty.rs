@@ -5,7 +5,7 @@ use rand::Rng;
 pub enum Ty {
     Unit,
     Prim(PrimTy),
-    Tuple(Vec<Ty>), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
+    Tuple(TupleTy), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
     Array(Box<Ty>, usize),
 }
 
@@ -13,7 +13,7 @@ impl Ty {
     pub fn is_unit(&self) -> bool {
         match self {
             Ty::Unit => true,
-            Ty::Tuple(types) => types.is_empty(),
+            Ty::Tuple(tuple_ty) => tuple_ty.tuple.is_empty(),
             _ => false,
         }
     }
@@ -41,8 +41,9 @@ impl Ty {
 
     pub fn tuple_depth(&self) -> usize {
         match self {
-            Ty::Tuple(types) => {
-                1 + types
+            Ty::Tuple(tuple_ty) => {
+                1 + tuple_ty
+                    .tuple
                     .iter()
                     .map(|ty| ty.tuple_depth())
                     .max()
@@ -58,16 +59,7 @@ impl ToString for Ty {
         match self {
             Ty::Unit => "()".to_string(),
             Ty::Prim(prim) => prim.to_string(),
-            Ty::Tuple(tuple) => {
-                format!(
-                    "({})",
-                    tuple
-                        .iter()
-                        .map(std::string::ToString::to_string)
-                        .collect::<Vec<String>>()
-                        .join(",")
-                )
-            }
+            Ty::Tuple(tuple) => {tuple.to_string()}
             Ty::Array(ty, count) => {
                 format!("[{};{}]", ty.to_string(), count)
             }
@@ -237,5 +229,39 @@ impl UIntTy {
             UIntTy::U64 => value as u64 as u128,
             UIntTy::U128 => value as u128 as u128,
         }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct TupleTy {
+    pub tuple: Vec<Ty>
+}
+
+impl From<TupleTy> for Ty {
+    fn from(ty: TupleTy) -> Ty {
+        Ty::Tuple(ty)
+    }
+}
+
+
+impl<'a> IntoIterator for &'a TupleTy {
+    type Item = &'a Ty;
+    type IntoIter = std::slice::Iter<'a, Ty>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.tuple).iter()
+    }
+}
+
+impl ToString for TupleTy {
+    fn to_string(&self) -> String {
+        format!(
+            "({})",
+            self.tuple
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect::<Vec<String>>()
+                .join(",")
+        )
     }
 }

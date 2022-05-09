@@ -829,15 +829,11 @@ impl FieldExpr {
         }
         let tuple = ctx.choose_tuple_type_with_elem_type(res_type);
 
-        let base = Box::new(Expr::generate_expr(ctx, &tuple)?);
-        let indexes: Vec<usize> = if let Ty::Tuple(tys) = tuple {
-            tys.iter()
+        let base = Box::new(Expr::generate_expr(ctx, &tuple.clone().into())?);
+        let indexes: Vec<usize> = (&tuple).into_iter()
                 .enumerate()
                 .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
-                .collect()
-        } else {
-            panic!()
-        };
+                .collect();
 
         let member = Member::Unnamed(*indexes.choose(&mut ctx.rng).unwrap());
         Some(Expr::Field(FieldExpr { base, member }))

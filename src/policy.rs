@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{IntTy, PrimTy, Ty, UIntTy};
+use crate::ast::ty::{IntTy, PrimTy, TupleTy, Ty, UIntTy};
 use rand::distributions::Uniform;
 
 #[derive(Debug, Clone)]
@@ -17,7 +17,7 @@ pub struct Policy {
     pub max_array_depth: usize,
 
     pub new_tuple_prob: f64,
-    pub default_tuple_type_dist: Vec<(Ty, f64)>,
+    pub default_tuple_type_dist: Vec<(TupleTy, f64)>,
     pub tuple_length_dist: Uniform<usize>,
     pub max_tuple_depth: usize,
 
@@ -98,8 +98,7 @@ impl Policy {
             prim_type_dist: vec![(IntTy::I8.into(), 3.0)],
             new_tuple_prob: 1.0,
             default_tuple_type_dist: vec![
-                (Ty::Tuple(vec![]), 3.0),
-                (Ty::Tuple(vec![IntTy::I8.into(), IntTy::I8.into()]), 1.0),
+                (TupleTy {tuple: vec![IntTy::I8.into(), IntTy::I8.into()]}, 1.0),
             ],
             tuple_length_dist: Uniform::new_inclusive(3, 4),
             max_tuple_depth: 1,
@@ -232,7 +231,7 @@ impl Policy {
             array_length_dist: Uniform::new_inclusive(3, 5),
             max_array_depth: 0,
             new_tuple_prob: 0.0,
-            default_tuple_type_dist: vec![(Ty::Tuple(vec![]), 3.0)],
+            default_tuple_type_dist: vec![],
             tuple_length_dist: Uniform::new_inclusive(3, 5),
             max_tuple_depth: 1,
             expr_dist: vec![
