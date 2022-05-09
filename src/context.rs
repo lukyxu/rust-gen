@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{PrimTy, TupleTy, Ty};
+use crate::ast::ty::{ArrayTy, PrimTy, TupleTy, Ty};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
@@ -20,7 +20,7 @@ pub struct Context {
     pub arith_depth: usize,
     pub array_depth: usize,
     pub tuple_depth: usize,
-    pub array_type_dist: Vec<(Ty, f64)>,
+    pub array_type_dist: Vec<(ArrayTy, f64)>,
     pub tuple_type_dist: Vec<(TupleTy, f64)>,
 }
 
@@ -67,7 +67,7 @@ impl Context {
         let base_expr = self.choose_base_expr_kind();
         match base_expr {
             ExprKind::Literal => self.choose_prim_type().into(),
-            ExprKind::Array => self.choose_array_type(),
+            ExprKind::Array => self.choose_array_type().into(),
             ExprKind::Tuple => self.choose_tuple_type().into(),
             _ => unreachable!(),
         }
@@ -77,8 +77,8 @@ impl Context {
         choose(&self.policy.prim_type_dist, &mut self.rng)
     }
 
-    pub fn choose_array_type(&mut self) -> Ty {
-        let mut res: Option<Ty> = None;
+    pub fn choose_array_type(&mut self) -> ArrayTy {
+        let mut res: Option<ArrayTy> = None;
         if self.choose_new_array_type() {
             let prev_gen_new_array_types = self.gen_new_array_types;
             self.gen_new_array_types = false;
@@ -88,16 +88,12 @@ impl Context {
         res.unwrap_or_else(|| choose(&self.array_type_dist, &mut self.rng))
     }
 
-    pub fn choose_array_type_with_elem_type(&mut self, ty: &Ty) -> Ty {
-        let filtered_dist: Vec<(Ty, f64)> = self
+    pub fn choose_array_type_with_elem_type(&mut self, ty: &Ty) -> ArrayTy {
+        let filtered_dist: Vec<(ArrayTy, f64)> = self
             .array_type_dist
             .iter()
-            .filter(|(t, _)| {
-                if let Ty::Array(t, _) = t {
-                    &**t == ty
-                } else {
-                    panic!()
-                }
+            .filter(|(array_ty, _)| {
+                &*array_ty.base_ty == ty
             })
             .cloned()
             .collect();
@@ -107,24 +103,24 @@ impl Context {
         if let Some(ty) = self.add_new_array_type_with_type(ty) {
             return ty;
         }
-        let len = self.choose_array_length();
+        let size = self.choose_array_length();
         let base_type = Box::new(ty.clone());
-        Ty::Array(base_type, len)
+        ArrayTy { base_ty: base_type, len: size }.into()
     }
 
     pub fn choose_array_length(&mut self) -> usize {
         self.policy.array_length_dist.sample(&mut self.rng)
     }
 
-    pub fn add_new_array_type(&mut self) -> Option<Ty> {
-        let mut res: Option<Ty> = None;
+    pub fn add_new_array_type(&mut self) -> Option<ArrayTy> {
+        let mut res: Option<ArrayTy> = None;
         for _ in 0..10 {
             let base_type = Box::new(self.choose_type());
             let len = self.choose_array_length();
             if base_type.array_depth() + 1 > self.policy.max_array_depth {
                 continue;
             }
-            let array_type = Ty::Array(base_type, len);
+            let array_type = ArrayTy { base_ty: base_type, len };
             if self.array_type_dist.iter().any(|(t, _)| t == &array_type) {
                 continue;
             }
@@ -136,10 +132,10 @@ impl Context {
         res
     }
 
-    pub fn add_new_array_type_with_type(&mut self, ty: &Ty) -> Option<Ty> {
+    pub fn add_new_array_type_with_type(&mut self, ty: &Ty) -> Option<ArrayTy> {
         let len = self.choose_array_length();
         let base_type = Box::new(ty.clone());
-        let array_type = Ty::Array(base_type, len);
+        let array_type = ArrayTy { base_ty: base_type, len };
         if self.array_type_dist.iter().any(|(t, _)| t == &array_type) {
             return None;
         }

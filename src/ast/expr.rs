@@ -789,11 +789,11 @@ pub struct ArrayExpr {
 
 impl ArrayExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if let Ty::Array(ty, count) = res_type {
+        if let Ty::Array(array_ty) = res_type {
             let mut res = vec![];
-            for _ in 0..*count {
+            for ty in array_ty.iter() {
                 for _ in 0..ctx.policy.max_expr_attempts {
-                    if let Some(expr) = Expr::generate_expr(ctx, ty) {
+                    if let Some(expr) = Expr::generate_expr(ctx, & ty) {
                         res.push(expr);
                         break;
                     }
@@ -856,12 +856,7 @@ impl IndexExpr {
             return None;
         }
         let array_type = ctx.choose_array_type_with_elem_type(res_type);
-        let array_size = if let Ty::Array(_, array_size) = array_type {
-            array_size as u128
-        } else {
-            panic!()
-        };
-        let base = Box::new(Expr::generate_expr(ctx, &array_type)?);
+        let base = Box::new(Expr::generate_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::generate_expr(
             ctx,
             &PrimTy::UInt(UIntTy::USize).into(),
@@ -869,7 +864,7 @@ impl IndexExpr {
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
             rhs: Box::new(Expr::Literal(LitExpr::Int(
-                array_size,
+                array_type.len as u128,
                 LitExprTy::Unsigned(UIntTy::USize),
             ))),
             op: BinaryOp::Rem,

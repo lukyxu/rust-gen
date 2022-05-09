@@ -122,8 +122,8 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
                 exprs_from_exprs(tuple_access, t, &mut accumulator)
             }
         }
-        Ty::Array(t, size) => {
-            for i in 0..*size {
+        Ty::Array(array_ty) => {
+            for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
                         name: name.clone(),
@@ -134,7 +134,7 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
                         LitExprTy::Unsigned(UIntTy::USize),
                     ))),
                 });
-                exprs_from_exprs(array_access, t, &mut accumulator)
+                exprs_from_exprs(array_access, &ty, &mut accumulator)
             }
         }
         _ => {}
@@ -154,8 +154,8 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                 exprs_from_exprs(tuple_access, ty, accumulator)
             }
         }
-        Ty::Array(ty, size) => {
-            for i in 0..*size {
+        Ty::Array(array_ty) => {
+            for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(expr.clone()),
                     index: Box::new(Expr::Literal(LitExpr::Int(
@@ -163,7 +163,7 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                         LitExprTy::Unsigned(UIntTy::USize),
                     ))),
                 });
-                exprs_from_exprs(array_access, ty, accumulator)
+                exprs_from_exprs(array_access, &ty, accumulator)
             }
         }
         _ => {}

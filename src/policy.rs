@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{IntTy, PrimTy, TupleTy, Ty, UIntTy};
+use crate::ast::ty::{ArrayTy, IntTy, PrimTy, TupleTy, UIntTy};
 use rand::distributions::Uniform;
 
 #[derive(Debug, Clone)]
@@ -12,7 +12,7 @@ pub struct Policy {
     pub prim_type_dist: Vec<(PrimTy, f64)>,
 
     pub new_array_prob: f64,
-    pub default_array_type_dist: Vec<(Ty, f64)>,
+    pub default_array_type_dist: Vec<(ArrayTy, f64)>,
     pub array_length_dist: Uniform<usize>,
     pub max_array_depth: usize,
 
@@ -164,7 +164,10 @@ impl Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             prim_type_dist: vec![(IntTy::I8.into(), 1.0)],
             new_array_prob: 0.5,
-            default_array_type_dist: vec![(Ty::Array(Box::new(IntTy::I8.into()), 3), 0.5)],
+            default_array_type_dist: vec![(ArrayTy {
+                base_ty: Box::new(IntTy::I8.into()),
+                len: 3
+            }, 0.5)],
             array_length_dist: Uniform::new_inclusive(3, 4),
             max_array_depth: 3,
 

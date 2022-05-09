@@ -6,7 +6,7 @@ pub enum Ty {
     Unit,
     Prim(PrimTy),
     Tuple(TupleTy), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
-    Array(Box<Ty>, usize),
+    Array(ArrayTy),
 }
 
 impl Ty {
@@ -34,7 +34,7 @@ impl Ty {
 
     pub fn array_depth(&self) -> usize {
         match self {
-            Ty::Array(types, _) => 1 + types.array_depth(),
+            Ty::Array(array_ty) => 1 + array_ty.base_ty.array_depth(),
             _ => 0,
         }
     }
@@ -59,10 +59,8 @@ impl ToString for Ty {
         match self {
             Ty::Unit => "()".to_string(),
             Ty::Prim(prim) => prim.to_string(),
-            Ty::Tuple(tuple) => {tuple.to_string()}
-            Ty::Array(ty, count) => {
-                format!("[{};{}]", ty.to_string(), count)
-            }
+            Ty::Tuple(tuple) => tuple.to_string(),
+            Ty::Array(array) => array.to_string(),
         }
     }
 }
@@ -263,5 +261,29 @@ impl ToString for TupleTy {
                 .collect::<Vec<String>>()
                 .join(",")
         )
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ArrayTy {
+    pub base_ty: Box<Ty>,
+    pub len: usize,
+}
+
+impl From<ArrayTy> for Ty {
+    fn from(ty: ArrayTy) -> Ty {
+        Ty::Array(ty)
+    }
+}
+
+impl ToString for ArrayTy {
+    fn to_string(&self) -> String {
+        format!("[{};{}]", self.base_ty.to_string(), self.len)
+    }
+}
+
+impl ArrayTy {
+    pub fn iter(&self) -> impl Iterator<Item = Ty> {
+        std::iter::repeat(*self.base_ty.clone()).take(self.len)
     }
 }
