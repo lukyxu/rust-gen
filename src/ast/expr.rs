@@ -765,7 +765,7 @@ pub struct AssignExpr {
 
 impl AssignExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if *res_type != Ty::unit_type() {
+        if !res_type.is_unit() {
             return None;
         };
         let ty = ctx.choose_prim_type().into();

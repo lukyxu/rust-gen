@@ -3,6 +3,7 @@ use rand::Rng;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
+    Unit,
     Prim(PrimTy),
     Tuple(Vec<Ty>), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
     Array(Box<Ty>, usize),
@@ -11,13 +12,14 @@ pub enum Ty {
 impl Ty {
     pub fn is_unit(&self) -> bool {
         match self {
+            Ty::Unit => true,
             Ty::Tuple(types) => types.is_empty(),
             _ => false,
         }
     }
 
     pub fn unit_type() -> Ty {
-        Ty::Tuple(Vec::new())
+        Ty::Unit
     }
 
     pub fn is_primitive_number(&self) -> bool {
@@ -54,6 +56,7 @@ impl Ty {
 impl ToString for Ty {
     fn to_string(&self) -> String {
         match self {
+            Ty::Unit => "()".to_string(),
             Ty::Prim(prim) => prim.to_string(),
             Ty::Tuple(tuple) => {
                 format!(
@@ -83,7 +86,6 @@ pub enum PrimTy {
     Float(FloatTy),
     #[allow(dead_code)]
     Str,
-    EmptyTuple,
 }
 
 impl ToString for PrimTy {
@@ -98,7 +100,6 @@ impl ToString for PrimTy {
                 FloatTy::F64 => "f64",
             }.to_string(),
             PrimTy::Str => "&str".to_string(),
-            PrimTy::EmptyTuple => "()".to_string(),
         }
         .to_owned()
     }
