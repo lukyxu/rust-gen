@@ -10,14 +10,16 @@ use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
 
 pub struct ChecksumGenVisitor {
+    add_checksum: bool,
     local_type_symbol_table: TypeSymbolTable,
     prev_local_type_symbol_tables: Vec<TypeSymbolTable>,
     checksum_name: &'static str,
 }
 
 impl ChecksumGenVisitor {
-    pub fn new() -> ChecksumGenVisitor {
+    pub fn new(add_checksum: bool) -> ChecksumGenVisitor {
         ChecksumGenVisitor {
+            add_checksum,
             local_type_symbol_table: TypeSymbolTable::default(),
             prev_local_type_symbol_tables: vec![],
             checksum_name: "checksum",
@@ -49,7 +51,9 @@ impl Visitor for ChecksumGenVisitor {
         function.block.stmts.push(Stmt::Custom(CustomStmt {
             stmt: format!("println!(\"{{}}\", {})", self.checksum_name),
         }));
-        self.visit_block_expr(&mut function.block);
+        if self.add_checksum {
+            self.visit_block_expr(&mut function.block);
+        }
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {

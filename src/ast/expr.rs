@@ -9,7 +9,6 @@ use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
 use crate::context::Context;
-use rand::Rng;
 use std::cmp::max;
 use std::mem::swap;
 use std::{isize, u32, usize};
@@ -829,10 +828,22 @@ impl FieldExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let field_tuple = Ty::Tuple(vec![res_type.clone(), res_type.clone()]);
+        if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+            return None;
+        }
+        let tuple = ctx.choose_tuple_type_with_elem_type(res_type);
 
-        let base = Box::new(Expr::generate_expr(ctx, &field_tuple)?);
-        let member = Member::Unnamed(ctx.rng.gen_range(0..2));
+        let base = Box::new(Expr::generate_expr(ctx, &tuple)?);
+        let indexes: Vec<usize> = if let Ty::Tuple(tys) = tuple {
+            tys.iter()
+                .enumerate()
+                .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
+                .collect()
+        } else {
+            panic!()
+        };
+
+        let member = Member::Unnamed(*indexes.choose(&mut ctx.rng).unwrap());
         Some(Expr::Field(FieldExpr { base, member }))
     }
 }
@@ -849,8 +860,15 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let array_type = Ty::Array(Box::new(res_type.clone()), 3);
-        let array_size: u128 = 3 as u128;
+        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
+            return None;
+        }
+        let array_type = ctx.choose_array_type_with_elem_type(res_type);
+        let array_size = if let Ty::Array(_, array_size) = array_type {
+            array_size as u128
+        } else {
+            panic!()
+        };
         let base = Box::new(Expr::generate_expr(ctx, &array_type)?);
         let index = Box::new(Expr::generate_expr(ctx, &Ty::UInt(UIntTy::USize))?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
@@ -861,6 +879,7 @@ impl IndexExpr {
             ))),
             op: BinaryOp::Rem,
         }));
+
         Some(Expr::Index(IndexExpr {
             base,
             index: inbound_index,
