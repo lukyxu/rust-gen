@@ -4,7 +4,7 @@ use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
-use crate::ast::ty::{FloatTy, IntTy, PrimTy, Ty, UIntTy};
+use crate::ast::ty::{ArrayTy, FloatTy, IntTy, PrimTy, Ty, UIntTy};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
@@ -630,7 +630,7 @@ impl CastExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let source_type: Ty = ctx.choose_prim_type().into();
+        let source_type: Ty = PrimTy::generate_type(ctx)?.into();
         if !source_type.compatible_cast(res_type) {
             return None;
         }
@@ -768,12 +768,9 @@ impl AssignExpr {
         if !res_type.is_unit() {
             return None;
         };
-        let ty = ctx.choose_prim_type().into();
+        let ty = Ty::generate_type(ctx)?;
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
-        if mut_ident_exprs.is_empty() {
-            return None;
-        }
-        let ident_expr = mut_ident_exprs.choose(&mut ctx.rng).unwrap().clone();
+        let ident_expr = mut_ident_exprs.choose(&mut ctx.rng)?.clone();
 
         Some(Expr::Assign(AssignExpr {
             name: ident_expr.name,
@@ -824,19 +821,20 @@ impl FieldExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
-            return None;
-        }
-        let tuple = ctx.choose_tuple_type_with_elem_type(res_type);
-
-        let base = Box::new(Expr::generate_expr(ctx, &tuple.clone().into())?);
-        let indexes: Vec<usize> = (&tuple).into_iter()
-                .enumerate()
-                .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
-                .collect();
-
-        let member = Member::Unnamed(*indexes.choose(&mut ctx.rng).unwrap());
-        Some(Expr::Field(FieldExpr { base, member }))
+        todo!()
+        // if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+        //     return None;
+        // }
+        // let tuple = ctx.choose_tuple_type_with_elem_type(res_type);
+        //
+        // let base = Box::new(Expr::generate_expr(ctx, &tuple.clone().into())?);
+        // let indexes: Vec<usize> = (&tuple).into_iter()
+        //         .enumerate()
+        //         .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
+        //         .collect();
+        //
+        // let member = Member::Unnamed(*indexes.choose(&mut ctx.rng).unwrap());
+        // Some(Expr::Field(FieldExpr { base, member }))
     }
 }
 
@@ -855,7 +853,7 @@ impl IndexExpr {
         if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
             return None;
         }
-        let array_type = ctx.choose_array_type_with_elem_type(res_type);
+        let array_type: ArrayTy = ArrayTy::generate_type(ctx, Some(res_type.clone()))?;
         let base = Box::new(Expr::generate_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::generate_expr(
             ctx,

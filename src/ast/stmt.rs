@@ -18,7 +18,7 @@ pub enum Stmt {
 
 impl Stmt {
     pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
-        let ty = ctx.choose_type();
+        let ty = Ty::generate_type(ctx)?;
         let stmt_kind = ctx.choose_stmt_kind();
         let stmt = match stmt_kind {
             StmtKind::Local => {

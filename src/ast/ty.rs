@@ -10,6 +10,15 @@ pub enum Ty {
 }
 
 impl Ty {
+    pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
+        match ctx.choose_base_expr_kind() {
+            TyKind::Unit => Some(Ty::Unit),
+            TyKind::Prim => PrimTy::generate_type(ctx).map(Ty::Prim),
+            TyKind::Tuple => panic!(),
+            TyKind::Array => ArrayTy::generate_type(ctx, None).map(Ty::Array),
+        }
+    }
+
     pub fn is_unit(&self) -> bool {
         match self {
             Ty::Unit => true,
@@ -98,6 +107,12 @@ impl ToString for PrimTy {
 impl From<PrimTy> for Ty {
     fn from(ty: PrimTy) -> Ty {
         Ty::Prim(ty)
+    }
+}
+
+impl PrimTy {
+    pub fn generate_type(ctx: &mut Context) -> Option<PrimTy> {
+        ctx.choose_prim_type()
     }
 }
 
@@ -286,4 +301,47 @@ impl ArrayTy {
     pub fn iter(&self) -> impl Iterator<Item = Ty> {
         std::iter::repeat(*self.base_ty.clone()).take(self.len)
     }
+
+    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
+        if ctx.choose_new_array_type() {
+            return ArrayTy::generate_new_type(ctx, ty);
+        }
+        return ctx.choose_array_type(ty)
+    }
+
+    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
+        let prev_gen_new_array_types = ctx.gen_new_array_types;
+        ctx.gen_new_array_types = false;
+        let mut res: Option<ArrayTy> = None;
+        for _ in 0..10 {
+            let len = ctx.choose_array_length();
+            let base_ty = if let Some(base_type) = ty.clone().or_else(||Ty::generate_type(ctx)) {
+                Box::new(base_type)
+            } else {
+                continue
+            };
+
+            if base_ty.array_depth() + 1 > ctx.policy.max_array_depth {
+                continue;
+            }
+            let array_type = ArrayTy { base_ty, len };
+            if ctx.array_type_dist.iter().any(|(t, _)| t == &array_type) {
+                continue;
+            }
+            let weight = 1.0;
+            ctx.array_type_dist.push((array_type.clone(), weight));
+            res = Some(array_type);
+            break;
+        }
+        ctx.gen_new_array_types = prev_gen_new_array_types;
+        res
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TyKind {
+    Unit,
+    Prim,
+    Tuple,
+    Array,
 }
