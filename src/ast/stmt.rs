@@ -17,7 +17,7 @@ pub enum Stmt {
 }
 
 impl Stmt {
-    pub fn generate_non_expr_stmt(ctx: &mut Context) -> Stmt {
+    pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
         let ty = ctx.choose_type();
         let stmt_kind = ctx.choose_stmt_kind();
         let stmt = match stmt_kind {
@@ -28,14 +28,14 @@ impl Stmt {
                 let stmt: Stmt = Stmt::Local(LocalStmt::Init(InitLocalStmt {
                     name: name.clone(),
                     ty: ty.clone(),
-                    rhs: Expr::generate_expr_safe(ctx, &ty),
+                    rhs: Expr::generate_expr(ctx, &ty)?,
                     mutable,
                 }));
                 ctx.type_symbol_table.add_var(name, ty, mutable);
                 stmt
             }
             StmtKind::Semi => Stmt::Semi(SemiStmt {
-                expr: Expr::generate_expr_safe(ctx, &ty),
+                expr: Expr::generate_expr(ctx, &ty)?,
             }),
             StmtKind::Expr => {
                 panic!("Non expression statement cannot be expression")
@@ -43,13 +43,13 @@ impl Stmt {
         };
         *ctx.statistics.stmt_counter.entry(stmt_kind).or_insert(0) += 1;
         ctx.statistics.total_stmts += 1;
-        stmt
+        Some(stmt)
     }
 
-    pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Stmt {
-        Stmt::Expr(ExprStmt {
-            expr: Expr::generate_expr_safe(ctx, res_type),
-        })
+    pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
+        Some(Stmt::Expr(ExprStmt {
+            expr: Expr::generate_expr(ctx, res_type)?,
+        }))
     }
 }
 

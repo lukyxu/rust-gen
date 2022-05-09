@@ -75,14 +75,6 @@ impl Expr {
         res
     }
 
-    pub fn generate_expr_safe(ctx: &mut Context, res_type: &Ty) -> Expr {
-        let expr = Expr::generate_expr(ctx, res_type);
-        match expr {
-            None => panic!("Failed to generate non expression statement"),
-            Some(expr) => expr,
-        }
-    }
-
     fn generate_arith_expr(
         ctx: &mut Context,
         res_type: &Ty,
@@ -638,7 +630,7 @@ impl CastExpr {
         if !source_type.compatible_cast(res_type) {
             return None;
         }
-        let expr = Box::new(Expr::generate_expr_safe(ctx, &source_type));
+        let expr = Box::new(Expr::generate_expr(ctx, &source_type)?);
         Some(Expr::Cast(CastExpr {
             expr,
             ty: res_type.clone(),
@@ -708,10 +700,10 @@ impl BlockExpr {
         }
         for _ in 0..num_stmts {
             // TODO: Make sure these statements are not expression statements
-            stmts.push(Stmt::generate_non_expr_stmt(ctx));
+            stmts.push(Stmt::generate_non_expr_stmt(ctx)?);
         }
         if !res_type.is_unit() {
-            stmts.push(Stmt::generate_expr_stmt(ctx, res_type));
+            stmts.push(Stmt::generate_expr_stmt(ctx, res_type)?);
         }
         ctx.type_symbol_table = outer_symbol_table;
         Some(BlockExpr { stmts })
@@ -781,7 +773,7 @@ impl AssignExpr {
 
         Some(Expr::Assign(AssignExpr {
             name: ident_expr.name,
-            rhs: Box::new(Expr::generate_expr_safe(ctx, &ident_expr.ty)),
+            rhs: Box::new(Expr::generate_expr(ctx, &ident_expr.ty)?),
         }))
     }
 }
