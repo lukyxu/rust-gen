@@ -150,14 +150,14 @@ impl Policy {
                 (Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]), 1.0),
             ],
             tuple_length_dist: Uniform::new_inclusive(3, 4),
-            max_tuple_depth: 2,
+            max_tuple_depth: 1,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
                 (ExprKind::Binary, 1.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Ident, 2.0),
                 (ExprKind::If, 1.0),
-                (ExprKind::Tuple, 2.0),
+                (ExprKind::Tuple, 1.0),
             ],
 
             max_if_else_depth: 2,
@@ -250,7 +250,7 @@ impl Policy {
                 (ExprKind::Unary, 5.0),
                 (ExprKind::Ident, 2.0),
                 (ExprKind::If, 1.0),
-                (ExprKind::Array, 2.0),
+                (ExprKind::Array, 1.0),
             ],
 
             max_if_else_depth: 2,

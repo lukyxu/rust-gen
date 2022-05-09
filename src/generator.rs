@@ -15,16 +15,12 @@ pub struct GeneratorOutput {
 }
 
 pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
+    let add_checksum = false;
     let mut ctx = Context::with_policy(seed, &policy);
     let mut main = Function::create_main_fn(&mut ctx);
     // Make program compilable
-    // _print_program(&mut main);
-    let mut expr_visitor = ExprVisitor::new();
-    // Fix runtime errors
-    expr_visitor.visit_function(&mut main);
-    let mut checksum_gen_visitor = ChecksumGenVisitor::new();
+    let mut checksum_gen_visitor = ChecksumGenVisitor::new(add_checksum);
     checksum_gen_visitor.visit_function(&mut main);
-    // _print_program(&mut main);
     let mut checksum_eval_visitor = ChecksumEvalVisitor::new();
     checksum_eval_visitor.visit_function(&mut main);
     let mut emit_visitor = EmitVisitor::default();

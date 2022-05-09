@@ -78,16 +78,14 @@ impl Context {
     }
 
     pub fn choose_array_type(&mut self) -> Ty {
+        let mut res: Option<Ty> = None;
         if self.choose_new_array_type() {
             let prev_gen_new_array_types = self.gen_new_array_types;
             self.gen_new_array_types = false;
-            if let Some(ty) = self.add_new_array_type() {
-                self.gen_new_array_types = prev_gen_new_array_types;
-                return ty;
-            }
+            res = self.add_new_array_type();
             self.gen_new_array_types = prev_gen_new_array_types;
         }
-        choose(&self.array_type_dist, &mut self.rng)
+        res.unwrap_or_else(||choose(&self.array_type_dist, &mut self.rng))
     }
 
     pub fn choose_array_type_with_elem_type(&mut self, ty: &Ty) -> Ty {
@@ -182,7 +180,7 @@ impl Context {
         if let Some(ty) = self.add_new_tuple_type_with_type(ty) {
             return ty;
         }
-        Ty::Tuple(vec![ty.clone(), ty.clone()])
+        Ty::Tuple(vec![ty.clone()])
     }
 
     pub fn choose_tuple_length(&mut self) -> usize {
@@ -269,7 +267,7 @@ impl Context {
     }
 
     pub fn choose_new_array_type(&mut self) -> bool {
-        self.gen_new_tuple_types && self.rng.gen_bool(self.policy.new_array_prob)
+        self.gen_new_array_types && self.rng.gen_bool(self.policy.new_array_prob)
     }
 
     pub fn choose_new_tuple_type(&mut self) -> bool {

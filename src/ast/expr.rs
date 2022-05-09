@@ -828,6 +828,9 @@ impl FieldExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+            return None;
+        }
         let tuple = ctx.choose_tuple_type_with_elem_type(res_type);
 
         let base = Box::new(Expr::generate_expr(ctx, &tuple)?);
@@ -857,6 +860,9 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
+            return None;
+        }
         let array_type = ctx.choose_array_type_with_elem_type(res_type);
         let array_size = if let Ty::Array(_, array_size) = array_type {
             array_size as u128
@@ -873,6 +879,7 @@ impl IndexExpr {
             ))),
             op: BinaryOp::Rem,
         }));
+
         Some(Expr::Index(IndexExpr {
             base,
             index: inbound_index,

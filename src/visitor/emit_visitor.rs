@@ -194,6 +194,9 @@ impl Visitor for EmitVisitor {
             }
             self.visit_expr(expr);
         }
+        if expr.tuple.len() == 1 {
+            self.output.push(',');
+        }
         self.output.push(')');
     }
 
