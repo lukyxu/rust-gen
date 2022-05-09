@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{IntTy, Ty, UIntTy};
+use crate::ast::ty::{IntTy, PrimTy, Ty, UIntTy};
 use rand::distributions::Uniform;
 
 #[derive(Debug, Clone)]
@@ -9,7 +9,7 @@ pub struct Policy {
     pub num_stmt_dist: Uniform<usize>,
     pub expr_dist: Vec<(ExprKind, f64)>,
     pub stmt_dist: Vec<(StmtKind, f64)>,
-    pub prim_type_dist: Vec<(Ty, f64)>,
+    pub prim_type_dist: Vec<(PrimTy, f64)>,
 
     pub new_array_prob: f64,
     pub default_array_type_dist: Vec<(Ty, f64)>,
@@ -35,17 +35,27 @@ pub struct Policy {
     pub max_expr_attempts: usize,
 }
 
+// vec![
+//     Policy::stress_test(),
+//     Policy::mutability_debug(),
+//     Policy::tuple_debug(),
+//     Policy::tuple_field_debug(),
+//     Policy::simple_debug(),
+//     Policy::simple_debug_with_assignments(),
+//     Policy::unary_debug(),
+//     Policy::array_debug(),
+//     Policy::array_index_debug(),
+//     Policy::default(),
+// ]
+
 #[allow(dead_code)]
 impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![
-            Policy::stress_test(),
-            Policy::mutability_debug(),
             Policy::tuple_debug(),
             Policy::tuple_field_debug(),
             Policy::simple_debug(),
             Policy::simple_debug_with_assignments(),
-            Policy::unary_debug(),
             Policy::array_debug(),
             Policy::array_index_debug(),
             Policy::default(),
@@ -82,72 +92,14 @@ impl Policy {
         })
     }
 
-    pub fn stress_test() -> Self {
-        let policy = Policy::default_with_name("stress_test");
-        Policy {
-            stmt_dist: vec![
-                (StmtKind::Local, 1.0),
-                (StmtKind::Semi, 1.0),
-                // (StmtKind::Expr, 0.0): Must be 0
-            ],
-            prim_type_dist: vec![
-                (Ty::Int(IntTy::I8), 3.0),
-                // (Ty::Int(IntTy::I16), 1.0),
-                (Ty::Tuple(vec![]), 1.0),
-            ],
-            mutability_prob: 0.8,
-            expr_dist: vec![
-                (ExprKind::Literal, 3.0),
-                (ExprKind::If, 2.0),
-                (ExprKind::Binary, 2.0),
-                (ExprKind::Ident, 2.0),
-            ],
-            num_stmt_dist: Uniform::new_inclusive(2, 15),
-
-            max_if_else_depth: 3,
-            max_block_depth: 5,
-            max_arith_depth: 7,
-            ..policy
-        }
-    }
-
-    pub fn mutability_debug() -> Self {
-        let policy = Policy::default_with_name("mutability_debug");
-        Policy {
-            stmt_dist: vec![
-                (StmtKind::Local, 1.0),
-                (StmtKind::Semi, 1.0),
-                // (StmtKind::Expr, 0.0): Must be 0
-            ],
-            prim_type_dist: vec![
-                (Ty::Int(IntTy::I8), 1.0),
-                // (Ty::Int(IntTy::I16), 1.0),
-                (Ty::Tuple(vec![]), 2.0),
-            ],
-            mutability_prob: 0.8,
-            expr_dist: vec![
-                (ExprKind::Literal, 3.0),
-                (ExprKind::If, 2.0),
-                (ExprKind::Binary, 2.0),
-                (ExprKind::Ident, 2.0),
-                (ExprKind::Assign, 5.0),
-            ],
-
-            max_if_else_depth: 1,
-            max_block_depth: 2,
-            max_arith_depth: 1,
-            ..policy
-        }
-    }
-
     pub fn tuple_debug() -> Self {
         let policy = Policy::default_with_name("tuple_debug");
         Policy {
-            prim_type_dist: vec![(Ty::Int(IntTy::I8), 3.0)],
+            prim_type_dist: vec![(IntTy::I8.into(), 3.0)],
             new_tuple_prob: 1.0,
             default_tuple_type_dist: vec![
                 (Ty::Tuple(vec![]), 3.0),
-                (Ty::Tuple(vec![Ty::Int(IntTy::I8), Ty::Int(IntTy::I8)]), 1.0),
+                (Ty::Tuple(vec![IntTy::I8.into(), IntTy::I8.into()]), 1.0),
             ],
             tuple_length_dist: Uniform::new_inclusive(3, 4),
             max_tuple_depth: 1,
@@ -178,7 +130,7 @@ impl Policy {
         let policy = Policy::default_with_name("simple_debug");
         Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
-            prim_type_dist: vec![(Ty::Int(IntTy::I8), 1.0), (Ty::Tuple(vec![]), 1.0)],
+            prim_type_dist: vec![(IntTy::I8.into(), 1.0)],
             mutability_prob: 0.2,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
@@ -207,39 +159,13 @@ impl Policy {
         policy
     }
 
-    pub fn unary_debug() -> Self {
-        let policy = Policy::default_with_name("unary_debug");
-        Policy {
-            stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
-            prim_type_dist: vec![
-                (Ty::Int(IntTy::I8), 1.0),
-                (Ty::Bool, 1.0),
-                (Ty::Tuple(vec![]), 1.0),
-            ],
-            mutability_prob: 0.2,
-            expr_dist: vec![
-                (ExprKind::Literal, 3.0),
-                (ExprKind::Binary, 1.0),
-                (ExprKind::Unary, 5.0),
-                (ExprKind::Ident, 2.0),
-            ],
-
-            max_if_else_depth: 2,
-            max_block_depth: 3,
-            max_arith_depth: 1,
-
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
-            ..policy
-        }
-    }
-
     pub fn array_debug() -> Self {
         let policy = Policy::default_with_name("array_debug");
         Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
-            prim_type_dist: vec![(Ty::Int(IntTy::I8), 1.0)],
+            prim_type_dist: vec![(IntTy::I8.into(), 1.0)],
             new_array_prob: 0.5,
-            default_array_type_dist: vec![(Ty::Array(Box::new(Ty::Int(IntTy::I8)), 3), 0.5)],
+            default_array_type_dist: vec![(Ty::Array(Box::new(IntTy::I8.into()), 3), 0.5)],
             array_length_dist: Uniform::new_inclusive(3, 4),
             max_array_depth: 3,
 
@@ -287,16 +213,18 @@ impl Policy {
                 // (StmtKind::Expr, 0.0): Must be 0
             ],
             prim_type_dist: vec![
-                (Ty::Int(IntTy::I8), 3.0),
-                (Ty::Int(IntTy::I16), 3.0),
-                (Ty::Int(IntTy::I32), 3.0),
-                (Ty::Int(IntTy::I64), 1.0),
-                (Ty::Int(IntTy::ISize), 1.0),
-                (Ty::UInt(UIntTy::U8), 3.0),
-                (Ty::UInt(UIntTy::U16), 3.0),
-                (Ty::UInt(UIntTy::U32), 3.0),
-                (Ty::UInt(UIntTy::U64), 1.0),
-                (Ty::UInt(UIntTy::USize), 1.0),
+                (IntTy::I8.into(), 3.0),
+                (IntTy::I16.into(), 3.0),
+                (IntTy::I32.into(), 3.0),
+                (IntTy::I64.into(), 1.0),
+                (IntTy::I128.into(), 1.0),
+                (IntTy::ISize.into(), 1.0),
+                (UIntTy::U8.into(), 3.0),
+                (UIntTy::U16.into(), 3.0),
+                (UIntTy::U32.into(), 3.0),
+                (UIntTy::U64.into(), 1.0),
+                (UIntTy::U128.into(), 1.0),
+                (UIntTy::USize.into(), 1.0),
             ],
 
             new_array_prob: 0.0,

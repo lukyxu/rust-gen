@@ -4,7 +4,7 @@ use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
-use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
+use crate::ast::ty::{FloatTy, IntTy, PrimTy, Ty, UIntTy};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
@@ -135,8 +135,8 @@ impl From<LitExpr> for EvalExpr {
 impl LitExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
-            Ty::Bool => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
-            Ty::Int(t) => {
+            Ty::Prim(PrimTy::Bool) => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
+            Ty::Prim(PrimTy::Int(t)) => {
                 let val = t.rand_val(ctx);
                 let expr_type = if matches!(t, IntTy::I32) && ctx.choose_unsuffixed_int() {
                     LitExprTy::Unsuffixed
@@ -145,7 +145,7 @@ impl LitExpr {
                 };
                 Some(LitExpr::Int(val, expr_type).into())
             }
-            Ty::UInt(t) => {
+            Ty::Prim(PrimTy::UInt(t)) => {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
             }
@@ -160,8 +160,12 @@ impl LitExpr {
     pub fn cast(self, res_type: &Ty) -> LitExpr {
         if let LitExpr::Int(u128, _) = self {
             match res_type {
-                Ty::Int(s_int) => LitExpr::Int(s_int.recast(u128), LitExprTy::Signed(*s_int)),
-                Ty::UInt(u_int) => LitExpr::Int(u_int.recast(u128), LitExprTy::Unsigned(*u_int)),
+                Ty::Prim(PrimTy::Int(s_int)) => {
+                    LitExpr::Int(s_int.recast(u128), LitExprTy::Signed(*s_int))
+                }
+                Ty::Prim(PrimTy::UInt(u_int)) => {
+                    LitExpr::Int(u_int.recast(u128), LitExprTy::Unsigned(*u_int))
+                }
                 _ => panic!(),
             }
         } else {
@@ -204,8 +208,8 @@ impl BinaryExpr {
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let op = match res_type {
-            Ty::Bool => ctx.choose_binary_bool_op(),
-            Ty::Int(_) | Ty::UInt(_) => ctx.choose_binary_int_op(),
+            Ty::Prim(PrimTy::Bool) => ctx.choose_binary_bool_op(),
+            Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => ctx.choose_binary_int_op(),
             Ty::Tuple(_) | Ty::Array(..) => return None,
             _ => panic!(
                 "Binary operations for {} not supported",
@@ -531,8 +535,8 @@ impl UnaryExpr {
     #[allow(dead_code)]
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let op = match res_type {
-            Ty::Bool => UnaryOp::Not,
-            Ty::Int(_) => UnaryOp::Neg,
+            Ty::Prim(PrimTy::Bool) => UnaryOp::Not,
+            Ty::Prim(PrimTy::Int(_)) => UnaryOp::Neg,
             _ => return None,
         };
         let expr = Box::new(Expr::generate_expr(ctx, res_type)?);
@@ -626,7 +630,7 @@ impl CastExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let source_type = ctx.choose_prim_type();
+        let source_type: Ty = ctx.choose_prim_type().into();
         if !source_type.compatible_cast(res_type) {
             return None;
         }
@@ -653,7 +657,7 @@ impl IfExpr {
         }
         let outer_symbol_table = ctx.type_symbol_table.clone();
         ctx.if_else_depth += 1;
-        let cond = Expr::generate_expr(ctx, &Ty::Bool);
+        let cond = Expr::generate_expr(ctx, &PrimTy::Bool.into());
         let if_expr = match cond {
             None => None,
             Some(cond) => {
@@ -764,7 +768,7 @@ impl AssignExpr {
         if *res_type != Ty::unit_type() {
             return None;
         };
-        let ty = ctx.choose_prim_type();
+        let ty = ctx.choose_prim_type().into();
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
         if mut_ident_exprs.is_empty() {
             return None;
@@ -862,7 +866,10 @@ impl IndexExpr {
             panic!()
         };
         let base = Box::new(Expr::generate_expr(ctx, &array_type)?);
-        let index = Box::new(Expr::generate_expr(ctx, &Ty::UInt(UIntTy::USize))?);
+        let index = Box::new(Expr::generate_expr(
+            ctx,
+            &PrimTy::UInt(UIntTy::USize).into(),
+        )?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
             rhs: Box::new(Expr::Literal(LitExpr::Int(
@@ -951,11 +958,11 @@ impl EvalExpr {
         match self {
             EvalExpr::Literal(lit) => match lit {
                 LitExpr::Int(_, int_ty) => match int_ty {
-                    Signed(t) => Ty::Int(*t),
-                    Unsigned(t) => Ty::UInt(*t),
+                    Signed(t) => (*t).into(),
+                    Unsigned(t) => (*t).into(),
                     Unsuffixed => todo!(),
                 },
-                LitExpr::Bool(_) => Ty::Bool,
+                LitExpr::Bool(_) => PrimTy::Bool.into(),
                 LitExpr::Str(_) | LitExpr::Byte(_) | LitExpr::Char(_) | LitExpr::Float(_, _) => {
                     todo!()
                 }
@@ -1141,8 +1148,8 @@ mod tests {
     fn cast_expr_ok() {
         let expr = LitExpr::Int(-27_i8 as u128, LitExprTy::Signed(IntTy::I8));
         assert_eq!(
-            expr.cast(&Ty::UInt(UIntTy::U32))
-                .cast(&Ty::UInt(UIntTy::U64)),
+            expr.cast(&UIntTy::U32.into())
+                .cast(&UIntTy::U64.into()),
             LitExpr::Int(4294967269, Unsigned(UIntTy::U64))
         );
     }

@@ -3,15 +3,7 @@ use rand::Rng;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
-    Bool,
-    #[allow(dead_code)]
-    Char,
-    Int(IntTy),
-    UInt(UIntTy),
-    #[allow(dead_code)]
-    Float(FloatTy),
-    #[allow(dead_code)]
-    Str,
+    Prim(PrimTy),
     Tuple(Vec<Ty>), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
     Array(Box<Ty>, usize),
 }
@@ -30,7 +22,7 @@ impl Ty {
 
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
-        matches!(self, Ty::Int(_) | Ty::UInt(_))
+        matches!(self, Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)))
     }
 
     pub fn compatible_cast(&self, target_type: &Ty) -> bool {
@@ -61,48 +53,60 @@ impl Ty {
 
 impl ToString for Ty {
     fn to_string(&self) -> String {
-        let tmp;
         match self {
-            Ty::Bool => "bool",
-            Ty::Char => "char",
-            Ty::Int(int) => match int {
-                IntTy::ISize => "isize",
-                IntTy::I8 => "i8",
-                IntTy::I16 => "i16",
-                IntTy::I32 => "i32",
-                IntTy::I64 => "i64",
-                IntTy::I128 => "i128",
-            },
-            Ty::UInt(uint) => match uint {
-                UIntTy::USize => "usize",
-                UIntTy::U8 => "u8",
-                UIntTy::U16 => "u16",
-                UIntTy::U32 => "u32",
-                UIntTy::U64 => "u64",
-                UIntTy::U128 => "u128",
-            },
-            Ty::Float(float) => match float {
-                FloatTy::F32 => "f32",
-                FloatTy::F64 => "f64",
-            },
-            Ty::Str => "&str",
+            Ty::Prim(prim) => prim.to_string(),
             Ty::Tuple(tuple) => {
-                tmp = format!(
+                format!(
                     "({})",
                     tuple
                         .iter()
                         .map(std::string::ToString::to_string)
                         .collect::<Vec<String>>()
                         .join(",")
-                );
-                &tmp
+                )
             }
             Ty::Array(ty, count) => {
-                tmp = format!("[{};{}]", ty.to_string(), count);
-                &tmp
+                format!("[{};{}]", ty.to_string(), count)
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum PrimTy {
+    Bool,
+    #[allow(dead_code)]
+    Char,
+    Int(IntTy),
+    UInt(UIntTy),
+    #[allow(dead_code)]
+    Float(FloatTy),
+    #[allow(dead_code)]
+    Str,
+    EmptyTuple,
+}
+
+impl ToString for PrimTy {
+    fn to_string(&self) -> String {
+        match self {
+            PrimTy::Bool => "bool".to_string(),
+            PrimTy::Char => "char".to_string(),
+            PrimTy::Int(int_ty) => int_ty.to_string(),
+            PrimTy::UInt(uint_ty) => uint_ty.to_string(),
+            PrimTy::Float(float) => match float {
+                FloatTy::F32 => "f32",
+                FloatTy::F64 => "f64",
+            }.to_string(),
+            PrimTy::Str => "&str".to_string(),
+            PrimTy::EmptyTuple => "()".to_string(),
+        }
         .to_owned()
+    }
+}
+
+impl From<PrimTy> for Ty {
+    fn from(ty: PrimTy) -> Ty {
+        Ty::Prim(ty)
     }
 }
 
@@ -121,6 +125,32 @@ pub enum IntTy {
     I32,
     I64,
     I128,
+}
+
+impl From<IntTy> for Ty {
+    fn from(ty: IntTy) -> Ty {
+        Ty::Prim(ty.into())
+    }
+}
+
+impl From<IntTy> for PrimTy {
+    fn from(ty: IntTy) -> PrimTy {
+        PrimTy::Int(ty)
+    }
+}
+
+impl ToString for IntTy {
+    fn to_string(&self) -> String {
+        match self {
+            IntTy::ISize => "isize",
+            IntTy::I8 => "i8",
+            IntTy::I16 => "i16",
+            IntTy::I32 => "i32",
+            IntTy::I64 => "i64",
+            IntTy::I128 => "i128",
+        }
+        .to_owned()
+    }
 }
 
 impl IntTy {
@@ -156,6 +186,18 @@ pub enum UIntTy {
     U32,
     U64,
     U128,
+}
+
+impl From<UIntTy> for Ty {
+    fn from(ty: UIntTy) -> Ty {
+        Ty::Prim(ty.into())
+    }
+}
+
+impl From<UIntTy> for PrimTy {
+    fn from(ty: UIntTy) -> PrimTy {
+        PrimTy::UInt(ty)
+    }
 }
 
 impl ToString for UIntTy {
