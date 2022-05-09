@@ -5,7 +5,7 @@ use crate::ast::expr::{
 };
 use crate::ast::function::Function;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{Ty, UIntTy};
+use crate::ast::ty::{PrimTy, Ty, UIntTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
 
@@ -43,7 +43,7 @@ impl Visitor for ChecksumGenVisitor {
             0,
             Stmt::Local(LocalStmt::Init(InitLocalStmt {
                 name: self.checksum_name.to_owned(),
-                ty: Ty::UInt(UIntTy::U128),
+                ty: UIntTy::U128.into(),
                 rhs: Expr::Literal(LitExpr::Int(0, Unsigned(UIntTy::U128))),
                 mutable: true,
             })),
@@ -77,7 +77,7 @@ impl Visitor for ChecksumGenVisitor {
                 .map(|expr| {
                     Expr::Cast(CastExpr {
                         expr: Box::new(expr),
-                        ty: Ty::UInt(UIntTy::U128),
+                        ty: UIntTy::U128.into(),
                     })
                 })
                 .collect();
@@ -88,7 +88,7 @@ impl Visitor for ChecksumGenVisitor {
                         rhs: Box::new(Expr::Binary(BinaryExpr {
                             lhs: Box::new(Expr::Ident(IdentExpr {
                                 name: self.checksum_name.to_owned(),
-                                ty: Ty::UInt(UIntTy::U128),
+                                ty: UIntTy::U128.into(),
                             })),
                             rhs: Box::new(cast_expr),
                             op: BinaryOp::Add,
@@ -106,7 +106,7 @@ impl Visitor for ChecksumGenVisitor {
 fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
     let mut accumulator = vec![];
     match ty {
-        Ty::Int(_) | Ty::UInt(_) => accumulator.push(Expr::Ident(IdentExpr {
+        Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => accumulator.push(Expr::Ident(IdentExpr {
             name: name.clone(),
             ty: ty.clone(),
         })),
@@ -144,7 +144,7 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
 
 fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
     match ty {
-        Ty::Int(_) | Ty::UInt(_) => accumulator.push(expr),
+        Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => accumulator.push(expr),
         Ty::Tuple(tuples) => {
             for (i, ty) in tuples.iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {

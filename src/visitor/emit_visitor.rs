@@ -100,7 +100,7 @@ impl Visitor for EmitVisitor {
                             IntTy::I64 => (*u128 as i64).to_string(),
                             IntTy::I128 => (*u128 as i128).to_string(),
                         };
-                        format!("{}_{}", int_str, Ty::Int(*t).to_string())
+                        format!("{}_{}", int_str, (*t).to_string())
                     }
                     LitExprTy::Unsigned(t) => {
                         let uint_str = match t {
@@ -111,7 +111,7 @@ impl Visitor for EmitVisitor {
                             UIntTy::U64 => (*u128 as u64).to_string(),
                             UIntTy::U128 => u128.to_string(),
                         };
-                        format!("{}_{}", uint_str, Ty::UInt(*t).to_string())
+                        format!("{}_{}", uint_str, (*t).to_string())
                     }
                     // Unsuffixed defaults to i32
                     LitExprTy::Unsuffixed => (*u128 as i32).to_string(),
@@ -206,17 +206,6 @@ impl Visitor for EmitVisitor {
         self.visit_expr(&mut expr.rhs);
     }
 
-    fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
-        self.output.push('[');
-        for (i, expr) in (&mut expr.array).iter_mut().enumerate() {
-            if i != 0 {
-                self.output.push_str(", ");
-            }
-            self.visit_expr(expr);
-        }
-        self.output.push(']');
-    }
-
     fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
         self.output.push('(');
         self.visit_expr(&mut expr.base);
@@ -226,6 +215,17 @@ impl Visitor for EmitVisitor {
             Member::Unnamed(usize) => self.output.push_str(&usize.to_string()),
         }
         self.output.push(')');
+    }
+
+    fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
+        self.output.push('[');
+        for (i, expr) in (&mut expr.array).iter_mut().enumerate() {
+            if i != 0 {
+                self.output.push_str(", ");
+            }
+            self.visit_expr(expr);
+        }
+        self.output.push(']');
     }
 
     fn visit_index_expr(&mut self, expr: &mut IndexExpr) {

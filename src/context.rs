@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::Ty;
+use crate::ast::ty::{PrimTy, Ty};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
@@ -66,14 +66,14 @@ impl Context {
     pub fn choose_type(&mut self) -> Ty {
         let base_expr = self.choose_base_expr_kind();
         match base_expr {
-            ExprKind::Literal => self.choose_prim_type(),
+            ExprKind::Literal => self.choose_prim_type().into(),
             ExprKind::Array => self.choose_array_type(),
             ExprKind::Tuple => self.choose_tuple_type(),
             _ => unreachable!(),
         }
     }
 
-    pub fn choose_prim_type(&mut self) -> Ty {
+    pub fn choose_prim_type(&mut self) -> PrimTy {
         choose(&self.policy.prim_type_dist, &mut self.rng)
     }
 
@@ -85,7 +85,7 @@ impl Context {
             res = self.add_new_array_type();
             self.gen_new_array_types = prev_gen_new_array_types;
         }
-        res.unwrap_or_else(||choose(&self.array_type_dist, &mut self.rng))
+        res.unwrap_or_else(|| choose(&self.array_type_dist, &mut self.rng))
     }
 
     pub fn choose_array_type_with_elem_type(&mut self, ty: &Ty) -> Ty {
