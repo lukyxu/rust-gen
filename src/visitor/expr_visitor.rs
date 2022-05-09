@@ -390,7 +390,7 @@ mod tests {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
                         name: "var_0".to_owned(),
-                        ty: Ty::Int(IntTy::I8),
+                        ty: IntTy::I8.into(),
                         rhs: Expr::i8(0),
                         mutable: true,
                     })),
@@ -413,7 +413,7 @@ mod tests {
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
-                                    ty: Ty::Int(IntTy::I8),
+                                    ty: IntTy::I8.into(),
                                 })),
                                 rhs: Box::new(Expr::Literal(LitExpr::Int(
                                     1,
@@ -451,7 +451,7 @@ mod tests {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
                         name: "var_0".to_owned(),
-                        ty: Ty::Int(IntTy::I8),
+                        ty: IntTy::I8.into(),
                         rhs: Expr::i8(0),
                         mutable: true,
                     })),
@@ -482,7 +482,7 @@ mod tests {
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
-                                    ty: Ty::Int(IntTy::I8),
+                                    ty: IntTy::I8.into(),
                                 })),
                                 rhs: Box::new(Expr::i8(1)),
                                 op: BinaryOp::Add,
@@ -517,7 +517,7 @@ mod tests {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
                         name: "var_0".to_owned(),
-                        ty: Ty::Int(IntTy::I8),
+                        ty: IntTy::I8.into(),
                         rhs: Expr::i8(0),
                         mutable: true,
                     })),
@@ -548,7 +548,7 @@ mod tests {
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
-                                    ty: Ty::Int(IntTy::I8),
+                                    ty: IntTy::I8.into(),
                                 })),
                                 rhs: Box::new(Expr::i8(1)),
                                 op: BinaryOp::Add,

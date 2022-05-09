@@ -110,8 +110,8 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
             name: name.clone(),
             ty: ty.clone(),
         })),
-        Ty::Tuple(tuples) => {
-            for (i, t) in tuples.iter().enumerate() {
+        Ty::Tuple(tuple_ty) => {
+            for (i, t) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
                         name: name.clone(),
@@ -122,8 +122,8 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
                 exprs_from_exprs(tuple_access, t, &mut accumulator)
             }
         }
-        Ty::Array(t, size) => {
-            for i in 0..*size {
+        Ty::Array(array_ty) => {
+            for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
                         name: name.clone(),
@@ -134,7 +134,7 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
                         LitExprTy::Unsigned(UIntTy::USize),
                     ))),
                 });
-                exprs_from_exprs(array_access, t, &mut accumulator)
+                exprs_from_exprs(array_access, &ty, &mut accumulator)
             }
         }
         _ => {}
@@ -145,8 +145,8 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
 fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
     match ty {
         Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => accumulator.push(expr),
-        Ty::Tuple(tuples) => {
-            for (i, ty) in tuples.iter().enumerate() {
+        Ty::Tuple(tuple_ty) => {
+            for (i, ty) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(expr.clone()),
                     member: Member::Unnamed(i),
@@ -154,8 +154,8 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                 exprs_from_exprs(tuple_access, ty, accumulator)
             }
         }
-        Ty::Array(ty, size) => {
-            for i in 0..*size {
+        Ty::Array(array_ty) => {
+            for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(expr.clone()),
                     index: Box::new(Expr::Literal(LitExpr::Int(
@@ -163,7 +163,7 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                         LitExprTy::Unsigned(UIntTy::USize),
                     ))),
                 });
-                exprs_from_exprs(array_access, ty, accumulator)
+                exprs_from_exprs(array_access, &ty, accumulator)
             }
         }
         _ => {}
