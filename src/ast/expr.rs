@@ -748,10 +748,12 @@ impl TupleExpr {
         if let Ty::Tuple(types) = res_type {
             let mut res = vec![];
             for ty in types {
-                for _ in 0..ctx.policy.max_expr_attempts {
+                for i in 0..ctx.policy.max_expr_attempts {
                     if let Some(expr) = Expr::generate_expr(ctx, ty) {
                         res.push(expr);
                         break;
+                    } else if i == ctx.policy.max_expr_attempts - 1 {
+                        return None;
                     }
                 }
             }
@@ -794,10 +796,12 @@ impl ArrayExpr {
         if let Ty::Array(array_ty) = res_type {
             let mut res = vec![];
             for ty in array_ty.iter() {
-                for _ in 0..ctx.policy.max_expr_attempts {
+                for i in 0..ctx.policy.max_expr_attempts {
                     if let Some(expr) = Expr::generate_expr(ctx, & ty) {
                         res.push(expr);
                         break;
+                    } else if i == ctx.policy.max_expr_attempts - 1 {
+                        return None;
                     }
                 }
             }

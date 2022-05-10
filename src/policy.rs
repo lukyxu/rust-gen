@@ -18,10 +18,12 @@ pub struct Policy {
     pub new_array_prob: f64,
     pub array_length_dist: Uniform<usize>,
     pub max_array_depth: usize,
+    pub max_expr_depth_in_array: usize,
 
     pub new_tuple_prob: f64,
     pub tuple_length_dist: Uniform<usize>,
     pub max_tuple_depth: usize,
+    pub max_tuple_depth_in_array: usize,
 
     pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
     pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
