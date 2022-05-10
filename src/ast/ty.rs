@@ -1,5 +1,6 @@
 use crate::context::Context;
 use rand::Rng;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -14,7 +15,8 @@ impl Ty {
         let mut res: Option<Ty> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_ty_attempts {
-            res = match ctx.choose_base_expr_kind() {
+            let ty_kind = ctx.choose_base_expr_kind();
+            res = match ty_kind {
                 TyKind::Unit => Some(Ty::Unit),
                 TyKind::Prim => PrimTy::generate_type(ctx).map(Ty::Prim),
                 TyKind::Tuple => TupleTy::generate_type(ctx, None).map(Ty::Tuple),
@@ -22,6 +24,8 @@ impl Ty {
             };
             if res.is_none() {
                 num_failed_attempts += 1;
+            } else {
+                *ctx.statistics.ty_counter.entry(ty_kind).or_insert(0) += 1;
             }
         }
         return res;
@@ -415,7 +419,7 @@ impl ArrayTy {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TyKind {
     Unit,
     Prim,
