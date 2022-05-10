@@ -6,6 +6,7 @@ use crate::visitor::base_visitor::Visitor;
 use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
 use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use crate::visitor::emit_visitor::EmitVisitor;
+use crate::visitor::expr_visitor::ExprVisitor;
 
 pub struct GeneratorOutput {
     pub program: String,
@@ -17,6 +18,8 @@ pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
     let add_checksum = true;
     let mut ctx = Context::with_policy(seed, &policy);
     let mut main = Function::create_main_fn(&mut ctx);
+    let mut expr_visitor = ExprVisitor::new();
+    expr_visitor.visit_function(&mut main);
     // Make program compilable
     let mut checksum_gen_visitor = ChecksumGenVisitor::new(add_checksum);
     checksum_gen_visitor.visit_function(&mut main);
