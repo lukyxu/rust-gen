@@ -229,8 +229,8 @@ impl Policy {
             type_dist: vec![
                 (TyKind::Unit, 1.0),
                 (TyKind::Prim, 2.0),
-                (TyKind::Array, 0.5),
-                (TyKind::Tuple, 0.5),
+                (TyKind::Array, 0.2),
+                (TyKind::Tuple, 0.2),
             ],
 
             prim_type_dist: vec![
@@ -248,11 +248,11 @@ impl Policy {
                 (UIntTy::USize.into(), 1.0),
             ],
 
-            new_array_prob: 0.0,
+            new_array_prob: 0.5,
             default_array_type_dist: vec![],
             array_length_dist: Uniform::new_inclusive(3, 5),
-            max_array_depth: 0,
-            new_tuple_prob: 0.0,
+            max_array_depth: 3,
+            new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
             tuple_length_dist: Uniform::new_inclusive(3, 5),
             max_tuple_depth: 1,

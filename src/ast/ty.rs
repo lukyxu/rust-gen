@@ -11,12 +11,18 @@ pub enum Ty {
 
 impl Ty {
     pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
-        match ctx.choose_base_expr_kind() {
-            TyKind::Unit => Some(Ty::Unit),
-            TyKind::Prim => PrimTy::generate_type(ctx).map(Ty::Prim),
-            TyKind::Tuple => panic!(),
-            TyKind::Array => ArrayTy::generate_type(ctx, None).map(Ty::Array),
+        for _ in 0..ctx.policy.max_expr_attempts {
+            let res: Option<Ty> = match ctx.choose_base_expr_kind() {
+                TyKind::Unit => Some(Ty::Unit),
+                TyKind::Prim => PrimTy::generate_type(ctx).map(Ty::Prim),
+                TyKind::Tuple => TupleTy::generate_type(ctx, None).map(Ty::Tuple),
+                TyKind::Array => ArrayTy::generate_type(ctx, None).map(Ty::Array),
+            };
+            if res.is_some() {
+                return res;
+            }
         }
+        return None;
     }
 
     pub fn is_unit(&self) -> bool {
@@ -279,6 +285,71 @@ impl ToString for TupleTy {
     }
 }
 
+impl TupleTy {
+    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
+        let mut res: Option<TupleTy> = None;
+        if !ctx.choose_new_tuple_type() {
+            res = ctx.choose_tuple_type(ty.clone())
+        }
+        if res.is_none() && ctx.gen_new_tuple_types {
+            res = TupleTy::generate_new_type(ctx, ty);
+        }
+        return res;
+    }
+
+    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
+        let prev_gen_new_tuple_types = ctx.gen_new_tuple_types;
+        ctx.gen_new_tuple_types = false;
+        let mut res: Option<TupleTy> = None;
+        'outer: for _ in 0..10 {
+            let len = ctx.choose_tuple_length();
+            let mut types: Vec<Ty> = vec![];
+            for _ in 0..len {
+                if let Some(ty) = TupleTy::generate_tuple_elem(ctx) {
+                    types.push(ty)
+                } else {
+                    break 'outer;
+                }
+            }
+            if types.len() != len {
+                break;
+            }
+            if let Some(ty) = &ty {
+                let index = ctx.rng.gen_range(0..len);
+                types[index] = ty.clone();
+            }
+            let tuple_type = TupleTy {
+                tuple: types
+            };
+            if ctx.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
+                continue;
+            }
+            let weight = 1.0;
+            ctx.tuple_type_dist.push((tuple_type.clone(), weight));
+            res = Some(tuple_type);
+            break;
+        }
+        ctx.gen_new_tuple_types = prev_gen_new_tuple_types;
+        res
+    }
+
+    pub fn generate_tuple_elem(ctx: &mut Context) -> Option<Ty> {
+        for _ in 0..10 {
+            let base_type = Ty::generate_type(ctx);
+            let base_type = if let Some(base_type) = base_type {
+                base_type
+            } else {
+                continue;
+            };
+            if base_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+                continue;
+            }
+            return Some(base_type)
+        }
+        return None
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ArrayTy {
     pub base_ty: Box<Ty>,
@@ -303,10 +374,14 @@ impl ArrayTy {
     }
 
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
-        if ctx.choose_new_array_type() {
-            return ArrayTy::generate_new_type(ctx, ty);
+        let mut res: Option<ArrayTy> = None;
+        if !ctx.choose_new_array_type() {
+            res = ctx.choose_array_type(ty.clone())
         }
-        return ctx.choose_array_type(ty)
+        if res.is_none() && ctx.gen_new_array_types {
+            res = ArrayTy::generate_new_type(ctx, ty.clone());
+        }
+        return res
     }
 
     pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
