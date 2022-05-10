@@ -1,23 +1,25 @@
 use crate::ast::expr::{BinaryOp, ExprKind};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{ArrayTy, IntTy, PrimTy, TupleTy, UIntTy};
+use crate::ast::ty::{ArrayTy, IntTy, PrimTy, TupleTy, TyKind, UIntTy};
 use rand::distributions::Uniform;
 
 #[derive(Debug, Clone)]
 pub struct Policy {
     pub name: &'static str,
     pub num_stmt_dist: Uniform<usize>,
-    pub expr_dist: Vec<(ExprKind, f64)>,
     pub stmt_dist: Vec<(StmtKind, f64)>,
+    pub expr_dist: Vec<(ExprKind, f64)>,
+    pub type_dist : Vec<(TyKind, f64)>,
+
     pub prim_type_dist: Vec<(PrimTy, f64)>,
+    pub default_array_type_dist: Vec<(ArrayTy, f64)>,
+    pub default_tuple_type_dist: Vec<(TupleTy, f64)>,
 
     pub new_array_prob: f64,
-    pub default_array_type_dist: Vec<(ArrayTy, f64)>,
     pub array_length_dist: Uniform<usize>,
     pub max_array_depth: usize,
 
     pub new_tuple_prob: f64,
-    pub default_tuple_type_dist: Vec<(TupleTy, f64)>,
     pub tuple_length_dist: Uniform<usize>,
     pub max_tuple_depth: usize,
 
@@ -32,7 +34,9 @@ pub struct Policy {
     pub max_if_else_depth: usize,
     pub max_block_depth: usize,
     pub max_arith_depth: usize,
+
     pub max_expr_attempts: usize,
+    pub max_ty_attempts: usize,
 }
 
 // vec![
@@ -214,6 +218,23 @@ impl Policy {
                 (StmtKind::Semi, 1.0),
                 // (StmtKind::Expr, 0.0): Must be 0
             ],
+            expr_dist: vec![
+                (ExprKind::Literal, 3.0),
+                (ExprKind::If, 1.0),
+                (ExprKind::Binary, 2.0),
+                (ExprKind::Ident, 2.0),
+                (ExprKind::Block, 0.0),
+                (ExprKind::Unary, 1.0),
+                (ExprKind::Cast, 1.0),
+                (ExprKind::Tuple, 3.0),
+            ],
+            type_dist: vec![
+                (TyKind::Unit, 1.0),
+                (TyKind::Prim, 2.0),
+                (TyKind::Array, 0.2),
+                (TyKind::Tuple, 0.2),
+            ],
+
             prim_type_dist: vec![
                 (IntTy::I8.into(), 3.0),
                 (IntTy::I16.into(), 3.0),
@@ -229,24 +250,14 @@ impl Policy {
                 (UIntTy::USize.into(), 1.0),
             ],
 
-            new_array_prob: 0.0,
+            new_array_prob: 0.5,
             default_array_type_dist: vec![],
             array_length_dist: Uniform::new_inclusive(3, 5),
-            max_array_depth: 0,
-            new_tuple_prob: 0.0,
+            max_array_depth: 3,
+            new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
             tuple_length_dist: Uniform::new_inclusive(3, 5),
             max_tuple_depth: 1,
-            expr_dist: vec![
-                (ExprKind::Literal, 3.0),
-                (ExprKind::If, 2.0),
-                (ExprKind::Binary, 2.0),
-                (ExprKind::Ident, 2.0),
-                (ExprKind::Block, 0.0),
-                (ExprKind::Unary, 1.0),
-                (ExprKind::Cast, 1.0),
-                (ExprKind::Tuple, 3.0),
-            ],
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
@@ -267,6 +278,7 @@ impl Policy {
             max_arith_depth: 5,
 
             max_expr_attempts: 100,
+            max_ty_attempts: 5
         }
     }
 }

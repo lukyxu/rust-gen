@@ -4,7 +4,7 @@ use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
-use crate::ast::ty::{FloatTy, IntTy, PrimTy, Ty, UIntTy};
+use crate::ast::ty::{ArrayTy, FloatTy, IntTy, PrimTy, TupleTy, Ty, UIntTy};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
@@ -135,6 +135,7 @@ impl From<LitExpr> for EvalExpr {
 impl LitExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
+            Ty::Unit => Some(TupleExpr::empty_tuple()),
             Ty::Prim(PrimTy::Bool) => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
             Ty::Prim(PrimTy::Int(t)) => {
                 let val = t.rand_val(ctx);
@@ -210,7 +211,7 @@ impl BinaryExpr {
         let op = match res_type {
             Ty::Prim(PrimTy::Bool) => ctx.choose_binary_bool_op(),
             Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => ctx.choose_binary_int_op(),
-            Ty::Tuple(_) | Ty::Array(..) => return None,
+            Ty::Tuple(_) | Ty::Array(..) | Ty::Unit => return None,
             _ => panic!(
                 "Binary operations for {} not supported",
                 res_type.to_string()
@@ -630,7 +631,7 @@ impl CastExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let source_type: Ty = ctx.choose_prim_type().into();
+        let source_type: Ty = PrimTy::generate_type(ctx)?.into();
         if !source_type.compatible_cast(res_type) {
             return None;
         }
@@ -661,7 +662,7 @@ impl IfExpr {
         let if_expr = match cond {
             None => None,
             Some(cond) => {
-                let then = Box::new(BlockExpr::generate_block_expr(ctx, res_type).unwrap());
+                let then = Box::new(BlockExpr::generate_block_expr(ctx, res_type)?);
                 let otherwise = if !res_type.is_unit() || ctx.choose_otherwise_if_stmt() {
                     Some(Box::new(
                         BlockExpr::generate_block_expr(ctx, res_type).unwrap(),
@@ -739,6 +740,10 @@ pub struct TupleExpr {
 }
 
 impl TupleExpr {
+    fn empty_tuple() -> Expr {
+        Expr::Tuple(TupleExpr{tuple: vec![]})
+    }
+
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         if let Ty::Tuple(types) = res_type {
             let mut res = vec![];
@@ -768,12 +773,9 @@ impl AssignExpr {
         if !res_type.is_unit() {
             return None;
         };
-        let ty = ctx.choose_prim_type().into();
+        let ty = Ty::generate_type(ctx)?;
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
-        if mut_ident_exprs.is_empty() {
-            return None;
-        }
-        let ident_expr = mut_ident_exprs.choose(&mut ctx.rng).unwrap().clone();
+        let ident_expr = mut_ident_exprs.choose(&mut ctx.rng)?.clone();
 
         Some(Expr::Assign(AssignExpr {
             name: ident_expr.name,
@@ -827,7 +829,7 @@ impl FieldExpr {
         if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
             return None;
         }
-        let tuple = ctx.choose_tuple_type_with_elem_type(res_type);
+        let tuple = TupleTy::generate_type(ctx, Some(res_type.clone()))?;
 
         let base = Box::new(Expr::generate_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple).into_iter()
@@ -855,7 +857,7 @@ impl IndexExpr {
         if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
             return None;
         }
-        let array_type = ctx.choose_array_type_with_elem_type(res_type);
+        let array_type: ArrayTy = ArrayTy::generate_type(ctx, Some(res_type.clone()))?;
         let base = Box::new(Expr::generate_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::generate_expr(
             ctx,
