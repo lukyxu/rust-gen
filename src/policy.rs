@@ -34,7 +34,9 @@ pub struct Policy {
     pub max_if_else_depth: usize,
     pub max_block_depth: usize,
     pub max_arith_depth: usize,
+
     pub max_expr_attempts: usize,
+    pub max_ty_attempts: usize,
 }
 
 // vec![
@@ -276,6 +278,7 @@ impl Policy {
             max_arith_depth: 5,
 
             max_expr_attempts: 100,
+            max_ty_attempts: 5
         }
     }
 }

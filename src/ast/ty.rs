@@ -11,18 +11,20 @@ pub enum Ty {
 
 impl Ty {
     pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
-        for _ in 0..ctx.policy.max_expr_attempts {
-            let res: Option<Ty> = match ctx.choose_base_expr_kind() {
+        let mut res: Option<Ty> = None;
+        let mut num_failed_attempts = 0;
+        while res.is_none() && num_failed_attempts < ctx.policy.max_ty_attempts {
+            res = match ctx.choose_base_expr_kind() {
                 TyKind::Unit => Some(Ty::Unit),
                 TyKind::Prim => PrimTy::generate_type(ctx).map(Ty::Prim),
                 TyKind::Tuple => TupleTy::generate_type(ctx, None).map(Ty::Tuple),
                 TyKind::Array => ArrayTy::generate_type(ctx, None).map(Ty::Array),
             };
-            if res.is_some() {
-                return res;
+            if res.is_none() {
+                num_failed_attempts += 1;
             }
         }
-        return None;
+        return res;
     }
 
     pub fn is_unit(&self) -> bool {
