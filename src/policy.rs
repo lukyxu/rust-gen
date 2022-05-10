@@ -18,10 +18,12 @@ pub struct Policy {
     pub new_array_prob: f64,
     pub array_length_dist: Uniform<usize>,
     pub max_array_depth: usize,
+    pub max_expr_depth_in_array: usize,
 
     pub new_tuple_prob: f64,
     pub tuple_length_dist: Uniform<usize>,
     pub max_tuple_depth: usize,
+    pub max_expr_depth_in_tuple: usize,
 
     pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
     pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
@@ -34,6 +36,7 @@ pub struct Policy {
     pub max_if_else_depth: usize,
     pub max_block_depth: usize,
     pub max_arith_depth: usize,
+    pub max_expr_depth: usize,
 
     pub max_expr_attempts: usize,
     pub max_ty_attempts: usize,
@@ -254,10 +257,12 @@ impl Policy {
             default_array_type_dist: vec![],
             array_length_dist: Uniform::new_inclusive(2, 3),
             max_array_depth: 2,
+            max_expr_depth_in_array: 5,
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
             tuple_length_dist: Uniform::new_inclusive(2, 3),
             max_tuple_depth: 2,
+            max_expr_depth_in_tuple: 5,
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
@@ -272,9 +277,10 @@ impl Policy {
             bool_true_prob: 0.5,
             mutability_prob: 0.5,
 
-            max_if_else_depth: 3,
+            max_expr_depth: 100,
+            max_if_else_depth: 2,
             // max_block_depth: 3 + max_if_else_depth,
-            max_block_depth: 4,
+            max_block_depth: 2,
             max_arith_depth: 5,
 
             max_expr_attempts: 100,
