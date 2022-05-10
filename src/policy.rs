@@ -252,12 +252,12 @@ impl Policy {
 
             new_array_prob: 0.5,
             default_array_type_dist: vec![],
-            array_length_dist: Uniform::new_inclusive(3, 5),
-            max_array_depth: 3,
+            array_length_dist: Uniform::new_inclusive(2, 3),
+            max_array_depth: 2,
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
-            tuple_length_dist: Uniform::new_inclusive(3, 5),
-            max_tuple_depth: 1,
+            tuple_length_dist: Uniform::new_inclusive(2, 3),
+            max_tuple_depth: 2,
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
