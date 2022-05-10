@@ -42,7 +42,6 @@ impl Stmt {
             }
         };
         *ctx.statistics.stmt_counter.entry(stmt_kind).or_insert(0) += 1;
-        ctx.statistics.total_stmts += 1;
         Some(stmt)
     }
 

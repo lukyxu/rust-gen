@@ -73,7 +73,6 @@ impl Expr {
                 );
             } else {
                 *ctx.statistics.expr_counter.entry(expr_kind).or_insert(0) += 1;
-                ctx.statistics.total_exprs += 1;
             }
         }
         res
