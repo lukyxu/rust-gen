@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{ArrayTy, PrimTy, TupleTy, Ty, TyKind};
+use crate::ast::ty::{ArrayTy, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
@@ -15,14 +15,19 @@ pub struct Context {
     pub rng: StdRng,
     pub gen_new_array_types: bool,
     pub gen_new_tuple_types: bool,
+    pub gen_new_struct_types: bool,
     pub expr_depth: usize,
     pub if_else_depth: usize,
     pub block_depth: usize,
     pub arith_depth: usize,
+
     pub array_depth: usize,
     pub tuple_depth: usize,
+    pub struct_depth: usize,
+
     pub array_type_dist: Vec<(ArrayTy, f64)>,
     pub tuple_type_dist: Vec<(TupleTy, f64)>,
+    pub struct_type_dist: Vec<(StructTy, f64)>,
 }
 
 impl Context {
@@ -44,14 +49,17 @@ impl Context {
             rng,
             gen_new_array_types: true,
             gen_new_tuple_types: true,
+            gen_new_struct_types: true,
             expr_depth: 0,
             if_else_depth: 0,
             block_depth: 0,
             arith_depth: 0,
             array_depth: 0,
             tuple_depth: 0,
+            struct_depth: 0,
             array_type_dist: policy.default_array_type_dist.clone(),
             tuple_type_dist: policy.default_tuple_type_dist.clone(),
+            struct_type_dist: policy.default_struct_type_dist.clone(),
         }
     }
 }
@@ -79,7 +87,7 @@ impl Context {
                 .array_type_dist
                 .iter()
                 .filter(|(array_ty, _)| {
-                    &*array_ty.base_ty == &elem_ty
+                    *array_ty.base_ty == elem_ty
                 })
                 .cloned()
                 .collect()
@@ -113,6 +121,26 @@ impl Context {
         self.policy.tuple_length_dist.sample(&mut self.rng)
     }
 
+    pub fn choose_struct_type(&mut self, elem_ty: Option<Ty>) -> Option<StructTy> {
+        let dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
+            self
+                .struct_type_dist
+                .iter()
+                .filter(|(struct_ty, _)| {
+                    struct_ty.fields.iter().any(|field_def|*field_def.ty == elem_ty)
+                })
+                .cloned()
+                .collect()
+        } else {
+            self.struct_type_dist.clone()
+        };
+        choose(&dist, &mut self.rng)
+    }
+
+    pub fn choose_struct_length(&mut self) -> usize {
+        self.policy.struct_length_dist.sample(&mut self.rng)
+    }
+
     pub fn choose_base_expr_kind(&mut self) -> TyKind {
         choose(&self.policy.type_dist, &mut self.rng).unwrap()
     }
@@ -143,6 +171,10 @@ impl Context {
 
     pub fn choose_new_tuple_type(&mut self) -> bool {
         self.gen_new_tuple_types && self.rng.gen_bool(self.policy.new_tuple_prob)
+    }
+
+    pub fn choose_new_struct_type(&mut self) -> bool {
+        self.gen_new_struct_types && self.rng.gen_bool(self.policy.new_struct_prob)
     }
 
     pub fn choose_otherwise_if_stmt(&mut self) -> bool {

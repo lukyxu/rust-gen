@@ -17,7 +17,7 @@ pub struct GeneratorOutput {
 pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
     let add_checksum = true;
     let mut ctx = Context::with_policy(seed, &policy);
-    let mut main = Function::create_main_fn(&mut ctx);
+    let mut main = Function::create_main_fn(&mut ctx).expect("Cannot create main function");
     let mut expr_visitor = ExprVisitor::new();
     expr_visitor.visit_function(&mut main);
     // Make program compilable

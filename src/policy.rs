@@ -1,6 +1,6 @@
 use crate::ast::expr::{BinaryOp, ExprKind};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{ArrayTy, IntTy, PrimTy, TupleTy, TyKind, UIntTy};
+use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use rand::distributions::Uniform;
 
 #[derive(Debug, Clone)]
@@ -14,6 +14,7 @@ pub struct Policy {
     pub prim_type_dist: Vec<(PrimTy, f64)>,
     pub default_array_type_dist: Vec<(ArrayTy, f64)>,
     pub default_tuple_type_dist: Vec<(TupleTy, f64)>,
+    pub default_struct_type_dist: Vec<(StructTy, f64)>,
 
     pub new_array_prob: f64,
     pub array_length_dist: Uniform<usize>,
@@ -24,6 +25,11 @@ pub struct Policy {
     pub tuple_length_dist: Uniform<usize>,
     pub max_tuple_depth: usize,
     pub max_expr_depth_in_tuple: usize,
+
+    pub new_struct_prob: f64,
+    pub struct_length_dist: Uniform<usize>,
+    pub max_struct_depth: usize,
+    pub max_expr_depth_in_struct: usize,
 
     pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
     pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
@@ -258,11 +264,19 @@ impl Policy {
             array_length_dist: Uniform::new_inclusive(2, 3),
             max_array_depth: 2,
             max_expr_depth_in_array: 5,
+            
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
             tuple_length_dist: Uniform::new_inclusive(2, 3),
             max_tuple_depth: 2,
             max_expr_depth_in_tuple: 5,
+
+            new_struct_prob: 0.5,
+            default_struct_type_dist: vec![],
+            struct_length_dist: Uniform::new_inclusive(2, 3),
+            max_struct_depth: 2,
+            max_expr_depth_in_struct: 5,
+            
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
