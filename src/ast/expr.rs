@@ -9,6 +9,7 @@ use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
 use crate::context::Context;
+use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::mem::swap;
 use std::{isize, u32, usize};
@@ -264,7 +265,7 @@ impl BinaryExpr {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum BinaryOp {
     Add,
@@ -549,7 +550,7 @@ impl UnaryExpr {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum UnaryOp {
     // TODO: Deref when adding pointer types
@@ -898,7 +899,7 @@ impl IndexExpr {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ExprKind {
     Literal,

@@ -1,5 +1,6 @@
 use crate::context::Context;
 use rand::Rng;
+use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -418,7 +419,7 @@ impl ArrayTy {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TyKind {
     Unit,
     Prim,

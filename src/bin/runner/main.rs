@@ -12,6 +12,9 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::str::FromStr;
+use ron::ser::PrettyConfig;
+use ron::Serializer;
+use serde::Serialize;
 
 mod error;
 
@@ -161,10 +164,12 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str, opts: Vec<&'static st
     let rust_file = base_name.to_string() + ".rs";
     fs::write(&rust_file, program).expect("Unable to write file");
 
+    // Write statistics
     let stats_file = "statistics.txt".to_owned();
-    fs::write(&stats_file, format!("{:#?}", statistics)).expect("Unable to write file");
+    let mut serializer = Serializer::new(fs::File::create(&stats_file).expect("Unable to create file"), Some(PrettyConfig::default()), true).expect("Unable to create statistics serializer");
+    statistics.serialize(&mut serializer).expect("Unable to serialize statistics");
 
-    // Compile program (with multiple optimizations
+    // Compile program (with multiple optimizations)
     let mut runs: Vec<(&str, u128)> = vec![];
     let mut files: Vec<String> = vec![rust_file.clone(), stats_file.clone()];
 

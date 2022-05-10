@@ -2,8 +2,9 @@ use crate::ast::expr::{BinaryOp, ExprKind, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use std::collections::HashMap;
 use crate::ast::ty::TyKind;
+use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Deserialize, Serialize)]
 pub struct Statistics {
     pub main_fn_stmts: usize,
 
@@ -17,11 +18,13 @@ pub struct Statistics {
     pub max_failed_generation_depth: usize,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Deserialize, Serialize)]
 pub struct FullStatistics {
     pub total_stmts: usize,
     pub total_exprs: usize,
     pub total_tys: usize,
+
+    #[serde(flatten)]
     pub statistics: Statistics
 }
 

@@ -1,6 +1,7 @@
 use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
 use crate::context::Context;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -97,7 +98,7 @@ pub struct CustomStmt {
     pub stmt: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum StmtKind {
     Local,
