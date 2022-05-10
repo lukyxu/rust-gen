@@ -41,6 +41,10 @@ pub enum Expr {
 
 impl Expr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        if ctx.expr_depth > ctx.policy.max_expr_depth {
+            return None;
+        }
+
         let mut res: Option<Expr> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
@@ -748,13 +752,19 @@ impl TupleExpr {
         if let Ty::Tuple(types) = res_type {
             let mut res = vec![];
             for ty in types {
-                for i in 0..ctx.policy.max_expr_attempts {
-                    if let Some(expr) = Expr::generate_expr(ctx, ty) {
-                        res.push(expr);
-                        break;
-                    } else if i == ctx.policy.max_expr_attempts - 1 {
-                        return None;
-                    }
+                let mut expr: Option<Expr> = None;
+                let mut num_failed_attempts = 0;
+                let prev_max_expr_depth = ctx.policy.max_expr_depth;
+                ctx.policy.max_expr_depth = ctx.policy.max_expr_depth_in_tuple;
+                while expr.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
+                    expr = Expr::generate_expr(ctx, & ty);
+                    num_failed_attempts += 1;
+                }
+                ctx.policy.max_expr_depth = prev_max_expr_depth;
+                if let Some(expr) = Expr::generate_expr(ctx, & ty) {
+                    res.push(expr);
+                } else {
+                    return None;
                 }
             }
             Some(Expr::Tuple(TupleExpr { tuple: res }))
@@ -796,13 +806,19 @@ impl ArrayExpr {
         if let Ty::Array(array_ty) = res_type {
             let mut res = vec![];
             for ty in array_ty.iter() {
-                for i in 0..ctx.policy.max_expr_attempts {
-                    if let Some(expr) = Expr::generate_expr(ctx, & ty) {
-                        res.push(expr);
-                        break;
-                    } else if i == ctx.policy.max_expr_attempts - 1 {
-                        return None;
-                    }
+                let mut expr: Option<Expr> = None;
+                let mut num_failed_attempts = 0;
+                let prev_max_expr_depth = ctx.policy.max_expr_depth;
+                ctx.policy.max_expr_depth = ctx.policy.max_expr_depth_in_array;
+                while expr.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
+                    expr = Expr::generate_expr(ctx, & ty);
+                    num_failed_attempts += 1;
+                }
+                ctx.policy.max_expr_depth = prev_max_expr_depth;
+                if let Some(expr) = Expr::generate_expr(ctx, & ty) {
+                    res.push(expr);
+                } else {
+                    return None;
                 }
             }
             Some(Expr::Array(ArrayExpr { array: res }))
