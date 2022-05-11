@@ -473,12 +473,7 @@ impl From<FieldStructTy> for StructTy {
 }
 
 impl FieldStructTy {
-    // pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<FieldStructTy> {
-    //     ctx.choose_struct_type(ty.clone())
-    // }
-
     pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<FieldStructTy> {
-        let mut res: Option<FieldStructTy> = None;
         'outer: for _ in 0..10 {
             let len = ctx.choose_struct_length();
             let mut fields: Vec<FieldDef> = vec![];
@@ -498,8 +493,9 @@ impl FieldStructTy {
                 fields,
             };
             let weight = 1.0;
-            ctx.struct_type_dist.push((struct_ty.clone().into(), weight));
-            return Some(struct_ty)
+            ctx.struct_type_dist
+                .push((struct_ty.clone().into(), weight));
+            return Some(struct_ty);
         }
         None
     }
@@ -564,15 +560,16 @@ impl TupleStructTy {
             let fields = if let Some(tuple) = TupleTy::generate_type(ctx, ty.clone()) {
                 tuple
             } else {
-                continue
+                continue;
             };
             let struct_ty = TupleStructTy {
                 name: ctx.create_struct_name(),
                 fields,
             };
             let weight = 1.0;
-            ctx.struct_type_dist.push((struct_ty.clone().into(), weight));
-            return Some(struct_ty)
+            ctx.struct_type_dist
+                .push((struct_ty.clone().into(), weight));
+            return Some(struct_ty);
         }
         None
     }

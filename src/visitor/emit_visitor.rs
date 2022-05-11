@@ -1,6 +1,7 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, FieldExpr, IdentExpr, IfExpr,
-    IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp,
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr,
+    TupleStructExpr, UnaryExpr, UnaryOp,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
@@ -60,35 +61,37 @@ impl Visitor for EmitVisitor {
         }
     }
 
-    fn visit_struct_item(&mut self, item: &mut StructItem) {
-        match &item.struct_ty {
-            StructTy::Field(field_struct) => {
-                self.output.push_str(&format!(
-                    "struct {} {{\n{}\n}} ",
-                    field_struct.name,
-                    field_struct
-                        .fields
-                        .iter()
-                        .map(|f| format!(
-                            "{}{},",
-                            " ".repeat(self.curr_indent + self.indentation),
-                            f.to_string()
-                        ))
-                        .collect::<Vec<String>>()
-                        .join("\n")
-                ))
-            }
-            StructTy::Tuple(tuple_struct) => {
-                self.output.push_str(&format!(
-                    "struct {}{};",
-                    tuple_struct.name, tuple_struct.fields.to_string()));
-            }
-        }
-    }
-
     fn visit_function(&mut self, function: &mut Function) {
         self.output.push_str(&format!("fn {}() ", function.name));
         self.visit_block_expr(&mut function.block);
+    }
+
+    fn visit_struct_item(&mut self, item: &mut StructItem) {
+        // TODO: Remove this
+        self.output.push_str("#[derive(Clone, Copy)]\n");
+        match &item.struct_ty {
+            StructTy::Field(field_struct) => self.output.push_str(&format!(
+                "struct {} {{\n{}\n}} ",
+                field_struct.name,
+                field_struct
+                    .fields
+                    .iter()
+                    .map(|f| format!(
+                        "{}{},",
+                        " ".repeat(self.curr_indent + self.indentation),
+                        f.to_string()
+                    ))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            )),
+            StructTy::Tuple(tuple_struct) => {
+                self.output.push_str(&format!(
+                    "struct {}{};",
+                    tuple_struct.name,
+                    tuple_struct.fields.to_string()
+                ));
+            }
+        }
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
@@ -272,6 +275,27 @@ impl Visitor for EmitVisitor {
         self.visit_expr(&mut expr.index);
         self.output.push(']');
         self.output.push(')');
+    }
+
+    fn visit_field_struct_expr(&mut self, expr: &mut FieldStructExpr) {
+        self.output.push_str(&format!("{} {{ ", expr.struct_name));
+        for (i, field) in expr.fields.iter_mut().enumerate() {
+            if i > 0 {
+                self.output.push_str(", ")
+            }
+            self.visit_field(field)
+        }
+        self.output.push_str(" }");
+    }
+
+    fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
+        self.output.push_str(&expr.struct_name);
+        self.visit_tuple_expr(&mut expr.fields)
+    }
+
+    fn visit_field(&mut self, field: &mut Field) {
+        self.output.push_str(&format!("{}: ", &field.name));
+        self.visit_expr(&mut field.expr);
     }
 
     fn visit_unary_op(&mut self, op: &mut UnaryOp) {

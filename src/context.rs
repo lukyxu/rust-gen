@@ -124,11 +124,12 @@ impl Context {
         let dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.struct_type_dist
                 .iter()
-                .filter(|(struct_ty, _)| {
-                    match struct_ty {
-                        StructTy::Field(field) => {field.fields.iter().any(|field_def| *field_def.ty == elem_ty)}
-                        StructTy::Tuple(tuple) => {(&tuple.fields).into_iter().any(|ty| *ty == elem_ty)}
-                    }
+                .filter(|(struct_ty, _)| match struct_ty {
+                    StructTy::Field(field) => field
+                        .fields
+                        .iter()
+                        .any(|field_def| *field_def.ty == elem_ty),
+                    StructTy::Tuple(tuple) => (&tuple.fields).into_iter().any(|ty| *ty == elem_ty),
                 })
                 .cloned()
                 .collect()
@@ -142,7 +143,9 @@ impl Context {
         self.policy.struct_length_dist.sample(&mut self.rng)
     }
 
-    pub fn choose_field_struct(&mut self) -> bool { self.rng.gen_bool(self.policy.field_struct_prob) }
+    pub fn choose_field_struct(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.field_struct_prob)
+    }
 
     pub fn choose_base_expr_kind(&mut self) -> TyKind {
         choose(&self.policy.type_dist, &mut self.rng).unwrap()

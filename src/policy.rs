@@ -255,6 +255,7 @@ impl Policy {
                 (TyKind::Prim, 2.0),
                 (TyKind::Array, 0.2),
                 (TyKind::Tuple, 0.2),
+                (TyKind::Struct, 0.5),
             ],
 
             prim_type_dist: vec![

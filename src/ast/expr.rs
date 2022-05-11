@@ -4,7 +4,10 @@ use crate::ast::stmt::Stmt;
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
-use crate::ast::ty::{ArrayTy, FloatTy, IntTy, PrimTy, TupleTy, Ty, UIntTy};
+use crate::ast::ty::{
+    ArrayTy, FieldDef, FieldStructTy, FloatTy, IntTy, PrimTy, StructTy, TupleStructTy, TupleTy, Ty,
+    UIntTy,
+};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use rand::prelude::SliceRandom;
 
@@ -38,6 +41,7 @@ pub enum Expr {
     Array(ArrayExpr),
     Field(FieldExpr),
     Index(IndexExpr),
+    Struct(StructExpr),
 }
 
 impl Expr {
@@ -60,9 +64,10 @@ impl Expr {
                 ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type),
                 ExprKind::Cast => CastExpr::generate_expr(ctx, res_type),
                 ExprKind::Array => ArrayExpr::generate_expr(ctx, res_type),
-                ExprKind::Tuple => TupleExpr::generate_expr(ctx, res_type),
+                ExprKind::Tuple => TupleExpr::generate_expr(ctx, res_type).map(Expr::Tuple),
                 ExprKind::Field => FieldExpr::generate_expr(ctx, res_type),
                 ExprKind::Index => IndexExpr::generate_expr(ctx, res_type),
+                ExprKind::Struct => StructExpr::generate_expr(ctx, res_type).map(Expr::Struct),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
             if res.is_none() {
@@ -154,8 +159,11 @@ impl LitExpr {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
             }
-            tuple @ Ty::Tuple(_) => TupleExpr::generate_expr(ctx, tuple),
+            tuple @ Ty::Tuple(_) => TupleExpr::generate_expr(ctx, tuple).map(Expr::Tuple),
             array @ Ty::Array(..) => ArrayExpr::generate_expr(ctx, array),
+            struct_ty @ Ty::Struct(..) => {
+                StructExpr::generate_expr(ctx, struct_ty).map(Expr::Struct)
+            }
             _ => panic!(
                 "Literal type for {} not supported yet",
                 res_type.to_string()
@@ -215,7 +223,7 @@ impl BinaryExpr {
         let op = match res_type {
             Ty::Prim(PrimTy::Bool) => ctx.choose_binary_bool_op(),
             Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => ctx.choose_binary_int_op(),
-            Ty::Tuple(_) | Ty::Array(..) | Ty::Unit => return None,
+            Ty::Tuple(_) | Ty::Array(..) | Ty::Unit | Ty::Struct(..) => return None,
             _ => panic!(
                 "Binary operations for {} not supported",
                 res_type.to_string()
@@ -748,7 +756,7 @@ impl TupleExpr {
         Expr::Tuple(TupleExpr { tuple: vec![] })
     }
 
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<TupleExpr> {
         if let Ty::Tuple(types) = res_type {
             let mut res = vec![];
             for ty in types {
@@ -767,7 +775,7 @@ impl TupleExpr {
                     return None;
                 }
             }
-            Some(Expr::Tuple(TupleExpr { tuple: res }))
+            Some(TupleExpr { tuple: res })
         } else {
             None
         }
@@ -900,6 +908,78 @@ impl IndexExpr {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum StructExpr {
+    Tuple(TupleStructExpr),
+    Field(FieldStructExpr),
+}
+
+impl StructExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<StructExpr> {
+        if let Ty::Struct(res_type) = res_type {
+            match res_type {
+                StructTy::Field(res_type) => {
+                    FieldStructExpr::generate_expr(ctx, res_type).map(StructExpr::Field)
+                }
+                StructTy::Tuple(res_type) => {
+                    TupleStructExpr::generate_expr(ctx, res_type).map(StructExpr::Tuple)
+                }
+            }
+        } else {
+            return None;
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TupleStructExpr {
+    pub struct_name: String,
+    pub fields: TupleExpr,
+}
+
+impl TupleStructExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &TupleStructTy) -> Option<TupleStructExpr> {
+        Some(TupleStructExpr {
+            struct_name: res_type.name.clone(),
+            fields: TupleExpr::generate_expr(ctx, &Ty::Tuple(res_type.fields.clone()))?,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldStructExpr {
+    pub struct_name: String,
+    pub fields: Vec<Field>,
+}
+
+impl FieldStructExpr {
+    fn generate_expr(ctx: &mut Context, res_type: &FieldStructTy) -> Option<FieldStructExpr> {
+        let mut fields: Vec<Field> = vec![];
+        for field_def in &res_type.fields {
+            fields.push(Field::generate_field(ctx, field_def)?);
+        }
+        Some(FieldStructExpr {
+            struct_name: res_type.name.clone(),
+            fields,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Field {
+    pub name: String,
+    pub expr: Expr,
+}
+
+impl Field {
+    fn generate_field(ctx: &mut Context, field_def: &FieldDef) -> Option<Field> {
+        Some(Field {
+            name: field_def.name.clone(),
+            expr: Expr::generate_expr(ctx, &*field_def.ty)?,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ExprKind {
@@ -915,6 +995,7 @@ pub enum ExprKind {
     Tuple,
     Index,
     Field,
+    Struct,
     __Nonexhaustive,
 }
 
