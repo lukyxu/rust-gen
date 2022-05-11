@@ -32,7 +32,7 @@ pub struct FunctionItem {
 impl FunctionItem {
     pub fn generate_main(ctx: &mut Context) -> Option<FunctionItem> {
         Some(FunctionItem {
-            function: Function::create_main_fn(ctx)?
+            function: Function::create_main_fn(ctx)?,
         })
     }
     // fn generate_item(ctx: &mut Context) -> Option<FunctionItem> {
@@ -44,13 +44,13 @@ impl FunctionItem {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructItem {
-    pub item: StructTy,
+    pub struct_ty: StructTy,
 }
 
 impl StructItem {
     pub fn generate_item(ctx: &mut Context) -> Option<StructItem> {
         Some(StructItem {
-            item: StructTy::generate_new_type(ctx, None)?
+            struct_ty: StructTy::generate_new_type(ctx, None)?,
         })
     }
 }

@@ -9,7 +9,7 @@ pub struct Policy {
     pub num_stmt_dist: Uniform<usize>,
     pub stmt_dist: Vec<(StmtKind, f64)>,
     pub expr_dist: Vec<(ExprKind, f64)>,
-    pub type_dist : Vec<(TyKind, f64)>,
+    pub type_dist: Vec<(TyKind, f64)>,
 
     pub prim_type_dist: Vec<(PrimTy, f64)>,
     pub default_array_type_dist: Vec<(ArrayTy, f64)>,
@@ -110,9 +110,12 @@ impl Policy {
         Policy {
             prim_type_dist: vec![(IntTy::I8.into(), 3.0)],
             new_tuple_prob: 1.0,
-            default_tuple_type_dist: vec![
-                (TupleTy {tuple: vec![IntTy::I8.into(), IntTy::I8.into()]}, 1.0),
-            ],
+            default_tuple_type_dist: vec![(
+                TupleTy {
+                    tuple: vec![IntTy::I8.into(), IntTy::I8.into()],
+                },
+                1.0,
+            )],
             tuple_length_dist: Uniform::new_inclusive(3, 4),
             max_tuple_depth: 1,
             expr_dist: vec![
@@ -177,10 +180,13 @@ impl Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             prim_type_dist: vec![(IntTy::I8.into(), 1.0)],
             new_array_prob: 0.5,
-            default_array_type_dist: vec![(ArrayTy {
-                base_ty: Box::new(IntTy::I8.into()),
-                len: 3
-            }, 0.5)],
+            default_array_type_dist: vec![(
+                ArrayTy {
+                    base_ty: Box::new(IntTy::I8.into()),
+                    len: 3,
+                },
+                0.5,
+            )],
             array_length_dist: Uniform::new_inclusive(3, 4),
             max_array_depth: 3,
 
@@ -264,7 +270,7 @@ impl Policy {
             array_length_dist: Uniform::new_inclusive(2, 3),
             max_array_depth: 2,
             max_expr_depth_in_array: 5,
-            
+
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
             tuple_length_dist: Uniform::new_inclusive(2, 3),
@@ -276,7 +282,7 @@ impl Policy {
             struct_length_dist: Uniform::new_inclusive(2, 3),
             max_struct_depth: 2,
             max_expr_depth_in_struct: 5,
-            
+
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
@@ -298,7 +304,7 @@ impl Policy {
             max_arith_depth: 5,
 
             max_expr_attempts: 100,
-            max_ty_attempts: 5
+            max_ty_attempts: 5,
         }
     }
 }

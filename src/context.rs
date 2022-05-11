@@ -67,7 +67,7 @@ impl Context {
 // TODO: Check where this is used
 fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> Option<T> {
     if dist.is_empty() {
-        return None
+        return None;
     };
     Some(dist.choose_weighted(rng, |item| item.1).unwrap().0.clone())
 }
@@ -83,12 +83,9 @@ impl Context {
 
     pub fn choose_array_type(&mut self, elem_ty: Option<Ty>) -> Option<ArrayTy> {
         let dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
-            self
-                .array_type_dist
+            self.array_type_dist
                 .iter()
-                .filter(|(array_ty, _)| {
-                    *array_ty.base_ty == elem_ty
-                })
+                .filter(|(array_ty, _)| *array_ty.base_ty == elem_ty)
                 .cloned()
                 .collect()
         } else {
@@ -103,12 +100,9 @@ impl Context {
 
     pub fn choose_tuple_type(&mut self, elem_ty: Option<Ty>) -> Option<TupleTy> {
         let dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
-            self
-                .tuple_type_dist
+            self.tuple_type_dist
                 .iter()
-                .filter(|(tuple_ty, _)| {
-                    tuple_ty.tuple.contains(&elem_ty)
-                })
+                .filter(|(tuple_ty, _)| tuple_ty.tuple.contains(&elem_ty))
                 .cloned()
                 .collect()
         } else {
@@ -123,11 +117,13 @@ impl Context {
 
     pub fn choose_struct_type(&mut self, elem_ty: Option<Ty>) -> Option<StructTy> {
         let dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
-            self
-                .struct_type_dist
+            self.struct_type_dist
                 .iter()
                 .filter(|(struct_ty, _)| {
-                    struct_ty.fields.iter().any(|field_def|*field_def.ty == elem_ty)
+                    struct_ty
+                        .fields
+                        .iter()
+                        .any(|field_def| *field_def.ty == elem_ty)
                 })
                 .cloned()
                 .collect()
@@ -163,6 +159,14 @@ impl Context {
 
     pub fn create_var_name(&mut self) -> String {
         self.name_handler.create_var_name()
+    }
+
+    pub fn create_struct_name(&mut self) -> String {
+        self.name_handler.create_struct_name()
+    }
+
+    pub fn create_field_name(&mut self, index: usize) -> String {
+        self.name_handler.create_field_name(index)
     }
 
     pub fn choose_new_array_type(&mut self) -> bool {
@@ -202,13 +206,22 @@ impl Context {
 #[derive(Default)]
 pub struct NameHandler {
     var_counter: i32,
+    struct_counter: i32,
 }
 
 impl NameHandler {
     fn create_var_name(&mut self) -> String {
-        let res = format!("var_{}", self.var_counter);
         self.var_counter += 1;
-        res
+        format!("var_{}", self.var_counter)
+    }
+
+    fn create_struct_name(&mut self) -> String {
+        self.struct_counter += 1;
+        format!("Struct{}", self.struct_counter)
+    }
+
+    fn create_field_name(&mut self, index: usize) -> String {
+        format!("field_{}", index)
     }
 }
 

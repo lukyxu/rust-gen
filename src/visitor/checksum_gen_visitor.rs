@@ -106,10 +106,12 @@ impl Visitor for ChecksumGenVisitor {
 fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
     let mut accumulator = vec![];
     match ty {
-        Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => accumulator.push(Expr::Ident(IdentExpr {
-            name: name.clone(),
-            ty: ty.clone(),
-        })),
+        Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => {
+            accumulator.push(Expr::Ident(IdentExpr {
+                name: name.clone(),
+                ty: ty.clone(),
+            }))
+        }
         Ty::Tuple(tuple_ty) => {
             for (i, t) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {

@@ -745,7 +745,7 @@ pub struct TupleExpr {
 
 impl TupleExpr {
     fn empty_tuple() -> Expr {
-        Expr::Tuple(TupleExpr{tuple: vec![]})
+        Expr::Tuple(TupleExpr { tuple: vec![] })
     }
 
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
@@ -757,11 +757,11 @@ impl TupleExpr {
                 let prev_max_expr_depth = ctx.policy.max_expr_depth;
                 ctx.policy.max_expr_depth = ctx.policy.max_expr_depth_in_tuple;
                 while expr.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
-                    expr = Expr::generate_expr(ctx, & ty);
+                    expr = Expr::generate_expr(ctx, &ty);
                     num_failed_attempts += 1;
                 }
                 ctx.policy.max_expr_depth = prev_max_expr_depth;
-                if let Some(expr) = Expr::generate_expr(ctx, & ty) {
+                if let Some(expr) = Expr::generate_expr(ctx, &ty) {
                     res.push(expr);
                 } else {
                     return None;
@@ -811,11 +811,11 @@ impl ArrayExpr {
                 let prev_max_expr_depth = ctx.policy.max_expr_depth;
                 ctx.policy.max_expr_depth = ctx.policy.max_expr_depth_in_array;
                 while expr.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
-                    expr = Expr::generate_expr(ctx, & ty);
+                    expr = Expr::generate_expr(ctx, &ty);
                     num_failed_attempts += 1;
                 }
                 ctx.policy.max_expr_depth = prev_max_expr_depth;
-                if let Some(expr) = Expr::generate_expr(ctx, & ty) {
+                if let Some(expr) = Expr::generate_expr(ctx, &ty) {
                     res.push(expr);
                 } else {
                     return None;
@@ -852,10 +852,11 @@ impl FieldExpr {
         let tuple = TupleTy::generate_type(ctx, Some(res_type.clone()))?;
 
         let base = Box::new(Expr::generate_expr(ctx, &tuple.clone().into())?);
-        let indexes: Vec<usize> = (&tuple).into_iter()
-                .enumerate()
-                .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
-                .collect();
+        let indexes: Vec<usize> = (&tuple)
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
+            .collect();
 
         let member = Member::Unnamed(*indexes.choose(&mut ctx.rng).unwrap());
         Some(Expr::Field(FieldExpr { base, member }))
@@ -1161,8 +1162,7 @@ mod tests {
     fn cast_expr_ok() {
         let expr = LitExpr::Int(-27_i8 as u128, LitExprTy::Signed(IntTy::I8));
         assert_eq!(
-            expr.cast(&UIntTy::U32.into())
-                .cast(&UIntTy::U64.into()),
+            expr.cast(&UIntTy::U32.into()).cast(&UIntTy::U64.into()),
             LitExpr::Int(4294967269, Unsigned(UIntTy::U64))
         );
     }

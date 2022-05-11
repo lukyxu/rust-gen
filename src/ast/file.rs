@@ -1,16 +1,17 @@
 use crate::ast::item::{FunctionItem, Item, StructItem};
 use crate::context::Context;
 
-pub struct File {
-    items: Vec<Item>
+pub struct RustFile {
+    pub items: Vec<Item>,
 }
 
-impl File {
-    fn generate_file(ctx: &mut Context) {
+impl RustFile {
+    pub fn generate_file(ctx: &mut Context) -> Option<RustFile> {
         let mut items = vec![];
-        items.push(StructItem::);
-        items.push(Item::generate_item(ctx));
-        items.push(Item::generate_item(ctx));
-        items.push(FunctionItem::generate_main(ctx).map(Item::Function));
+        items.push(Item::Struct(StructItem::generate_item(ctx)?));
+        items.push(Item::Struct(StructItem::generate_item(ctx)?));
+        items.push(Item::Struct(StructItem::generate_item(ctx)?));
+        items.push(Item::Function(FunctionItem::generate_main(ctx)?));
+        Some(RustFile { items })
     }
 }

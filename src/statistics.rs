@@ -1,8 +1,8 @@
 use crate::ast::expr::{BinaryOp, ExprKind, UnaryOp};
 use crate::ast::stmt::StmtKind;
-use std::collections::HashMap;
 use crate::ast::ty::TyKind;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Default, Debug, Deserialize, Serialize)]
 pub struct Statistics {
@@ -25,7 +25,7 @@ pub struct FullStatistics {
     pub total_tys: usize,
 
     #[serde(flatten)]
-    pub statistics: Statistics
+    pub statistics: Statistics,
 }
 
 impl From<Statistics> for FullStatistics {
@@ -38,4 +38,3 @@ impl From<Statistics> for FullStatistics {
         }
     }
 }
-
