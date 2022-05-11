@@ -16,8 +16,8 @@ impl Item {
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
             res = match ctx.choose_item_kind() {
-                ItemKind::Struct => StructItem::generate_item(ctx).map(Item::Struct),
-                ItemKind::Function => FunctionItem::generate_item(ctx).map(Item::Function),
+                ItemKind::Struct => StructItem::generate_item(ctx).map(From::from),
+                ItemKind::Function => FunctionItem::generate_item(ctx).map(From::from),
             };
             if res.is_none() {
                 num_failed_attempts += 1;
@@ -28,9 +28,21 @@ impl Item {
     }
 }
 
+impl From<StructItem> for Item {
+    fn from(item: StructItem) -> Item {
+        Item::Struct(item)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionItem {
     pub function: Function,
+}
+
+impl From<FunctionItem> for Item {
+    fn from(item: FunctionItem) -> Item {
+        Item::Function(item)
+    }
 }
 
 impl FunctionItem {

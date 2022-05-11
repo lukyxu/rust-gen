@@ -17,14 +17,14 @@ pub struct GeneratorOutput {
 
 pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
     let add_checksum = true;
-    let mut ctx = Context::with_policy(seed, &policy);
+    let mut ctx = Context::with_policy(seed, policy);
     let mut file = RustFile::generate_file(&mut ctx).expect("Cannot create main function");
-    let mut expr_visitor = ExprVisitor::new();
+    let mut expr_visitor = ExprVisitor::default();
     expr_visitor.visit_file(&mut file);
     // Make program compilable
     let mut checksum_gen_visitor = ChecksumGenVisitor::new(add_checksum);
     checksum_gen_visitor.visit_file(&mut file);
-    let mut checksum_eval_visitor = ChecksumEvalVisitor::new();
+    let mut checksum_eval_visitor = ChecksumEvalVisitor::default();
     checksum_eval_visitor.visit_file(&mut file);
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_file(&mut file);
@@ -38,12 +38,12 @@ pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
 fn _print_program(main: &mut Function) {
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_function(main);
-    println!("{}", emit_visitor.output())
+    println!("{}", emit_visitor.output());
 }
 
 #[test]
 fn generator_bench() {
-    for i in 0..100 {
+    for i in 0..10 {
         run_generator(Some(i), &Policy::default());
     }
 }

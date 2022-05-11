@@ -17,5 +17,5 @@ pub fn main() {
     let args: GeneratorArgs = GeneratorArgs::parse();
     let policy = Policy::parse_policy_args(args.policy);
     let program = run_generator(args.seed, &policy).program;
-    println!("{}", program)
+    println!("{}", program);
 }

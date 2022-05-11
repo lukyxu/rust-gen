@@ -1,11 +1,12 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr,
-    TupleStructExpr, UnaryExpr, UnaryOp,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, TupleStructExpr,
+    UnaryExpr,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
 use crate::ast::item::StructItem;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, StructTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
@@ -55,7 +56,7 @@ impl Visitor for EmitVisitor {
     fn visit_file(&mut self, file: &mut RustFile) {
         for (i, item) in (&mut file.items).iter_mut().enumerate() {
             if i > 0 {
-                self.output.push_str("\n\n")
+                self.output.push_str("\n\n");
             }
             self.visit_item(item);
         }
@@ -120,7 +121,7 @@ impl Visitor for EmitVisitor {
 
     fn visit_custom_stmt(&mut self, stmt: &mut CustomStmt) {
         self.output.push_str(&" ".repeat(self.curr_indent));
-        self.output.push_str(stmt.stmt.as_str())
+        self.output.push_str(stmt.stmt.as_str());
     }
 
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
@@ -281,16 +282,16 @@ impl Visitor for EmitVisitor {
         self.output.push_str(&format!("{} {{ ", expr.struct_name));
         for (i, field) in expr.fields.iter_mut().enumerate() {
             if i > 0 {
-                self.output.push_str(", ")
+                self.output.push_str(", ");
             }
-            self.visit_field(field)
+            self.visit_field(field);
         }
         self.output.push_str(" }");
     }
 
     fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
         self.output.push_str(&expr.struct_name);
-        self.visit_tuple_expr(&mut expr.fields)
+        self.visit_tuple_expr(&mut expr.fields);
     }
 
     fn visit_field(&mut self, field: &mut Field) {

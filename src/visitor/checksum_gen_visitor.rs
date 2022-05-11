@@ -1,9 +1,10 @@
 use crate::ast::expr::LitExprTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr,
-    LitExpr, LitExprTy, Member,
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitExpr,
+    LitExprTy, Member,
 };
 use crate::ast::function::Function;
+use crate::ast::op::BinaryOp;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{PrimTy, Ty, UIntTy};
 use crate::symbol_table::ty::TypeSymbolTable;
@@ -35,7 +36,7 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn exit_scope(&mut self) {
-        self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap()
+        self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap();
     }
 
     fn visit_function(&mut self, function: &mut Function) {
@@ -103,32 +104,32 @@ impl Visitor for ChecksumGenVisitor {
     }
 }
 
-fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
+fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
     let mut accumulator = vec![];
     match ty {
-        Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => {
+        Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => {
             accumulator.push(Expr::Ident(IdentExpr {
-                name: name.clone(),
+                name: name.to_owned(),
                 ty: ty.clone(),
-            }))
+            }));
         }
         Ty::Tuple(tuple_ty) => {
             for (i, t) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
-                        name: name.clone(),
+                        name: name.to_owned(),
                         ty: ty.clone(),
                     })),
                     member: Member::Unnamed(i),
                 });
-                exprs_from_exprs(tuple_access, t, &mut accumulator)
+                exprs_from_exprs(tuple_access, t, &mut accumulator);
             }
         }
         Ty::Array(array_ty) => {
             for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
-                        name: name.clone(),
+                        name: name.to_owned(),
                         ty: ty.clone(),
                     })),
                     index: Box::new(Expr::Literal(LitExpr::Int(
@@ -136,7 +137,7 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
                         LitExprTy::Unsigned(UIntTy::USize),
                     ))),
                 });
-                exprs_from_exprs(array_access, &ty, &mut accumulator)
+                exprs_from_exprs(array_access, &ty, &mut accumulator);
             }
         }
         _ => {}
@@ -146,14 +147,14 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
 
 fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
     match ty {
-        Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => accumulator.push(expr),
+        Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => accumulator.push(expr),
         Ty::Tuple(tuple_ty) => {
             for (i, ty) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(expr.clone()),
                     member: Member::Unnamed(i),
                 });
-                exprs_from_exprs(tuple_access, ty, accumulator)
+                exprs_from_exprs(tuple_access, ty, accumulator);
             }
         }
         Ty::Array(array_ty) => {
@@ -165,7 +166,7 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                         LitExprTy::Unsigned(UIntTy::USize),
                     ))),
                 });
-                exprs_from_exprs(array_access, &ty, accumulator)
+                exprs_from_exprs(array_access, &ty, accumulator);
             }
         }
         _ => {}

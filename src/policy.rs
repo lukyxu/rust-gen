@@ -1,5 +1,6 @@
-use crate::ast::expr::{BinaryOp, ExprKind};
+use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
+use crate::ast::op::BinaryOp;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use rand::distributions::Uniform;
@@ -88,8 +89,7 @@ impl Policy {
     pub fn get_policy(name: &str) -> Option<Policy> {
         Policy::get_policies()
             .iter()
-            .filter(|p| p.name == name)
-            .next()
+            .find(|p| p.name == name)
             .cloned()
     }
 
@@ -285,7 +285,7 @@ impl Policy {
             field_struct_prob: 0.5,
             default_struct_type_dist: vec![],
             struct_length_dist: Uniform::new_inclusive(2, 3),
-            max_struct_depth: 2,
+            max_struct_depth: 5,
             max_expr_depth_in_struct: 5,
 
             binary_int_op_dist: vec![

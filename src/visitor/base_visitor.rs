@@ -1,12 +1,13 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
     FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, StructExpr, TupleExpr,
-    TupleStructExpr, UnaryExpr, UnaryOp,
+    TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 
 use crate::ast::function::Function;
 use crate::ast::item::{FunctionItem, Item, StructItem};
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::{
     CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
 };
@@ -131,11 +132,11 @@ fn walk_item<V: Visitor>(visitor: &mut V, item: &mut Item) {
 }
 
 fn walk_struct_item<V: Visitor>(visitor: &mut V, item: &mut StructItem) {
-    visitor.visit_type(&Ty::Struct(item.struct_ty.clone().into()));
+    visitor.visit_type(&Ty::Struct(item.struct_ty.clone()));
 }
 
 fn walk_function_item<V: Visitor>(visitor: &mut V, item: &mut FunctionItem) {
-    visitor.visit_function(&mut item.function)
+    visitor.visit_function(&mut item.function);
 }
 
 fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {

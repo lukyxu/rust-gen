@@ -42,7 +42,7 @@ pub struct CompilationError {
 }
 
 impl CompilationError {
-    pub fn new(rust_file_path: &str, output: Output) -> CompilationError {
+    pub fn new(rust_file_path: &str, output: &Output) -> CompilationError {
         return CompilationError {
             rust_file_path: rust_file_path.to_owned(),
             status_code: output.status.code().unwrap_or(-1),
@@ -79,7 +79,7 @@ pub struct RunError {
 }
 
 impl RunError {
-    pub fn new(rust_file_path: &str, bin_file_path: &str, output: Output) -> RunError {
+    pub fn new(rust_file_path: &str, bin_file_path: &str, output: &Output) -> RunError {
         return RunError {
             rust_file_path: rust_file_path.to_owned(),
             bin_file_path: bin_file_path.to_owned(),

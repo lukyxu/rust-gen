@@ -30,7 +30,7 @@ impl Ty {
                 *ctx.statistics.ty_counter.entry(ty_kind).or_insert(0) += 1;
             }
         }
-        return res;
+        res
     }
 
     pub fn is_unit(&self) -> bool {
@@ -47,7 +47,7 @@ impl Ty {
 
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
-        matches!(self, Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)))
+        matches!(self, Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
     }
 
     pub fn compatible_cast(&self, target_type: &Ty) -> bool {
@@ -68,9 +68,32 @@ impl Ty {
                 1 + tuple_ty
                     .tuple
                     .iter()
-                    .map(|ty| ty.tuple_depth())
+                    .map(Ty::tuple_depth)
                     .max()
                     .unwrap_or_default()
+            }
+            _ => 0,
+        }
+    }
+
+    pub fn struct_depth(&self) -> usize {
+        match self {
+            Ty::Struct(struct_ty) => {
+                1 + match struct_ty {
+                    StructTy::Field(field_struct) => field_struct
+                        .fields
+                        .iter()
+                        .map(|f| f.ty.struct_depth())
+                        .max()
+                        .unwrap_or_default(),
+                    StructTy::Tuple(tuple_struct) => tuple_struct
+                        .fields
+                        .tuple
+                        .iter()
+                        .map(Ty::struct_depth)
+                        .max()
+                        .unwrap_or_default(),
+                }
             }
             _ => 0,
         }
@@ -116,7 +139,6 @@ impl ToString for PrimTy {
             .to_string(),
             PrimTy::Str => "&str".to_string(),
         }
-        .to_owned()
     }
 }
 
@@ -298,15 +320,15 @@ impl TupleTy {
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
         let mut res: Option<TupleTy> = None;
         if !ctx.choose_new_tuple_type() {
-            res = ctx.choose_tuple_type(ty.clone())
+            res = ctx.choose_tuple_type(ty.clone());
         }
         if res.is_none() && ctx.gen_new_tuple_types {
-            res = TupleTy::generate_new_type(ctx, ty);
+            res = TupleTy::generate_new_type(ctx, &ty);
         }
-        return res;
+        res
     }
 
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleTy> {
         let prev_gen_new_tuple_types = ctx.gen_new_tuple_types;
         ctx.gen_new_tuple_types = false;
         let mut res: Option<TupleTy> = None;
@@ -315,7 +337,7 @@ impl TupleTy {
             let mut types: Vec<Ty> = vec![];
             for _ in 0..len {
                 if let Some(ty) = TupleTy::generate_tuple_elem(ctx) {
-                    types.push(ty)
+                    types.push(ty);
                 } else {
                     continue 'outer;
                 }
@@ -350,7 +372,7 @@ impl TupleTy {
             }
             return Some(base_type);
         }
-        return None;
+        None
     }
 }
 
@@ -380,15 +402,15 @@ impl ArrayTy {
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
         let mut res: Option<ArrayTy> = None;
         if !ctx.choose_new_array_type() {
-            res = ctx.choose_array_type(ty.clone())
+            res = ctx.choose_array_type(ty.clone());
         }
         if res.is_none() && ctx.gen_new_array_types {
-            res = ArrayTy::generate_new_type(ctx, ty.clone());
+            res = ArrayTy::generate_new_type(ctx, &ty);
         }
-        return res;
+        res
     }
 
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
         let prev_gen_new_array_types = ctx.gen_new_array_types;
         ctx.gen_new_array_types = false;
         let mut res: Option<ArrayTy> = None;
@@ -453,9 +475,9 @@ impl StructTy {
 
     pub fn generate_new_type(ctx: &mut Context) -> Option<StructTy> {
         if ctx.choose_field_struct() {
-            FieldStructTy::generate_new_type(ctx, None).map(From::from)
+            FieldStructTy::generate_new_type(ctx, &None).map(From::from)
         } else {
-            TupleStructTy::generate_new_type(ctx, None).map(From::from)
+            TupleStructTy::generate_new_type(ctx, &None).map(From::from)
         }
     }
 }
@@ -479,13 +501,13 @@ impl From<FieldStructTy> for StructTy {
 }
 
 impl FieldStructTy {
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<FieldStructTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
         'outer: for _ in 0..10 {
             let len = ctx.choose_struct_length();
             let mut fields: Vec<FieldDef> = vec![];
             for i in 0..len {
                 if let Some(field_def) = FieldDef::generate_field_def(ctx, i) {
-                    fields.push(field_def)
+                    fields.push(field_def);
                 } else {
                     continue 'outer;
                 }
@@ -521,23 +543,15 @@ impl ToString for FieldDef {
 
 impl FieldDef {
     pub fn generate_field_def(ctx: &mut Context, i: usize) -> Option<FieldDef> {
-        for _ in 0..10 {
-            let base_type = Ty::generate_type(ctx);
-            let base_type = if let Some(base_type) = base_type {
-                base_type
-            } else {
-                continue;
-            };
-            if base_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
-                continue;
-            }
-            let name = ctx.create_field_name(i);
-            return Some(FieldDef {
-                name,
-                ty: Box::new(base_type),
-            });
+        let base_type = Ty::generate_type(ctx)?;
+        if base_type.struct_depth() + 1 > ctx.policy.max_struct_depth {
+            return None;
         }
-        return None;
+        let name = ctx.create_field_name(i);
+        return Some(FieldDef {
+            name,
+            ty: Box::new(base_type),
+        });
     }
 }
 
@@ -560,7 +574,7 @@ impl From<TupleStructTy> for StructTy {
 }
 
 impl TupleStructTy {
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleStructTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
         for _ in 0..10 {
             // let len = ctx.choose_struct_length();
             let fields = if let Some(tuple) = TupleTy::generate_type(ctx, ty.clone()) {

@@ -1,4 +1,5 @@
-use crate::ast::expr::{BinaryOp, ExprKind, UnaryOp};
+use crate::ast::expr::ExprKind;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::TyKind;
 use serde::{Deserialize, Serialize};
