@@ -8,7 +8,7 @@ use rand::prelude::SliceRandom;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
-use std::cmp::max;
+use std::cmp::{max, min};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -143,9 +143,9 @@ impl LitExpr {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
             }
-            Ty::Tuple(_) => TupleExpr::generate_expr(ctx, res_type).map(From::from),
-            Ty::Array(..) => ArrayExpr::generate_expr(ctx, res_type).map(From::from),
-            Ty::Struct(..) => StructExpr::generate_expr(ctx, res_type).map(From::from),
+            Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
+            Ty::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
+            Ty::Struct(struct_ty) => StructExpr::generate_expr(ctx, struct_ty).map(From::from),
             _ => panic!(
                 "Literal type for {} not supported yet",
                 res_type.to_string()
@@ -388,29 +388,16 @@ impl TupleExpr {
         Expr::Tuple(TupleExpr { tuple: vec![] })
     }
 
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<TupleExpr> {
-        if let Ty::Tuple(types) = res_type {
-            let mut res = vec![];
-            for ty in types {
-                let mut expr: Option<Expr> = None;
-                let mut num_failed_attempts = 0;
-                let prev_max_expr_depth = ctx.policy.max_expr_depth;
-                ctx.policy.max_expr_depth = ctx.policy.max_expr_depth_in_tuple;
-                while expr.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
-                    expr = Expr::generate_expr(ctx, ty);
-                    num_failed_attempts += 1;
-                }
-                ctx.policy.max_expr_depth = prev_max_expr_depth;
-                if let Some(expr) = Expr::generate_expr(ctx, ty) {
-                    res.push(expr);
-                } else {
-                    return None;
-                }
-            }
-            Some(TupleExpr { tuple: res })
-        } else {
-            None
+    fn generate_expr(ctx: &mut Context, res_type: &TupleTy) -> Option<TupleExpr> {
+        let mut res = vec![];
+        for ty in &res_type.tuple {
+            let prev_max_expr_depth = ctx.policy.max_expr_depth;
+            ctx.policy.max_expr_depth = min(ctx.policy.max_expr_depth, ctx.policy.max_expr_depth_in_tuple);
+            let expr = Expr::generate_expr(ctx, ty);
+            ctx.policy.max_expr_depth = prev_max_expr_depth;
+            res.push(expr?);
         }
+        Some(TupleExpr { tuple: res })
     }
 }
 
@@ -454,29 +441,16 @@ impl From<ArrayExpr> for Expr {
 }
 
 impl ArrayExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<ArrayExpr> {
-        if let Ty::Array(array_ty) = res_type {
-            let mut res = vec![];
-            for ty in array_ty.iter() {
-                let mut expr: Option<Expr> = None;
-                let mut num_failed_attempts = 0;
-                let prev_max_expr_depth = ctx.policy.max_expr_depth;
-                ctx.policy.max_expr_depth = ctx.policy.max_expr_depth_in_array;
-                while expr.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
-                    expr = Expr::generate_expr(ctx, &ty);
-                    num_failed_attempts += 1;
-                }
-                ctx.policy.max_expr_depth = prev_max_expr_depth;
-                if let Some(expr) = Expr::generate_expr(ctx, &ty) {
-                    res.push(expr);
-                } else {
-                    return None;
-                }
-            }
-            Some(ArrayExpr { array: res })
-        } else {
-            None
+    fn generate_expr(ctx: &mut Context, res_type: &ArrayTy) -> Option<ArrayExpr> {
+        let mut res = vec![];
+        for ty in res_type.iter() {
+            let prev_max_expr_depth = ctx.policy.max_expr_depth;
+            ctx.policy.max_expr_depth = min(ctx.policy.max_expr_depth, ctx.policy.max_expr_depth_in_array);
+            let expr = Expr::generate_expr(ctx, &ty);
+            ctx.policy.max_expr_depth = prev_max_expr_depth;
+            res.push(expr?);
         }
+        Some(ArrayExpr { array: res })
     }
 }
 
@@ -577,19 +551,19 @@ impl From<StructExpr> for Expr {
 }
 
 impl StructExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<StructExpr> {
-        if let Ty::Struct(res_type) = res_type {
-            match res_type {
-                StructTy::Field(res_type) => {
-                    FieldStructExpr::generate_expr(ctx, res_type).map(From::from)
-                }
-                StructTy::Tuple(res_type) => {
-                    TupleStructExpr::generate_expr(ctx, res_type).map(From::from)
-                }
+    fn generate_expr(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
+        let prev_max_expr_depth = ctx.policy.max_expr_depth;
+        ctx.policy.max_expr_depth = min(ctx.policy.max_expr_depth, ctx.policy.max_expr_depth_in_struct);
+        let res = match res_type {
+            StructTy::Field(res_type) => {
+                FieldStructExpr::generate_expr(ctx, res_type).map(From::from)
             }
-        } else {
-            None
-        }
+            StructTy::Tuple(res_type) => {
+                TupleStructExpr::generate_expr(ctx, res_type).map(From::from)
+            }
+        };
+        ctx.policy.max_expr_depth = prev_max_expr_depth;
+        res
     }
 }
 
@@ -609,7 +583,7 @@ impl TupleStructExpr {
     fn generate_expr(ctx: &mut Context, res_type: &TupleStructTy) -> Option<TupleStructExpr> {
         Some(TupleStructExpr {
             struct_name: res_type.name.clone(),
-            fields: TupleExpr::generate_expr(ctx, &Ty::Tuple(res_type.fields.clone()))?,
+            fields: TupleExpr::generate_expr(ctx, &res_type.fields)?,
         })
     }
 }
