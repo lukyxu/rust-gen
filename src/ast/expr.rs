@@ -56,18 +56,15 @@ impl Expr {
             let expr_kind = ctx.choose_expr_kind();
             res = match expr_kind {
                 ExprKind::Literal => LitExpr::generate_expr(ctx, res_type),
-                ExprKind::If => IfExpr::generate_expr(ctx, res_type),
-                ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type),
-                ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type),
-                ExprKind::Block => BlockExpr::generate_expr(ctx, res_type),
-                ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type),
-                ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type),
-                ExprKind::Cast => CastExpr::generate_expr(ctx, res_type),
-                ExprKind::Array => ArrayExpr::generate_expr(ctx, res_type),
-                ExprKind::Tuple => TupleExpr::generate_expr(ctx, res_type).map(Expr::Tuple),
-                ExprKind::Field => FieldExpr::generate_expr(ctx, res_type),
-                ExprKind::Index => IndexExpr::generate_expr(ctx, res_type),
-                ExprKind::Struct => StructExpr::generate_expr(ctx, res_type).map(Expr::Struct),
+                ExprKind::If => IfExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Block => BlockExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Cast => CastExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Field => FieldExpr::generate_expr(ctx, res_type).map(From::from),
+                ExprKind::Index => IndexExpr::generate_expr(ctx, res_type).map(From::from),
                 _ => panic!("ExprKind {:?} not supported yet", expr_kind),
             };
             if res.is_none() {
@@ -84,11 +81,11 @@ impl Expr {
         res
     }
 
-    fn generate_arith_expr(
+    fn generate_arith_expr<T>(
         ctx: &mut Context,
         res_type: &Ty,
-        f: fn(&mut Context, &Ty) -> Option<Expr>,
-    ) -> Option<Expr> {
+        f: fn(&mut Context, &Ty) -> Option<T>,
+    ) -> Option<T> {
         if ctx.arith_depth > ctx.policy.max_arith_depth {
             return None;
         }
@@ -159,10 +156,10 @@ impl LitExpr {
                 let val = t.rand_val(ctx);
                 Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
             }
-            tuple @ Ty::Tuple(_) => TupleExpr::generate_expr(ctx, tuple).map(Expr::Tuple),
-            array @ Ty::Array(..) => ArrayExpr::generate_expr(ctx, array),
-            struct_ty @ Ty::Struct(..) => {
-                StructExpr::generate_expr(ctx, struct_ty).map(Expr::Struct)
+            Ty::Tuple(_) => TupleExpr::generate_expr(ctx, res_type).map(From::from),
+            Ty::Array(..) => ArrayExpr::generate_expr(ctx, res_type).map(From::from),
+            Ty::Struct(..) => {
+                StructExpr::generate_expr(ctx, res_type).map(From::from)
             }
             _ => panic!(
                 "Literal type for {} not supported yet",
@@ -215,11 +212,11 @@ pub struct BinaryExpr {
 }
 
 impl BinaryExpr {
-    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
         Expr::generate_arith_expr(ctx, res_type, BinaryExpr::generate_expr_internal)
     }
 
-    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
         let op = match res_type {
             Ty::Prim(PrimTy::Bool) => ctx.choose_binary_bool_op(),
             Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => ctx.choose_binary_int_op(),
@@ -232,7 +229,7 @@ impl BinaryExpr {
         let lhs = Box::new(Expr::generate_expr(ctx, res_type)?);
         let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
-        Some(Expr::Binary(BinaryExpr { lhs, rhs, op }))
+        Some(BinaryExpr { lhs, rhs, op })
     }
     pub fn fix(&mut self, error: EvalExprError, lhs: &mut EvalExpr, rhs: &mut EvalExpr) {
         if let EvalExprError::UnsignedOverflow = error {
@@ -270,6 +267,12 @@ impl BinaryExpr {
             }
             _ => panic!(),
         }
+    }
+}
+
+impl From<BinaryExpr> for Expr {
+    fn from(expr: BinaryExpr) -> Self {
+        Expr::Binary(expr)
     }
 }
 
@@ -539,6 +542,13 @@ pub struct UnaryExpr {
     pub op: UnaryOp,
 }
 
+impl From<UnaryExpr> for Expr {
+    fn from(expr: UnaryExpr) -> Self {
+        Expr::Unary(expr)
+    }
+}
+
+
 impl UnaryExpr {
     #[allow(dead_code)]
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
@@ -637,6 +647,12 @@ pub struct CastExpr {
     pub ty: Ty,
 }
 
+impl From<CastExpr> for Expr {
+    fn from(expr: CastExpr) -> Self {
+        Expr::Cast(expr)
+    }
+}
+
 impl CastExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         Expr::generate_arith_expr(ctx, res_type, CastExpr::generate_expr_internal)
@@ -663,8 +679,14 @@ pub struct IfExpr {
     pub otherwise: Option<Box<BlockExpr>>,
 }
 
+impl From<IfExpr> for Expr {
+    fn from(expr: IfExpr) -> Self {
+        Expr::If(expr)
+    }
+}
+
 impl IfExpr {
-    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IfExpr> {
         if ctx.if_else_depth > ctx.policy.max_if_else_depth {
             return None;
         }
@@ -682,11 +704,11 @@ impl IfExpr {
                 } else {
                     None
                 };
-                Some(Expr::If(IfExpr {
+                Some(IfExpr {
                     condition: Box::new(cond),
                     then,
                     otherwise,
-                }))
+                })
             }
         };
         ctx.type_symbol_table = outer_symbol_table;
@@ -698,6 +720,12 @@ impl IfExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BlockExpr {
     pub stmts: Vec<Stmt>,
+}
+
+impl From<BlockExpr> for Expr {
+    fn from(expr: BlockExpr) -> Self {
+        Expr::Block(expr)
+    }
 }
 
 impl BlockExpr {
@@ -727,12 +755,6 @@ impl BlockExpr {
     }
 }
 
-impl From<BlockExpr> for Expr {
-    fn from(block_expr: BlockExpr) -> Self {
-        Expr::Block(block_expr)
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
@@ -740,15 +762,27 @@ pub struct IdentExpr {
     pub ty: Ty,
 }
 
+impl From<IdentExpr> for Expr {
+    fn from(expr: IdentExpr) -> Self {
+        Expr::Ident(expr)
+    }
+}
+
 impl IdentExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        ctx.choose_ident_expr_by_type(res_type).map(Expr::Ident)
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
+        ctx.choose_ident_expr_by_type(res_type)
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TupleExpr {
     pub tuple: Vec<Expr>,
+}
+
+impl From<TupleExpr> for Expr {
+    fn from(expr: TupleExpr) -> Self {
+        Expr::Tuple(expr)
+    }
 }
 
 impl TupleExpr {
@@ -788,8 +822,14 @@ pub struct AssignExpr {
     pub rhs: Box<Expr>,
 }
 
+impl From<AssignExpr> for Expr {
+    fn from(expr: AssignExpr) -> Self {
+        Expr::Assign(expr)
+    }
+}
+
 impl AssignExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<AssignExpr> {
         if !res_type.is_unit() {
             return None;
         };
@@ -797,10 +837,10 @@ impl AssignExpr {
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
         let ident_expr = mut_ident_exprs.choose(&mut ctx.rng)?.clone();
 
-        Some(Expr::Assign(AssignExpr {
+        Some(AssignExpr {
             name: ident_expr.name,
             rhs: Box::new(Expr::generate_expr(ctx, &ident_expr.ty)?),
-        }))
+        })
     }
 }
 
@@ -809,8 +849,14 @@ pub struct ArrayExpr {
     pub array: Vec<Expr>,
 }
 
+impl From<ArrayExpr> for Expr {
+    fn from(expr: ArrayExpr) -> Self {
+        Expr::Array(expr)
+    }
+}
+
 impl ArrayExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<ArrayExpr> {
         if let Ty::Array(array_ty) = res_type {
             let mut res = vec![];
             for ty in array_ty.iter() {
@@ -829,7 +875,7 @@ impl ArrayExpr {
                     return None;
                 }
             }
-            Some(Expr::Array(ArrayExpr { array: res }))
+            Some(ArrayExpr { array: res })
         } else {
             None
         }
@@ -848,12 +894,18 @@ pub struct FieldExpr {
     pub member: Member,
 }
 
+impl From<FieldExpr> for Expr {
+    fn from(expr: FieldExpr) -> Self {
+        Expr::Field(expr)
+    }
+}
+
 impl FieldExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         Expr::generate_arith_expr(ctx, res_type, FieldExpr::generate_expr_internal)
     }
 
-    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
             return None;
         }
@@ -867,7 +919,7 @@ impl FieldExpr {
             .collect();
 
         let member = Member::Unnamed(*indexes.choose(&mut ctx.rng).unwrap());
-        Some(Expr::Field(FieldExpr { base, member }))
+        Some(FieldExpr { base, member })
     }
 }
 
@@ -877,12 +929,18 @@ pub struct IndexExpr {
     pub index: Box<Expr>,
 }
 
+impl From<IndexExpr> for Expr {
+    fn from(expr: IndexExpr) -> Self {
+        Expr::Index(expr)
+    }
+}
+
 impl IndexExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
         Expr::generate_arith_expr(ctx, res_type, IndexExpr::generate_expr_internal)
     }
 
-    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
         if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
             return None;
         }
@@ -901,10 +959,10 @@ impl IndexExpr {
             op: BinaryOp::Rem,
         }));
 
-        Some(Expr::Index(IndexExpr {
+        Some(IndexExpr {
             base,
             index: inbound_index,
-        }))
+        })
     }
 }
 
@@ -912,6 +970,12 @@ impl IndexExpr {
 pub enum StructExpr {
     Tuple(TupleStructExpr),
     Field(FieldStructExpr),
+}
+
+impl From<StructExpr> for Expr {
+    fn from(expr: StructExpr) -> Expr {
+        Expr::Struct(expr)
+    }
 }
 
 impl StructExpr {
@@ -991,21 +1055,9 @@ pub enum ExprKind {
     Block,
     Ident,
     Assign,
-    Array,
-    Tuple,
     Index,
     Field,
-    Struct,
     __Nonexhaustive,
-}
-
-impl ExprKind {
-    pub fn is_base_expr(self) -> bool {
-        match self {
-            ExprKind::Literal | ExprKind::Array | ExprKind::Tuple => true,
-            _ => false,
-        }
-    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]

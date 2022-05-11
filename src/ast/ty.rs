@@ -19,10 +19,10 @@ impl Ty {
             let ty_kind = ctx.choose_base_expr_kind();
             res = match ty_kind {
                 TyKind::Unit => Some(Ty::Unit),
-                TyKind::Prim => PrimTy::generate_type(ctx).map(Ty::Prim),
-                TyKind::Tuple => TupleTy::generate_type(ctx, None).map(Ty::Tuple),
-                TyKind::Array => ArrayTy::generate_type(ctx, None).map(Ty::Array),
-                TyKind::Struct => StructTy::generate_type(ctx, None).map(Ty::Struct),
+                TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
+                TyKind::Tuple => TupleTy::generate_type(ctx, None).map(From::from),
+                TyKind::Array => ArrayTy::generate_type(ctx, None).map(From::from),
+                TyKind::Struct => StructTy::generate_type(ctx, None).map(From::from),
             };
             if res.is_none() {
                 num_failed_attempts += 1;
@@ -423,6 +423,12 @@ pub enum StructTy {
     Tuple(TupleStructTy),
 }
 
+impl From<StructTy> for Ty {
+    fn from(ty: StructTy) -> Ty {
+        Ty::Struct(ty)
+    }
+}
+
 impl ToString for StructTy {
     fn to_string(&self) -> String {
         match self {
@@ -447,9 +453,9 @@ impl StructTy {
 
     pub fn generate_new_type(ctx: &mut Context) -> Option<StructTy> {
         if ctx.choose_field_struct() {
-            FieldStructTy::generate_new_type(ctx, None).map(StructTy::Field)
+            FieldStructTy::generate_new_type(ctx, None).map(From::from)
         } else {
-            TupleStructTy::generate_new_type(ctx, None).map(StructTy::Tuple)
+            TupleStructTy::generate_new_type(ctx, None).map(From::from)
         }
     }
 }
