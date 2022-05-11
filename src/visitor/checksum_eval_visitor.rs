@@ -1,4 +1,5 @@
-use crate::ast::expr::{EvalExpr, LitExpr, LitExprTy};
+use crate::ast::eval_expr::EvalExpr;
+use crate::ast::expr::{LitExpr, LitExprTy};
 use crate::ast::function::Function;
 
 use crate::ast::ty::UIntTy;

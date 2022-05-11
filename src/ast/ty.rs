@@ -68,7 +68,7 @@ impl Ty {
                 1 + tuple_ty
                     .tuple
                     .iter()
-                    .map(|ty| ty.tuple_depth())
+                    .map(Ty::tuple_depth)
                     .max()
                     .unwrap_or_default()
             }
