@@ -1,11 +1,11 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr,
-    IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp,
+    ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, FieldExpr, IdentExpr, IfExpr,
+    IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
-use crate::ast::item::{FunctionItem, Item, StructItem};
-use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::ast::item::StructItem;
+use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 

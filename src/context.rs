@@ -1,4 +1,5 @@
 use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
+use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
@@ -73,6 +74,10 @@ fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> Option<T> {
 }
 
 impl Context {
+    pub fn choose_item_kind(&mut self) -> ItemKind {
+        choose(&self.policy.item_dist, &mut self.rng).unwrap()
+    }
+
     pub fn choose_stmt_kind(&mut self) -> StmtKind {
         choose(&self.policy.stmt_dist, &mut self.rng).unwrap()
     }
@@ -151,6 +156,10 @@ impl Context {
 
     pub fn choose_binary_bool_op(&mut self) -> BinaryOp {
         choose(&self.policy.binary_bool_op_dist, &mut self.rng).unwrap()
+    }
+
+    pub fn choose_num_items(&mut self) -> usize {
+        self.policy.num_item_dist.sample(&mut self.rng)
     }
 
     pub fn choose_num_stmts(&mut self) -> usize {

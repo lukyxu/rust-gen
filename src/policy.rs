@@ -1,4 +1,5 @@
 use crate::ast::expr::{BinaryOp, ExprKind};
+use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use rand::distributions::Uniform;
@@ -6,6 +7,8 @@ use rand::distributions::Uniform;
 #[derive(Debug, Clone)]
 pub struct Policy {
     pub name: &'static str,
+    pub num_item_dist: Uniform<usize>,
+    pub item_dist: Vec<(ItemKind, f64)>,
     pub num_stmt_dist: Uniform<usize>,
     pub stmt_dist: Vec<(StmtKind, f64)>,
     pub expr_dist: Vec<(ExprKind, f64)>,
@@ -228,6 +231,10 @@ impl Policy {
     fn default_with_name(name: &'static str) -> Self {
         Policy {
             name,
+            num_item_dist: Uniform::new_inclusive(2, 10),
+            item_dist: vec![(ItemKind::Struct, 1.0)],
+
+            num_stmt_dist: Uniform::new_inclusive(2, 10),
             stmt_dist: vec![
                 (StmtKind::Local, 5.0),
                 (StmtKind::Semi, 1.0),
@@ -291,7 +298,7 @@ impl Policy {
                 (BinaryOp::Rem, 1.0),
             ],
             binary_bool_op_dist: vec![(BinaryOp::And, 1.0), (BinaryOp::Or, 1.0)],
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
+
             unsuffixed_int_prob: 0.0,
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
