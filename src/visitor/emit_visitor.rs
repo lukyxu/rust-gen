@@ -6,7 +6,7 @@ use crate::ast::file::RustFile;
 use crate::ast::function::Function;
 use crate::ast::item::StructItem;
 use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
-use crate::ast::ty::{IntTy, Ty, UIntTy};
+use crate::ast::ty::{IntTy, StructTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 
 pub struct EmitVisitor {
@@ -61,20 +61,29 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_struct_item(&mut self, item: &mut StructItem) {
-        self.output.push_str(&format!(
-            "struct {} {{\n{}\n}} ",
-            item.struct_ty.name,
-            item.struct_ty
-                .fields
-                .iter()
-                .map(|f| format!(
-                    "{}{},",
-                    " ".repeat(self.curr_indent + self.indentation),
-                    f.to_string()
+        match &item.struct_ty {
+            StructTy::Field(field_struct) => {
+                self.output.push_str(&format!(
+                    "struct {} {{\n{}\n}} ",
+                    field_struct.name,
+                    field_struct
+                        .fields
+                        .iter()
+                        .map(|f| format!(
+                            "{}{},",
+                            " ".repeat(self.curr_indent + self.indentation),
+                            f.to_string()
+                        ))
+                        .collect::<Vec<String>>()
+                        .join("\n")
                 ))
-                .collect::<Vec<String>>()
-                .join("\n")
-        ))
+            }
+            StructTy::Tuple(tuple_struct) => {
+                self.output.push_str(&format!(
+                    "struct {}{};",
+                    tuple_struct.name, tuple_struct.fields.to_string()));
+            }
+        }
     }
 
     fn visit_function(&mut self, function: &mut Function) {

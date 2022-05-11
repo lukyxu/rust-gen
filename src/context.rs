@@ -125,10 +125,10 @@ impl Context {
             self.struct_type_dist
                 .iter()
                 .filter(|(struct_ty, _)| {
-                    struct_ty
-                        .fields
-                        .iter()
-                        .any(|field_def| *field_def.ty == elem_ty)
+                    match struct_ty {
+                        StructTy::Field(field) => {field.fields.iter().any(|field_def| *field_def.ty == elem_ty)}
+                        StructTy::Tuple(tuple) => {(&tuple.fields).into_iter().any(|ty| *ty == elem_ty)}
+                    }
                 })
                 .cloned()
                 .collect()
@@ -141,6 +141,8 @@ impl Context {
     pub fn choose_struct_length(&mut self) -> usize {
         self.policy.struct_length_dist.sample(&mut self.rng)
     }
+
+    pub fn choose_field_struct(&mut self) -> bool { self.rng.gen_bool(self.policy.field_struct_prob) }
 
     pub fn choose_base_expr_kind(&mut self) -> TyKind {
         choose(&self.policy.type_dist, &mut self.rng).unwrap()
@@ -184,10 +186,6 @@ impl Context {
 
     pub fn choose_new_tuple_type(&mut self) -> bool {
         self.gen_new_tuple_types && self.rng.gen_bool(self.policy.new_tuple_prob)
-    }
-
-    pub fn choose_new_struct_type(&mut self) -> bool {
-        self.gen_new_struct_types && self.rng.gen_bool(self.policy.new_struct_prob)
     }
 
     pub fn choose_otherwise_if_stmt(&mut self) -> bool {

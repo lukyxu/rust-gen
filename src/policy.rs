@@ -29,7 +29,7 @@ pub struct Policy {
     pub max_tuple_depth: usize,
     pub max_expr_depth_in_tuple: usize,
 
-    pub new_struct_prob: f64,
+    pub field_struct_prob: f64,
     pub struct_length_dist: Uniform<usize>,
     pub max_struct_depth: usize,
     pub max_expr_depth_in_struct: usize,
@@ -284,7 +284,7 @@ impl Policy {
             max_tuple_depth: 2,
             max_expr_depth_in_tuple: 5,
 
-            new_struct_prob: 0.5,
+            field_struct_prob: 0.5,
             default_struct_type_dist: vec![],
             struct_length_dist: Uniform::new_inclusive(2, 3),
             max_struct_depth: 2,
