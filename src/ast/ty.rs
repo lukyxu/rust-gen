@@ -75,6 +75,29 @@ impl Ty {
             _ => 0,
         }
     }
+
+    pub fn struct_depth(&self) -> usize {
+        match self {
+            Ty::Struct(struct_ty) => {
+                1 + match struct_ty {
+                    StructTy::Field(field_struct) => field_struct
+                        .fields
+                        .iter()
+                        .map(|f| f.ty.struct_depth())
+                        .max()
+                        .unwrap_or_default(),
+                    StructTy::Tuple(tuple_struct) => tuple_struct
+                        .fields
+                        .tuple
+                        .iter()
+                        .map(Ty::struct_depth)
+                        .max()
+                        .unwrap_or_default(),
+                }
+            }
+            _ => 0,
+        }
+    }
 }
 
 impl ToString for Ty {
@@ -520,23 +543,15 @@ impl ToString for FieldDef {
 
 impl FieldDef {
     pub fn generate_field_def(ctx: &mut Context, i: usize) -> Option<FieldDef> {
-        for _ in 0..10 {
-            let base_type = Ty::generate_type(ctx);
-            let base_type = if let Some(base_type) = base_type {
-                base_type
-            } else {
-                continue;
-            };
-            if base_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
-                continue;
-            }
-            let name = ctx.create_field_name(i);
-            return Some(FieldDef {
-                name,
-                ty: Box::new(base_type),
-            });
+        let base_type = Ty::generate_type(ctx)?;
+        if base_type.struct_depth() + 1 > ctx.policy.max_struct_depth {
+            return None;
         }
-        None
+        let name = ctx.create_field_name(i);
+        return Some(FieldDef {
+            name,
+            ty: Box::new(base_type),
+        });
     }
 }
 

@@ -392,7 +392,10 @@ impl TupleExpr {
         let mut res = vec![];
         for ty in &res_type.tuple {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
-            ctx.policy.max_expr_depth = min(ctx.policy.max_expr_depth, ctx.policy.max_expr_depth_in_tuple);
+            ctx.policy.max_expr_depth = min(
+                ctx.policy.max_expr_depth,
+                ctx.policy.max_expr_depth_in_tuple,
+            );
             let expr = Expr::generate_expr(ctx, ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
             res.push(expr?);
@@ -445,7 +448,10 @@ impl ArrayExpr {
         let mut res = vec![];
         for ty in res_type.iter() {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
-            ctx.policy.max_expr_depth = min(ctx.policy.max_expr_depth, ctx.policy.max_expr_depth_in_array);
+            ctx.policy.max_expr_depth = min(
+                ctx.policy.max_expr_depth,
+                ctx.policy.max_expr_depth_in_array,
+            );
             let expr = Expr::generate_expr(ctx, &ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
             res.push(expr?);
@@ -553,7 +559,10 @@ impl From<StructExpr> for Expr {
 impl StructExpr {
     fn generate_expr(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
         let prev_max_expr_depth = ctx.policy.max_expr_depth;
-        ctx.policy.max_expr_depth = min(ctx.policy.max_expr_depth, ctx.policy.max_expr_depth_in_struct);
+        ctx.policy.max_expr_depth = min(
+            ctx.policy.max_expr_depth,
+            ctx.policy.max_expr_depth_in_struct,
+        );
         let res = match res_type {
             StructTy::Field(res_type) => {
                 FieldStructExpr::generate_expr(ctx, res_type).map(From::from)

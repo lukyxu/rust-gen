@@ -285,7 +285,7 @@ impl Policy {
             field_struct_prob: 0.5,
             default_struct_type_dist: vec![],
             struct_length_dist: Uniform::new_inclusive(2, 3),
-            max_struct_depth: 2,
+            max_struct_depth: 5,
             max_expr_depth_in_struct: 5,
 
             binary_int_op_dist: vec![
