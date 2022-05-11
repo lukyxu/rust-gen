@@ -55,7 +55,7 @@ pub struct StructItem {
 impl StructItem {
     pub fn generate_item(ctx: &mut Context) -> Option<StructItem> {
         Some(StructItem {
-            struct_ty: StructTy::generate_new_type(ctx, None)?,
+            struct_ty: StructTy::generate_new_type(ctx)?,
         })
     }
 }

@@ -289,7 +289,7 @@ impl ToString for TupleTy {
                 .iter()
                 .map(std::string::ToString::to_string)
                 .collect::<Vec<String>>()
-                .join(",")
+                .join(", ")
         )
     }
 }
@@ -317,7 +317,7 @@ impl TupleTy {
                 if let Some(ty) = TupleTy::generate_tuple_elem(ctx) {
                     types.push(ty)
                 } else {
-                    break 'outer;
+                    continue 'outer;
                 }
             }
             if let Some(ty) = &ty {
@@ -418,53 +418,106 @@ impl ArrayTy {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StructTy {
+pub enum StructTy {
+    Field(FieldStructTy),
+    Tuple(TupleStructTy),
+}
+
+impl ToString for StructTy {
+    fn to_string(&self) -> String {
+        match self {
+            StructTy::Field(field) => field.name.clone(),
+            StructTy::Tuple(tuple) => tuple.name.clone(),
+        }
+    }
+}
+
+impl StructTy {
+    pub fn is_field_struct(&self) -> bool {
+        matches!(self, StructTy::Field(_))
+    }
+
+    pub fn is_tuple_struct(&self) -> bool {
+        matches!(self, StructTy::Tuple(_))
+    }
+
+    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
+        ctx.choose_struct_type(ty)
+    }
+
+    pub fn generate_new_type(ctx: &mut Context) -> Option<StructTy> {
+        if ctx.choose_field_struct() {
+            FieldStructTy::generate_new_type(ctx, None).map(StructTy::Field)
+        } else {
+            TupleStructTy::generate_new_type(ctx, None).map(StructTy::Tuple)
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FieldStructTy {
     pub name: String,
     pub fields: Vec<FieldDef>,
 }
 
-impl ToString for StructTy {
+impl ToString for FieldStructTy {
     fn to_string(&self) -> String {
         self.name.clone()
     }
 }
 
-impl StructTy {
-    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
-        ctx.choose_struct_type(ty.clone())
+impl From<FieldStructTy> for StructTy {
+    fn from(field: FieldStructTy) -> StructTy {
+        StructTy::Field(field)
     }
+}
 
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
-        let prev_gen_new_struct_types = ctx.gen_new_struct_types;
-        ctx.gen_new_struct_types = false;
-        let mut res: Option<StructTy> = None;
+impl FieldStructTy {
+    // pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<FieldStructTy> {
+    //     ctx.choose_struct_type(ty.clone())
+    // }
+
+    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<FieldStructTy> {
+        let mut res: Option<FieldStructTy> = None;
         'outer: for _ in 0..10 {
             let len = ctx.choose_struct_length();
             let mut fields: Vec<FieldDef> = vec![];
             for i in 0..len {
-                if let Some(field_def) = StructTy::generate_field_def(ctx, i) {
+                if let Some(field_def) = FieldDef::generate_field_def(ctx, i) {
                     fields.push(field_def)
                 } else {
-                    break 'outer;
+                    continue 'outer;
                 }
             }
             if let Some(ty) = &ty {
                 let index = ctx.rng.gen_range(0..len);
                 fields[index].ty = Box::new(ty.clone());
             }
-            let struct_ty = StructTy {
+            let struct_ty = FieldStructTy {
                 name: ctx.create_struct_name(),
                 fields,
             };
             let weight = 1.0;
-            ctx.struct_type_dist.push((struct_ty.clone(), weight));
-            res = Some(struct_ty);
-            break;
+            ctx.struct_type_dist.push((struct_ty.clone().into(), weight));
+            return Some(struct_ty)
         }
-        ctx.gen_new_tuple_types = prev_gen_new_struct_types;
-        res
+        None
     }
+}
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FieldDef {
+    pub name: String,
+    pub ty: Box<Ty>,
+}
+
+impl ToString for FieldDef {
+    fn to_string(&self) -> String {
+        format!("{}: {}", self.name, self.ty.to_string())
+    }
+}
+
+impl FieldDef {
     pub fn generate_field_def(ctx: &mut Context, i: usize) -> Option<FieldDef> {
         for _ in 0..10 {
             let base_type = Ty::generate_type(ctx);
@@ -487,14 +540,41 @@ impl StructTy {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FieldDef {
+pub struct TupleStructTy {
     pub name: String,
-    pub ty: Box<Ty>,
+    pub fields: TupleTy,
 }
 
-impl ToString for FieldDef {
+impl ToString for TupleStructTy {
     fn to_string(&self) -> String {
-        format!("{}: {}", self.name, self.ty.to_string())
+        self.name.clone()
+    }
+}
+
+impl From<TupleStructTy> for StructTy {
+    fn from(field: TupleStructTy) -> StructTy {
+        StructTy::Tuple(field)
+    }
+}
+
+impl TupleStructTy {
+    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleStructTy> {
+        for _ in 0..10 {
+            // let len = ctx.choose_struct_length();
+            let fields = if let Some(tuple) = TupleTy::generate_type(ctx, ty.clone()) {
+                tuple
+            } else {
+                continue
+            };
+            let struct_ty = TupleStructTy {
+                name: ctx.create_struct_name(),
+                fields,
+            };
+            let weight = 1.0;
+            ctx.struct_type_dist.push((struct_ty.clone().into(), weight));
+            return Some(struct_ty)
+        }
+        None
     }
 }
 
