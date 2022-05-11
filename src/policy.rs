@@ -1,19 +1,23 @@
 use crate::ast::expr::{BinaryOp, ExprKind};
+use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{ArrayTy, IntTy, PrimTy, TupleTy, TyKind, UIntTy};
+use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use rand::distributions::Uniform;
 
 #[derive(Debug, Clone)]
 pub struct Policy {
     pub name: &'static str,
+    pub num_item_dist: Uniform<usize>,
+    pub item_dist: Vec<(ItemKind, f64)>,
     pub num_stmt_dist: Uniform<usize>,
     pub stmt_dist: Vec<(StmtKind, f64)>,
     pub expr_dist: Vec<(ExprKind, f64)>,
-    pub type_dist : Vec<(TyKind, f64)>,
+    pub type_dist: Vec<(TyKind, f64)>,
 
     pub prim_type_dist: Vec<(PrimTy, f64)>,
     pub default_array_type_dist: Vec<(ArrayTy, f64)>,
     pub default_tuple_type_dist: Vec<(TupleTy, f64)>,
+    pub default_struct_type_dist: Vec<(StructTy, f64)>,
 
     pub new_array_prob: f64,
     pub array_length_dist: Uniform<usize>,
@@ -24,6 +28,11 @@ pub struct Policy {
     pub tuple_length_dist: Uniform<usize>,
     pub max_tuple_depth: usize,
     pub max_expr_depth_in_tuple: usize,
+
+    pub new_struct_prob: f64,
+    pub struct_length_dist: Uniform<usize>,
+    pub max_struct_depth: usize,
+    pub max_expr_depth_in_struct: usize,
 
     pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
     pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
@@ -104,9 +113,12 @@ impl Policy {
         Policy {
             prim_type_dist: vec![(IntTy::I8.into(), 3.0)],
             new_tuple_prob: 1.0,
-            default_tuple_type_dist: vec![
-                (TupleTy {tuple: vec![IntTy::I8.into(), IntTy::I8.into()]}, 1.0),
-            ],
+            default_tuple_type_dist: vec![(
+                TupleTy {
+                    tuple: vec![IntTy::I8.into(), IntTy::I8.into()],
+                },
+                1.0,
+            )],
             tuple_length_dist: Uniform::new_inclusive(3, 4),
             max_tuple_depth: 1,
             expr_dist: vec![
@@ -171,10 +183,13 @@ impl Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             prim_type_dist: vec![(IntTy::I8.into(), 1.0)],
             new_array_prob: 0.5,
-            default_array_type_dist: vec![(ArrayTy {
-                base_ty: Box::new(IntTy::I8.into()),
-                len: 3
-            }, 0.5)],
+            default_array_type_dist: vec![(
+                ArrayTy {
+                    base_ty: Box::new(IntTy::I8.into()),
+                    len: 3,
+                },
+                0.5,
+            )],
             array_length_dist: Uniform::new_inclusive(3, 4),
             max_array_depth: 3,
 
@@ -216,6 +231,10 @@ impl Policy {
     fn default_with_name(name: &'static str) -> Self {
         Policy {
             name,
+            num_item_dist: Uniform::new_inclusive(2, 10),
+            item_dist: vec![(ItemKind::Struct, 1.0)],
+
+            num_stmt_dist: Uniform::new_inclusive(2, 10),
             stmt_dist: vec![
                 (StmtKind::Local, 5.0),
                 (StmtKind::Semi, 1.0),
@@ -258,11 +277,19 @@ impl Policy {
             array_length_dist: Uniform::new_inclusive(2, 3),
             max_array_depth: 2,
             max_expr_depth_in_array: 5,
+
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
             tuple_length_dist: Uniform::new_inclusive(2, 3),
             max_tuple_depth: 2,
             max_expr_depth_in_tuple: 5,
+
+            new_struct_prob: 0.5,
+            default_struct_type_dist: vec![],
+            struct_length_dist: Uniform::new_inclusive(2, 3),
+            max_struct_depth: 2,
+            max_expr_depth_in_struct: 5,
+
             binary_int_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
@@ -271,7 +298,7 @@ impl Policy {
                 (BinaryOp::Rem, 1.0),
             ],
             binary_bool_op_dist: vec![(BinaryOp::And, 1.0), (BinaryOp::Or, 1.0)],
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
+
             unsuffixed_int_prob: 0.0,
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
@@ -284,7 +311,7 @@ impl Policy {
             max_arith_depth: 5,
 
             max_expr_attempts: 100,
-            max_ty_attempts: 5
+            max_ty_attempts: 5,
         }
     }
 }

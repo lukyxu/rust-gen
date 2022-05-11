@@ -1,6 +1,6 @@
 use crate::context::Context;
 use rand::Rng;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -8,6 +8,7 @@ pub enum Ty {
     Prim(PrimTy),
     Tuple(TupleTy), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
     Array(ArrayTy),
+    Struct(StructTy),
 }
 
 impl Ty {
@@ -21,6 +22,7 @@ impl Ty {
                 TyKind::Prim => PrimTy::generate_type(ctx).map(Ty::Prim),
                 TyKind::Tuple => TupleTy::generate_type(ctx, None).map(Ty::Tuple),
                 TyKind::Array => ArrayTy::generate_type(ctx, None).map(Ty::Array),
+                TyKind::Struct => StructTy::generate_type(ctx, None).map(Ty::Struct),
             };
             if res.is_none() {
                 num_failed_attempts += 1;
@@ -82,6 +84,7 @@ impl ToString for Ty {
             Ty::Prim(prim) => prim.to_string(),
             Ty::Tuple(tuple) => tuple.to_string(),
             Ty::Array(array) => array.to_string(),
+            Ty::Struct(struct_ty) => struct_ty.to_string(),
         }
     }
 }
@@ -109,7 +112,8 @@ impl ToString for PrimTy {
             PrimTy::Float(float) => match float {
                 FloatTy::F32 => "f32",
                 FloatTy::F64 => "f64",
-            }.to_string(),
+            }
+            .to_string(),
             PrimTy::Str => "&str".to_string(),
         }
         .to_owned()
@@ -259,7 +263,7 @@ impl UIntTy {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TupleTy {
-    pub tuple: Vec<Ty>
+    pub tuple: Vec<Ty>,
 }
 
 impl From<TupleTy> for Ty {
@@ -267,7 +271,6 @@ impl From<TupleTy> for Ty {
         Ty::Tuple(ty)
     }
 }
-
 
 impl<'a> IntoIterator for &'a TupleTy {
     type Item = &'a Ty;
@@ -317,16 +320,11 @@ impl TupleTy {
                     break 'outer;
                 }
             }
-            if types.len() != len {
-                break;
-            }
             if let Some(ty) = &ty {
                 let index = ctx.rng.gen_range(0..len);
                 types[index] = ty.clone();
             }
-            let tuple_type = TupleTy {
-                tuple: types
-            };
+            let tuple_type = TupleTy { tuple: types };
             if ctx.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
                 continue;
             }
@@ -350,9 +348,9 @@ impl TupleTy {
             if base_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
                 continue;
             }
-            return Some(base_type)
+            return Some(base_type);
         }
-        return None
+        return None;
     }
 }
 
@@ -387,7 +385,7 @@ impl ArrayTy {
         if res.is_none() && ctx.gen_new_array_types {
             res = ArrayTy::generate_new_type(ctx, ty.clone());
         }
-        return res
+        return res;
     }
 
     pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
@@ -396,10 +394,10 @@ impl ArrayTy {
         let mut res: Option<ArrayTy> = None;
         for _ in 0..10 {
             let len = ctx.choose_array_length();
-            let base_ty = if let Some(base_type) = ty.clone().or_else(||Ty::generate_type(ctx)) {
+            let base_ty = if let Some(base_type) = ty.clone().or_else(|| Ty::generate_type(ctx)) {
                 Box::new(base_type)
             } else {
-                continue
+                continue;
             };
 
             if base_ty.array_depth() + 1 > ctx.policy.max_array_depth {
@@ -419,10 +417,92 @@ impl ArrayTy {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct StructTy {
+    pub name: String,
+    pub fields: Vec<FieldDef>,
+}
+
+impl ToString for StructTy {
+    fn to_string(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl StructTy {
+    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
+        ctx.choose_struct_type(ty.clone())
+    }
+
+    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
+        let prev_gen_new_struct_types = ctx.gen_new_struct_types;
+        ctx.gen_new_struct_types = false;
+        let mut res: Option<StructTy> = None;
+        'outer: for _ in 0..10 {
+            let len = ctx.choose_struct_length();
+            let mut fields: Vec<FieldDef> = vec![];
+            for i in 0..len {
+                if let Some(field_def) = StructTy::generate_field_def(ctx, i) {
+                    fields.push(field_def)
+                } else {
+                    break 'outer;
+                }
+            }
+            if let Some(ty) = &ty {
+                let index = ctx.rng.gen_range(0..len);
+                fields[index].ty = Box::new(ty.clone());
+            }
+            let struct_ty = StructTy {
+                name: ctx.create_struct_name(),
+                fields,
+            };
+            let weight = 1.0;
+            ctx.struct_type_dist.push((struct_ty.clone(), weight));
+            res = Some(struct_ty);
+            break;
+        }
+        ctx.gen_new_tuple_types = prev_gen_new_struct_types;
+        res
+    }
+
+    pub fn generate_field_def(ctx: &mut Context, i: usize) -> Option<FieldDef> {
+        for _ in 0..10 {
+            let base_type = Ty::generate_type(ctx);
+            let base_type = if let Some(base_type) = base_type {
+                base_type
+            } else {
+                continue;
+            };
+            if base_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+                continue;
+            }
+            let name = ctx.create_field_name(i);
+            return Some(FieldDef {
+                name,
+                ty: Box::new(base_type),
+            });
+        }
+        return None;
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FieldDef {
+    pub name: String,
+    pub ty: Box<Ty>,
+}
+
+impl ToString for FieldDef {
+    fn to_string(&self) -> String {
+        format!("{}: {}", self.name, self.ty.to_string())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TyKind {
     Unit,
     Prim,
     Tuple,
     Array,
+    Struct,
 }

@@ -2,7 +2,9 @@ use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, FieldExpr, IdentExpr, IfExpr,
     IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr, UnaryOp,
 };
+use crate::ast::file::RustFile;
 use crate::ast::function::Function;
+use crate::ast::item::StructItem;
 use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
@@ -41,17 +43,43 @@ impl Visitor for EmitVisitor {
         self.curr_indent -= self.indentation;
     }
 
-    fn visit_function(&mut self, function: &mut Function) {
-        self.output.push_str(&format!("fn {}() ", function.name));
-        self.visit_block_expr(&mut function.block);
-    }
-
     fn visit_name(&mut self, name: &str) {
         self.output.push_str(name);
     }
 
     fn visit_type(&mut self, ty: &Ty) {
         self.output.push_str(&ty.to_string());
+    }
+
+    fn visit_file(&mut self, file: &mut RustFile) {
+        for (i, item) in (&mut file.items).iter_mut().enumerate() {
+            if i > 0 {
+                self.output.push_str("\n\n")
+            }
+            self.visit_item(item);
+        }
+    }
+
+    fn visit_struct_item(&mut self, item: &mut StructItem) {
+        self.output.push_str(&format!(
+            "struct {} {{\n{}\n}} ",
+            item.struct_ty.name,
+            item.struct_ty
+                .fields
+                .iter()
+                .map(|f| format!(
+                    "{}{},",
+                    " ".repeat(self.curr_indent + self.indentation),
+                    f.to_string()
+                ))
+                .collect::<Vec<String>>()
+                .join("\n")
+        ))
+    }
+
+    fn visit_function(&mut self, function: &mut Function) {
+        self.output.push_str(&format!("fn {}() ", function.name));
+        self.visit_block_expr(&mut function.block);
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {

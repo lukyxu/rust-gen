@@ -2,8 +2,10 @@ use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BinaryOp, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr,
     IfExpr, IndexExpr, LitExpr, Member, TupleExpr, UnaryExpr, UnaryOp,
 };
+use crate::ast::file::RustFile;
 
 use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
 use crate::ast::stmt::{
     CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
 };
@@ -13,11 +15,27 @@ pub trait Visitor: Sized {
     fn enter_scope(&mut self) {}
     fn exit_scope(&mut self) {}
 
+    fn visit_name(&mut self, _name: &str) {}
+    fn visit_type(&mut self, _ty: &Ty) {}
+
+    fn visit_file(&mut self, file: &mut RustFile) {
+        walk_file(self, file);
+    }
+
     fn visit_function(&mut self, function: &mut Function) {
         walk_function(self, function);
     }
-    fn visit_name(&mut self, _name: &str) {}
-    fn visit_type(&mut self, _ty: &Ty) {}
+
+    // Items
+    fn visit_item(&mut self, item: &mut Item) {
+        walk_item(self, item);
+    }
+    fn visit_struct_item(&mut self, item: &mut StructItem) {
+        walk_struct_item(self, item);
+    }
+    fn visit_function_item(&mut self, item: &mut FunctionItem) {
+        walk_function_item(self, item);
+    }
 
     // Statements
     fn visit_stmt(&mut self, stmt: &mut Stmt) {
@@ -81,8 +99,29 @@ pub trait Visitor: Sized {
     fn visit_binary_op(&mut self, _op: &mut BinaryOp) {}
 }
 
+fn walk_file<V: Visitor>(visitor: &mut V, file: &mut RustFile) {
+    for item in &mut file.items {
+        visitor.visit_item(item);
+    }
+}
+
 fn walk_function<V: Visitor>(visitor: &mut V, function: &mut Function) {
     visitor.visit_block_expr(&mut function.block);
+}
+
+fn walk_item<V: Visitor>(visitor: &mut V, item: &mut Item) {
+    match item {
+        Item::Struct(item) => visitor.visit_struct_item(item),
+        Item::Function(item) => visitor.visit_function_item(item),
+    }
+}
+
+fn walk_struct_item<V: Visitor>(visitor: &mut V, item: &mut StructItem) {
+    visitor.visit_type(&Ty::Struct(item.struct_ty.clone().into()));
+}
+
+fn walk_function_item<V: Visitor>(visitor: &mut V, item: &mut FunctionItem) {
+    visitor.visit_function(&mut item.function)
 }
 
 fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
