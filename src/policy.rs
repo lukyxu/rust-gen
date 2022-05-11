@@ -122,12 +122,11 @@ impl Policy {
             tuple_length_dist: Uniform::new_inclusive(3, 4),
             max_tuple_depth: 1,
             expr_dist: vec![
-                (ExprKind::Literal, 3.0),
+                (ExprKind::Literal, 5.0),
                 (ExprKind::Binary, 1.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Ident, 2.0),
                 (ExprKind::If, 1.0),
-                (ExprKind::Tuple, 1.0),
             ],
 
             max_if_else_depth: 2,
@@ -195,12 +194,11 @@ impl Policy {
 
             mutability_prob: 0.2,
             expr_dist: vec![
-                (ExprKind::Literal, 3.0),
+                (ExprKind::Literal, 5.0),
                 (ExprKind::Binary, 1.0),
                 (ExprKind::Unary, 5.0),
                 (ExprKind::Ident, 2.0),
                 (ExprKind::If, 1.0),
-                (ExprKind::Array, 1.0),
             ],
 
             max_if_else_depth: 2,
@@ -241,14 +239,13 @@ impl Policy {
                 // (StmtKind::Expr, 0.0): Must be 0
             ],
             expr_dist: vec![
-                (ExprKind::Literal, 3.0),
+                (ExprKind::Literal, 5.0),
                 (ExprKind::If, 1.0),
                 (ExprKind::Binary, 2.0),
                 (ExprKind::Ident, 2.0),
                 (ExprKind::Block, 0.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
-                (ExprKind::Tuple, 3.0),
             ],
             type_dist: vec![
                 (TyKind::Unit, 1.0),
