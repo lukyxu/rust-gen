@@ -1,9 +1,9 @@
 use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
+use crate::ast::op::BinaryOp;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use rand::distributions::Uniform;
-use crate::ast::op::BinaryOp;
 
 #[derive(Debug, Clone)]
 pub struct Policy {
@@ -89,8 +89,7 @@ impl Policy {
     pub fn get_policy(name: &str) -> Option<Policy> {
         Policy::get_policies()
             .iter()
-            .filter(|p| p.name == name)
-            .next()
+            .find(|p| p.name == name)
             .cloned()
     }
 

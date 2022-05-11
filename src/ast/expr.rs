@@ -5,10 +5,10 @@ use crate::ast::ty::{
 };
 use rand::prelude::SliceRandom;
 
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
-use crate::ast::op::{BinaryOp, UnaryOp};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -397,11 +397,11 @@ impl TupleExpr {
                 let prev_max_expr_depth = ctx.policy.max_expr_depth;
                 ctx.policy.max_expr_depth = ctx.policy.max_expr_depth_in_tuple;
                 while expr.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
-                    expr = Expr::generate_expr(ctx, &ty);
+                    expr = Expr::generate_expr(ctx, ty);
                     num_failed_attempts += 1;
                 }
                 ctx.policy.max_expr_depth = prev_max_expr_depth;
-                if let Some(expr) = Expr::generate_expr(ctx, &ty) {
+                if let Some(expr) = Expr::generate_expr(ctx, ty) {
                     res.push(expr);
                 } else {
                     return None;
@@ -588,7 +588,7 @@ impl StructExpr {
                 }
             }
         } else {
-            return None;
+            None
         }
     }
 }

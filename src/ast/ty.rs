@@ -30,7 +30,7 @@ impl Ty {
                 *ctx.statistics.ty_counter.entry(ty_kind).or_insert(0) += 1;
             }
         }
-        return res;
+        res
     }
 
     pub fn is_unit(&self) -> bool {
@@ -116,7 +116,6 @@ impl ToString for PrimTy {
             .to_string(),
             PrimTy::Str => "&str".to_string(),
         }
-        .to_owned()
     }
 }
 
@@ -303,7 +302,7 @@ impl TupleTy {
         if res.is_none() && ctx.gen_new_tuple_types {
             res = TupleTy::generate_new_type(ctx, ty);
         }
-        return res;
+        res
     }
 
     pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
@@ -350,7 +349,7 @@ impl TupleTy {
             }
             return Some(base_type);
         }
-        return None;
+        None
     }
 }
 
@@ -383,9 +382,9 @@ impl ArrayTy {
             res = ctx.choose_array_type(ty.clone())
         }
         if res.is_none() && ctx.gen_new_array_types {
-            res = ArrayTy::generate_new_type(ctx, ty.clone());
+            res = ArrayTy::generate_new_type(ctx, ty);
         }
-        return res;
+        res
     }
 
     pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
@@ -537,7 +536,7 @@ impl FieldDef {
                 ty: Box::new(base_type),
             });
         }
-        return None;
+        None
     }
 }
 

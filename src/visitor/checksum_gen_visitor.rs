@@ -1,7 +1,7 @@
 use crate::ast::expr::LitExprTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr,
-    LitExpr, LitExprTy, Member,
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitExpr,
+    LitExprTy, Member,
 };
 use crate::ast::function::Function;
 use crate::ast::op::BinaryOp;
@@ -104,12 +104,12 @@ impl Visitor for ChecksumGenVisitor {
     }
 }
 
-fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
+fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
     let mut accumulator = vec![];
     match ty {
         Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)) => {
             accumulator.push(Expr::Ident(IdentExpr {
-                name: name.clone(),
+                name: name.to_owned(),
                 ty: ty.clone(),
             }))
         }
@@ -117,7 +117,7 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
             for (i, t) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
-                        name: name.clone(),
+                        name: name.to_owned(),
                         ty: ty.clone(),
                     })),
                     member: Member::Unnamed(i),
@@ -129,7 +129,7 @@ fn exprs_from_ident(name: &String, ty: &Ty) -> Vec<Expr> {
             for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
-                        name: name.clone(),
+                        name: name.to_owned(),
                         ty: ty.clone(),
                     })),
                     index: Box::new(Expr::Literal(LitExpr::Int(

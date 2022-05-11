@@ -3,14 +3,14 @@ use crate::ast::eval_expr::EvalExprError::{
 };
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
 use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitExprTy};
-use crate::ast::ty::IntTy::{I128, I16, I32, I64, I8, ISize};
+use crate::ast::op::{BinaryOp, UnaryOp};
+use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 #[cfg(test)]
 use crate::ast::ty::UIntTy;
-use crate::ast::ty::UIntTy::{U128, U16, U32, U64, U8, USize};
+use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 use crate::ast::ty::{IntTy, PrimTy, Ty};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use std::mem::swap;
-use crate::ast::op::{BinaryOp, UnaryOp};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EvalExpr {

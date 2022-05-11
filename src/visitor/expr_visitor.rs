@@ -18,8 +18,8 @@ pub struct ExprVisitor {
     max_attempt_fix: usize,
 }
 
-impl ExprVisitor {
-    pub fn new() -> ExprVisitor {
+impl Default for ExprVisitor {
+    fn default() -> ExprVisitor {
         ExprVisitor {
             expr: None,
             symbol_table: ExprSymbolTable::default(),
@@ -27,7 +27,8 @@ impl ExprVisitor {
             max_attempt_fix: 2,
         }
     }
-
+}
+impl ExprVisitor {
     fn safe_expr_visit(&mut self, expr: &mut Expr) -> EvalExpr {
         self.expr = None;
         self.visit_expr(expr);
@@ -289,7 +290,7 @@ mod tests {
                 op: UnaryOp::Not,
             });
             let expected_expr = expr.clone();
-            let mut visitor = ExprVisitor::new();
+            let mut visitor = ExprVisitor::default();
             visitor.visit_unary_expr(&mut expr);
             // Assert that the tree is the same
             assert_eq!(expr, expected_expr);
@@ -307,7 +308,7 @@ mod tests {
             op: UnaryOp::Neg,
         });
         let expected_expr = expr.clone();
-        let mut visitor = ExprVisitor::new();
+        let mut visitor = ExprVisitor::default();
         visitor.visit_unary_expr(&mut expr);
         assert_eq!(expr, expected_expr);
         let eval_expr = visitor.expr;
@@ -322,7 +323,7 @@ mod tests {
             op: UnaryOp::Neg,
         });
         let expected_expr = Expr::i8(i8::MIN);
-        let mut visitor = ExprVisitor::new();
+        let mut visitor = ExprVisitor::default();
         visitor.visit_unary_expr(&mut expr);
         assert_eq!(expr, expected_expr);
         let eval_expr = visitor.expr;
@@ -346,7 +347,7 @@ mod tests {
                         rhs: Box::new(Expr::i8(j)),
                         op,
                     };
-                    let mut visitor = ExprVisitor::new();
+                    let mut visitor = ExprVisitor::default();
                     visitor.visit_binary_expr(&mut expr);
                 }
             }
@@ -369,7 +370,7 @@ mod tests {
                         rhs: Box::new(Expr::u8(j)),
                         op,
                     };
-                    let mut visitor = ExprVisitor::new();
+                    let mut visitor = ExprVisitor::default();
                     visitor.visit_binary_expr(&mut expr);
                 }
             }
@@ -428,7 +429,7 @@ mod tests {
                 ],
             },
         };
-        let mut expr_visitor = ExprVisitor::new();
+        let mut expr_visitor = ExprVisitor::default();
         expr_visitor.visit_function(&mut func);
         let mut emit_visitor = EmitVisitor::default();
         emit_visitor.visit_function(&mut func);
@@ -494,7 +495,7 @@ mod tests {
                 ],
             },
         };
-        let mut expr_visitor = ExprVisitor::new();
+        let mut expr_visitor = ExprVisitor::default();
         expr_visitor.visit_function(&mut func);
         let mut emit_visitor = EmitVisitor::default();
         emit_visitor.visit_function(&mut func);
@@ -560,7 +561,7 @@ mod tests {
                 ],
             },
         };
-        let mut expr_visitor = ExprVisitor::new();
+        let mut expr_visitor = ExprVisitor::default();
         expr_visitor.visit_function(&mut func);
         let mut emit_visitor = EmitVisitor::default();
         emit_visitor.visit_function(&mut func);

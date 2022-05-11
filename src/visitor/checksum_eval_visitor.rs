@@ -12,10 +12,10 @@ pub struct ChecksumEvalVisitor {
     pub res: Option<u128>,
 }
 
-impl ChecksumEvalVisitor {
-    pub fn new() -> ChecksumEvalVisitor {
+impl Default for ChecksumEvalVisitor {
+    fn default() -> ChecksumEvalVisitor {
         ChecksumEvalVisitor {
-            expr_visitor: ExprVisitor::new(),
+            expr_visitor: ExprVisitor::default(),
             checksum_name: "checksum",
             res: None,
         }

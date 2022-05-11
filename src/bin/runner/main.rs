@@ -178,7 +178,7 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str, opts: Vec<&'static st
 
     // Compile program (with multiple optimizations)
     let mut runs: Vec<(&str, u128)> = vec![];
-    let mut files: Vec<String> = vec![rust_file.clone(), stats_file.clone()];
+    let mut files: Vec<String> = vec![rust_file.clone(), stats_file];
 
     for opt in opts {
         let output_file = base_name.to_string() + "-" + opt.to_string().as_str();
@@ -221,7 +221,7 @@ fn compile_program(
             "-C",
             &format!("opt-level={}", opt_level),
             input_file,
-            &format!("-o"),
+            "-o",
             output_file,
         ])
         .output()
@@ -230,7 +230,7 @@ fn compile_program(
     if !output.status.success() {
         return Err(CompilationError::new(input_file, output));
     }
-    return Ok(());
+    Ok(())
 }
 
 fn run_program(rust_file: &str, executable: &str) -> Result<u128, RunError> {
