@@ -35,7 +35,7 @@ impl ExprSymbolTable {
     pub fn update_symbol_table(&mut self, other: &ExprSymbolTable) {
         for (name, expr) in &other.expr_mapping {
             if let Some(ty) = self.get_ty_by_name(name) {
-                self.add_expr(name, expr.clone(), ty)
+                self.add_expr(name, expr.clone(), ty);
             }
         }
     }

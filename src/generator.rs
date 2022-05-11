@@ -38,12 +38,12 @@ pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
 fn _print_program(main: &mut Function) {
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_function(main);
-    println!("{}", emit_visitor.output())
+    println!("{}", emit_visitor.output());
 }
 
 #[test]
 fn generator_bench() {
-    for i in 0..100 {
+    for i in 0..10 {
         run_generator(Some(i), &Policy::default());
     }
 }

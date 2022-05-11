@@ -181,7 +181,7 @@ impl Context {
     }
 
     pub fn create_field_name(&mut self, index: usize) -> String {
-        self.name_handler.create_field_name(index)
+        NameHandler::create_field_name(index)
     }
 
     pub fn choose_new_array_type(&mut self) -> bool {
@@ -231,7 +231,7 @@ impl NameHandler {
         format!("Struct{}", self.struct_counter)
     }
 
-    fn create_field_name(&mut self, index: usize) -> String {
+    fn create_field_name(index: usize) -> String {
         format!("field_{}", index)
     }
 }

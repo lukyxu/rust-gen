@@ -68,7 +68,7 @@ pub fn main() {
         } else {
             vec!["0", "1", "2", "3", "s"]
         };
-        match &run(Some(i), policy.clone(), &base_name, opts) {
+        match &run(Some(i), &policy, &base_name, opts) {
             Ok(files) => {
                 if args.save_passing_programs {
                     fs::create_dir_all(format!("{}/pass/{}", output_path, i))
@@ -77,7 +77,7 @@ pub fn main() {
                 for file in files {
                     if args.save_passing_programs {
                         fs::rename(file, format!("{}/pass/{}/{}", output_path, i, file))
-                            .expect("Cannot move file")
+                            .expect("Cannot move file");
                     } else {
                         fs::remove_file(file).expect("Unable to remove file");
                     }
@@ -152,7 +152,7 @@ pub fn main() {
 type RunOutput = Result<Vec<String>, RunnerError>;
 
 // TODO: Make policy take in a pointer
-fn run(seed: Option<u64>, policy: Policy, base_name: &str, opts: Vec<&'static str>) -> RunOutput {
+fn run(seed: Option<u64>, policy: &Policy, base_name: &str, opts: Vec<&'static str>) -> RunOutput {
     // Generate program
     let GeneratorOutput {
         program,
@@ -182,7 +182,7 @@ fn run(seed: Option<u64>, policy: Policy, base_name: &str, opts: Vec<&'static st
 
     for opt in opts {
         let output_file = base_name.to_string() + "-" + opt.to_string().as_str();
-        files.push(output_file.to_owned());
+        files.push(output_file.clone());
         compile_program(&rust_file, &output_file, opt)?;
         let checksum = run_program(&rust_file, &output_file)?;
         runs.push((opt, checksum));
@@ -228,7 +228,7 @@ fn compile_program(
         .expect("failed to execute compile process");
 
     if !output.status.success() {
-        return Err(CompilationError::new(input_file, output));
+        return Err(CompilationError::new(input_file, &output));
     }
     Ok(())
 }
@@ -238,7 +238,7 @@ fn run_program(rust_file: &str, executable: &str) -> Result<u128, RunError> {
         .output()
         .expect("failed to execute run process");
     if !output.status.success() {
-        return Err(RunError::new(rust_file, executable, output));
+        return Err(RunError::new(rust_file, executable, &output));
     }
     Ok(u128::from_str(
         String::from_utf8(output.stdout)

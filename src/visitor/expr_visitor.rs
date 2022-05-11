@@ -47,7 +47,7 @@ impl ExprVisitor {
     fn visit_block_internal(&mut self, block_expr: &mut BlockExpr) -> ExprSymbolTable {
         self.enter_scope();
         for stmt in &mut block_expr.stmts {
-            self.visit_stmt(stmt)
+            self.visit_stmt(stmt);
         }
         let res = self.symbol_table.clone();
         self.exit_scope();
@@ -124,7 +124,7 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_cast_expr(&mut self, expr: &mut CastExpr) {
-        self.expr = Some(self.safe_expr_visit(&mut expr.expr).cast(&expr.ty));
+        self.expr = Some(self.safe_expr_visit(&mut expr.expr).cast(&expr.ty).unwrap());
     }
 
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {

@@ -31,11 +31,13 @@ impl Visitor for ChecksumEvalVisitor {
             .expr_visitor
             .symbol_table
             .get_expr_by_name(self.checksum_name)
-            .map(|eval_expr| match eval_expr {
-                EvalExpr::Literal(LitExpr::Int(u128, LitExprTy::Unsigned(UIntTy::U128))) => u128,
-                _ => {
-                    dbg!(eval_expr);
-                    panic!()
+            .and_then(|eval_expr| {
+                if let EvalExpr::Literal(LitExpr::Int(u128, LitExprTy::Unsigned(UIntTy::U128))) =
+                    eval_expr
+                {
+                    Some(u128)
+                } else {
+                    None
                 }
             });
     }

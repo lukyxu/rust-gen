@@ -25,13 +25,13 @@ impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
         EvalExpr::Tuple(vec![])
     }
-    pub fn cast(self, res_type: &Ty) -> EvalExpr {
+    pub fn cast(self, res_type: &Ty) -> Option<EvalExpr> {
         if let EvalExpr::Literal(lit_expr) = self {
-            EvalExpr::Literal(lit_expr.cast(res_type))
+            Some(EvalExpr::Literal(lit_expr.cast(res_type)))
         } else if let EvalExpr::Unknown = self {
-            self
+            Some(self)
         } else {
-            panic!()
+            None
         }
     }
     pub fn get_type(&self) -> Ty {

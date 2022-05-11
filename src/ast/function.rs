@@ -2,7 +2,6 @@ use crate::ast::expr::BlockExpr;
 use crate::ast::ty::Ty;
 use crate::context::Context;
 
-#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     pub name: String,

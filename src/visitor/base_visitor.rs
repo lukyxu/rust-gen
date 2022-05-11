@@ -136,7 +136,7 @@ fn walk_struct_item<V: Visitor>(visitor: &mut V, item: &mut StructItem) {
 }
 
 fn walk_function_item<V: Visitor>(visitor: &mut V, item: &mut FunctionItem) {
-    visitor.visit_function(&mut item.function)
+    visitor.visit_function(&mut item.function);
 }
 
 fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {

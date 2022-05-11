@@ -47,7 +47,7 @@ impl Ty {
 
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
-        matches!(self, Ty::Prim(PrimTy::Int(_)) | Ty::Prim(PrimTy::UInt(_)))
+        matches!(self, Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
     }
 
     pub fn compatible_cast(&self, target_type: &Ty) -> bool {
@@ -297,15 +297,15 @@ impl TupleTy {
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
         let mut res: Option<TupleTy> = None;
         if !ctx.choose_new_tuple_type() {
-            res = ctx.choose_tuple_type(ty.clone())
+            res = ctx.choose_tuple_type(ty.clone());
         }
         if res.is_none() && ctx.gen_new_tuple_types {
-            res = TupleTy::generate_new_type(ctx, ty);
+            res = TupleTy::generate_new_type(ctx, &ty);
         }
         res
     }
 
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleTy> {
         let prev_gen_new_tuple_types = ctx.gen_new_tuple_types;
         ctx.gen_new_tuple_types = false;
         let mut res: Option<TupleTy> = None;
@@ -314,7 +314,7 @@ impl TupleTy {
             let mut types: Vec<Ty> = vec![];
             for _ in 0..len {
                 if let Some(ty) = TupleTy::generate_tuple_elem(ctx) {
-                    types.push(ty)
+                    types.push(ty);
                 } else {
                     continue 'outer;
                 }
@@ -379,15 +379,15 @@ impl ArrayTy {
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
         let mut res: Option<ArrayTy> = None;
         if !ctx.choose_new_array_type() {
-            res = ctx.choose_array_type(ty.clone())
+            res = ctx.choose_array_type(ty.clone());
         }
         if res.is_none() && ctx.gen_new_array_types {
-            res = ArrayTy::generate_new_type(ctx, ty);
+            res = ArrayTy::generate_new_type(ctx, &ty);
         }
         res
     }
 
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
         let prev_gen_new_array_types = ctx.gen_new_array_types;
         ctx.gen_new_array_types = false;
         let mut res: Option<ArrayTy> = None;
@@ -452,9 +452,9 @@ impl StructTy {
 
     pub fn generate_new_type(ctx: &mut Context) -> Option<StructTy> {
         if ctx.choose_field_struct() {
-            FieldStructTy::generate_new_type(ctx, None).map(From::from)
+            FieldStructTy::generate_new_type(ctx, &None).map(From::from)
         } else {
-            TupleStructTy::generate_new_type(ctx, None).map(From::from)
+            TupleStructTy::generate_new_type(ctx, &None).map(From::from)
         }
     }
 }
@@ -478,13 +478,13 @@ impl From<FieldStructTy> for StructTy {
 }
 
 impl FieldStructTy {
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<FieldStructTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
         'outer: for _ in 0..10 {
             let len = ctx.choose_struct_length();
             let mut fields: Vec<FieldDef> = vec![];
             for i in 0..len {
                 if let Some(field_def) = FieldDef::generate_field_def(ctx, i) {
-                    fields.push(field_def)
+                    fields.push(field_def);
                 } else {
                     continue 'outer;
                 }
@@ -559,7 +559,7 @@ impl From<TupleStructTy> for StructTy {
 }
 
 impl TupleStructTy {
-    pub fn generate_new_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleStructTy> {
+    pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
         for _ in 0..10 {
             // let len = ctx.choose_struct_length();
             let fields = if let Some(tuple) = TupleTy::generate_type(ctx, ty.clone()) {
