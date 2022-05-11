@@ -1,8 +1,9 @@
-use crate::ast::expr::{BinaryOp, ExprKind};
+use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use rand::distributions::Uniform;
+use crate::ast::op::BinaryOp;
 
 #[derive(Debug, Clone)]
 pub struct Policy {

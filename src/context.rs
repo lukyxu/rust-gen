@@ -1,4 +1,4 @@
-use crate::ast::expr::{BinaryOp, ExprKind, IdentExpr};
+use crate::ast::expr::{ExprKind, IdentExpr};
 use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, PrimTy, StructTy, TupleTy, Ty, TyKind};
@@ -6,7 +6,8 @@ use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
 use rand::prelude::{Distribution, SliceRandom, StdRng};
-use rand::{thread_rng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, thread_rng};
+use crate::ast::op::BinaryOp;
 
 pub struct Context {
     pub policy: Policy,

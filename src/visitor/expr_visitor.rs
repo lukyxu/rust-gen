@@ -274,8 +274,9 @@ impl ExprVisitor {
 mod tests {
     use super::*;
 
-    use crate::ast::expr::{BinaryOp, BlockExpr, LitExprTy, UnaryOp};
+    use crate::ast::expr::{BlockExpr, LitExprTy};
     use crate::ast::function::Function;
+    use crate::ast::op::{BinaryOp, UnaryOp};
     use crate::ast::stmt::{LocalStmt, Stmt};
     use crate::ast::ty::IntTy;
     use crate::visitor::emit_visitor::EmitVisitor;
