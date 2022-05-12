@@ -1,5 +1,5 @@
 use crate::ast::eval_expr::EvalExpr;
-use crate::ast::expr::{LitExpr, LitExprTy};
+use crate::ast::expr::{LitExpr, LitIntTy};
 use crate::ast::function::Function;
 
 use crate::ast::ty::UIntTy;
@@ -32,7 +32,7 @@ impl Visitor for ChecksumEvalVisitor {
             .symbol_table
             .get_expr_by_name(self.checksum_name)
             .and_then(|eval_expr| {
-                if let EvalExpr::Literal(LitExpr::Int(u128, LitExprTy::Unsigned(UIntTy::U128))) =
+                if let EvalExpr::Literal(LitExpr::Int(u128, LitIntTy::Unsigned(UIntTy::U128))) =
                     eval_expr
                 {
                     Some(u128)

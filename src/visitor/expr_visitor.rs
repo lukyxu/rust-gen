@@ -1,5 +1,5 @@
 use crate::ast::eval_expr::{EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr};
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntTy, Member, TupleExpr, TupleStructExpr, UnaryExpr};
 
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
@@ -247,7 +247,7 @@ impl Visitor for ExprVisitor {
         match (base, index) {
             (
                 EvalExpr::Array(exprs),
-                EvalExpr::Literal(LitExpr::Int(index, LitExprTy::Unsigned(UIntTy::USize))),
+                EvalExpr::Literal(LitExpr::Int(index, LitIntTy::Unsigned(UIntTy::USize))),
             ) => {
                 self.expr = Some(exprs.array[index as usize].clone());
             }
@@ -303,7 +303,7 @@ impl ExprVisitor {
 mod tests {
     use super::*;
 
-    use crate::ast::expr::{BlockExpr, LitExprTy};
+    use crate::ast::expr::{BlockExpr, LitIntTy};
     use crate::ast::function::Function;
     use crate::ast::op::{BinaryOp, UnaryOp};
     use crate::ast::stmt::{LocalStmt, Stmt};
@@ -432,7 +432,7 @@ mod tests {
                                     name: "var_0".to_owned(),
                                     rhs: Box::new(Expr::Literal(LitExpr::Int(
                                         127,
-                                        LitExprTy::Signed(IntTy::I8),
+                                        LitIntTy::Signed(IntTy::I8),
                                     ))),
                                 }),
                             })],
@@ -448,7 +448,7 @@ mod tests {
                                 })),
                                 rhs: Box::new(Expr::Literal(LitExpr::Int(
                                     1,
-                                    LitExprTy::Signed(IntTy::I8),
+                                    LitIntTy::Signed(IntTy::I8),
                                 ))),
                                 op: BinaryOp::Add,
                             })),

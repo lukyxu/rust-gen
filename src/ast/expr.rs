@@ -97,11 +97,11 @@ impl Expr {
     }
 
     pub fn i8(i: i8) -> Expr {
-        Expr::Literal(LitExpr::Int(i as u128, LitExprTy::Signed(IntTy::I8)))
+        Expr::Literal(LitExpr::Int(i as u128, LitIntTy::Signed(IntTy::I8)))
     }
 
     pub fn u8(u: u8) -> Expr {
-        Expr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
+        Expr::Literal(LitExpr::Int(u as u128, LitIntTy::Unsigned(UIntTy::U8)))
     }
 }
 
@@ -114,7 +114,7 @@ pub enum LitExpr {
     Byte(u8),
     #[allow(dead_code)]
     Char(char),
-    Int(u128, LitExprTy),
+    Int(u128, LitIntTy),
     #[allow(dead_code)]
     Float(String, LitFloatTy),
     Bool(bool),
@@ -134,15 +134,15 @@ impl LitExpr {
             Ty::Prim(PrimTy::Int(t)) => {
                 let val = t.rand_val(ctx);
                 let expr_type = if matches!(t, IntTy::I32) && ctx.choose_unsuffixed_int() {
-                    LitExprTy::Unsuffixed
+                    LitIntTy::Unsuffixed
                 } else {
-                    LitExprTy::Signed(*t)
+                    LitIntTy::Signed(*t)
                 };
                 Some(LitExpr::Int(val, expr_type).into())
             }
             Ty::Prim(PrimTy::UInt(t)) => {
                 let val = t.rand_val(ctx);
-                Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
+                Some(LitExpr::Int(val, LitIntTy::Unsigned(*t)).into())
             }
             Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
             Ty::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
@@ -156,7 +156,7 @@ impl LitExpr {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum LitExprTy {
+pub enum LitIntTy {
     /// `64_i32`
     Signed(IntTy),
     /// `64_u32`
@@ -567,7 +567,7 @@ impl IndexExpr {
             lhs: index,
             rhs: Box::new(Expr::Literal(LitExpr::Int(
                 array_type.len as u128,
-                LitExprTy::Unsigned(UIntTy::USize),
+                LitIntTy::Unsigned(UIntTy::USize),
             ))),
             op: BinaryOp::Rem,
         }));
