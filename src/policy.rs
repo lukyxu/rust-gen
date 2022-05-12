@@ -246,6 +246,8 @@ impl Policy {
                 (ExprKind::Block, 0.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
+                (ExprKind::Index, 1.0),
+                (ExprKind::Field, 1.0),
             ],
             type_dist: vec![
                 (TyKind::Unit, 1.0),

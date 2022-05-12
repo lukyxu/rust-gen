@@ -9,6 +9,7 @@ use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
+use rand::Rng;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -484,9 +485,14 @@ impl FieldExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
-        if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
-            return None;
+        if ctx.rng.gen_bool(0.5) {
+            FieldExpr::generate_tuple_field_expr(ctx, res_type)
+        } else {
+            FieldExpr::generate_struct_field_expr(ctx, res_type)
         }
+    }
+
+    fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, Some(res_type.clone()))?;
 
         let base = Box::new(Expr::generate_expr(ctx, &tuple.clone().into())?);
@@ -497,6 +503,38 @@ impl FieldExpr {
             .collect();
 
         let member = Member::Unnamed(*indexes.choose(&mut ctx.rng).unwrap());
+        Some(FieldExpr { base, member })
+    }
+
+    fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
+        let struct_ty = StructTy::generate_type(ctx, Some(res_type.clone()))?;
+        let base = Box::new(Expr::generate_expr(ctx, &struct_ty.clone().into())?);
+        let member = match struct_ty {
+            StructTy::Field(field_struct) => {
+                Member::Named(
+                    field_struct
+                        .fields
+                        .iter()
+                        .filter(|f| &*f.ty == res_type)
+                        .collect::<Vec<_>>()
+                        .choose(&mut ctx.rng)
+                        .unwrap()
+                        .name
+                        .clone(),
+                )
+            }
+            StructTy::Tuple(tuple_struct) => {
+                Member::Unnamed(
+                    *(&tuple_struct.fields)
+                        .into_iter()
+                        .enumerate()
+                        .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
+                        .collect::<Vec<_>>()
+                        .choose(&mut ctx.rng)
+                        .unwrap(),
+                )
+            }
+        };
         Some(FieldExpr { base, member })
     }
 }
@@ -519,9 +557,6 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
-        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
-            return None;
-        }
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, Some(res_type.clone()))?;
         let base = Box::new(Expr::generate_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::generate_expr(

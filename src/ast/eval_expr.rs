@@ -2,7 +2,7 @@ use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
-use crate::ast::expr::{BinaryExpr, Expr, FieldExpr, LitExpr, LitExprTy};
+use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitExprTy};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 #[cfg(test)]
@@ -24,9 +24,7 @@ pub enum EvalExpr {
 
 impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
-        EvalExpr::Tuple(EvalTupleExpr {
-            tuple: vec![]
-        })
+        EvalExpr::Tuple(EvalTupleExpr { tuple: vec![] })
     }
     pub fn cast(self, res_type: &Ty) -> Option<EvalExpr> {
         if let EvalExpr::Literal(lit_expr) = self {
@@ -89,7 +87,7 @@ impl EvalExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalTupleExpr {
-    pub tuple: Vec<EvalExpr>
+    pub tuple: Vec<EvalExpr>,
 }
 
 impl From<EvalTupleExpr> for EvalExpr {
@@ -100,7 +98,7 @@ impl From<EvalTupleExpr> for EvalExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalArrayExpr {
-    pub array: Vec<EvalExpr>
+    pub array: Vec<EvalExpr>,
 }
 
 impl From<EvalArrayExpr> for EvalExpr {
@@ -123,7 +121,7 @@ impl From<EvalStructExpr> for EvalExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalTupleStructExpr {
-    tuple: EvalTupleExpr
+    pub expr: EvalTupleExpr,
 }
 
 impl From<EvalTupleStructExpr> for EvalStructExpr {
@@ -134,7 +132,7 @@ impl From<EvalTupleStructExpr> for EvalStructExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalFieldStructExpr {
-    fields: Vec<EvalField>
+    pub fields: Vec<EvalField>,
 }
 
 impl From<EvalFieldStructExpr> for EvalStructExpr {
@@ -143,10 +141,16 @@ impl From<EvalFieldStructExpr> for EvalStructExpr {
     }
 }
 
+impl EvalFieldStructExpr {
+    pub fn get_field_by_name(&self, name: &str) -> Option<EvalField> {
+        self.fields.iter().find(|field|field.name == name).cloned()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalField {
-    name: String,
-    expr: EvalExpr,
+    pub name: String,
+    pub expr: EvalExpr,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
