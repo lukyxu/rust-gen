@@ -6,7 +6,7 @@ use crate::ast::expr::{
 use crate::ast::function::Function;
 use crate::ast::op::BinaryOp;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{PrimTy, Ty, UIntTy};
+use crate::ast::ty::{PrimTy, StructTy, Ty, UIntTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
 
@@ -140,6 +140,32 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                 exprs_from_exprs(array_access, &ty, &mut accumulator);
             }
         }
+        Ty::Struct(struct_ty) => match struct_ty {
+            StructTy::Field(field_struct) => {
+                for field in field_struct.fields.iter() {
+                    let tuple_access = Expr::Field(FieldExpr {
+                        base: Box::new(Expr::Ident(IdentExpr {
+                            name: name.to_owned(),
+                            ty: ty.clone(),
+                        })),
+                        member: Member::Named(field.name.clone()),
+                    });
+                    exprs_from_exprs(tuple_access, &*field.ty, &mut accumulator);
+                }
+            }
+            StructTy::Tuple(tuple_struct) => {
+                for (i, ty) in tuple_struct.fields.tuple.iter().enumerate() {
+                    let tuple_access = Expr::Field(FieldExpr {
+                        base: Box::new(Expr::Ident(IdentExpr {
+                            name: name.to_owned(),
+                            ty: ty.clone(),
+                        })),
+                        member: Member::Unnamed(i),
+                    });
+                    exprs_from_exprs(tuple_access, ty, &mut accumulator);
+                }
+            }
+        },
         _ => {}
     }
     accumulator
@@ -169,6 +195,26 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                 exprs_from_exprs(array_access, &ty, accumulator);
             }
         }
+        Ty::Struct(struct_ty) => match struct_ty {
+            StructTy::Field(field_struct) => {
+                for field in field_struct.fields.iter() {
+                    let tuple_access = Expr::Field(FieldExpr {
+                        base: Box::new(expr.clone()),
+                        member: Member::Named(field.name.clone()),
+                    });
+                    exprs_from_exprs(tuple_access, &*field.ty, accumulator);
+                }
+            }
+            StructTy::Tuple(tuple_struct) => {
+                for (i, ty) in tuple_struct.fields.tuple.iter().enumerate() {
+                    let tuple_access = Expr::Field(FieldExpr {
+                        base: Box::new(expr.clone()),
+                        member: Member::Unnamed(i),
+                    });
+                    exprs_from_exprs(tuple_access, ty, accumulator);
+                }
+            }
+        },
         _ => {}
     }
 }
