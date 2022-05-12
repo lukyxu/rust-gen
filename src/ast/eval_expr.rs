@@ -2,7 +2,7 @@ use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
 use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
-use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitExprTy};
+use crate::ast::expr::{BinaryExpr, Expr, FieldExpr, LitExpr, LitExprTy};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 #[cfg(test)]
@@ -112,7 +112,7 @@ impl From<EvalArrayExpr> for EvalExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum EvalStructExpr {
     Tuple(EvalTupleStructExpr),
-    // Field(EvalFieldStructExpr),
+    Field(EvalFieldStructExpr),
 }
 
 impl From<EvalStructExpr> for EvalExpr {
@@ -132,6 +132,22 @@ impl From<EvalTupleStructExpr> for EvalStructExpr {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalFieldStructExpr {
+    fields: Vec<EvalField>
+}
+
+impl From<EvalFieldStructExpr> for EvalStructExpr {
+    fn from(expr: EvalFieldStructExpr) -> EvalStructExpr {
+        EvalStructExpr::Field(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalField {
+    name: String,
+    expr: EvalExpr,
+}
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EvalExprError {
