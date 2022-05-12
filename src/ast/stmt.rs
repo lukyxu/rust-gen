@@ -38,9 +38,6 @@ impl Stmt {
             StmtKind::Semi => Stmt::Semi(SemiStmt {
                 expr: Expr::generate_expr(ctx, &ty)?,
             }),
-            StmtKind::Expr => {
-                panic!("Non expression statement cannot be expression")
-            }
         };
         *ctx.statistics.stmt_counter.entry(stmt_kind).or_insert(0) += 1;
         Some(stmt)
@@ -102,8 +99,6 @@ pub struct CustomStmt {
 #[non_exhaustive]
 pub enum StmtKind {
     Local,
-    #[allow(dead_code)]
-    Expr,
     Semi,
 }
 

@@ -16,14 +16,15 @@ use std::mem::swap;
 pub enum EvalExpr {
     /// Literal such as `1`, `"foo"`
     Literal(LitExpr),
-    Tuple(Vec<EvalExpr>),
-    Array(Vec<EvalExpr>),
+    Tuple(EvalTupleExpr),
+    Array(EvalArrayExpr),
+    Struct(EvalStructExpr),
     Unknown,
 }
 
 impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
-        EvalExpr::Tuple(vec![])
+        EvalExpr::Tuple(EvalTupleExpr { tuple: vec![] })
     }
     pub fn cast(self, res_type: &Ty) -> Option<EvalExpr> {
         if let EvalExpr::Literal(lit_expr) = self {
@@ -82,6 +83,74 @@ impl EvalExpr {
     pub fn u8(u: u8) -> EvalExpr {
         EvalExpr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalTupleExpr {
+    pub tuple: Vec<EvalExpr>,
+}
+
+impl From<EvalTupleExpr> for EvalExpr {
+    fn from(expr: EvalTupleExpr) -> EvalExpr {
+        EvalExpr::Tuple(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalArrayExpr {
+    pub array: Vec<EvalExpr>,
+}
+
+impl From<EvalArrayExpr> for EvalExpr {
+    fn from(expr: EvalArrayExpr) -> EvalExpr {
+        EvalExpr::Array(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum EvalStructExpr {
+    Tuple(EvalTupleStructExpr),
+    Field(EvalFieldStructExpr),
+}
+
+impl From<EvalStructExpr> for EvalExpr {
+    fn from(expr: EvalStructExpr) -> EvalExpr {
+        EvalExpr::Struct(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalTupleStructExpr {
+    pub expr: EvalTupleExpr,
+}
+
+impl From<EvalTupleStructExpr> for EvalStructExpr {
+    fn from(expr: EvalTupleStructExpr) -> EvalStructExpr {
+        EvalStructExpr::Tuple(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalFieldStructExpr {
+    pub fields: Vec<EvalField>,
+}
+
+impl From<EvalFieldStructExpr> for EvalStructExpr {
+    fn from(expr: EvalFieldStructExpr) -> EvalStructExpr {
+        EvalStructExpr::Field(expr)
+    }
+}
+
+impl EvalFieldStructExpr {
+    pub fn get_field_by_name(&self, name: &str) -> Option<EvalField> {
+        self.fields.iter().find(|field|field.name == name).cloned()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalField {
+    pub name: String,
+    pub expr: EvalExpr,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
