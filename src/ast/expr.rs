@@ -7,9 +7,9 @@ use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::context::Context;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
-use rand::Rng;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -197,8 +197,13 @@ impl BinaryExpr {
                 res_type.to_string()
             ),
         };
-        let lhs = Box::new(Expr::generate_expr(ctx, res_type)?);
-        let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
+        let args_type = op
+            .get_compatible_arg_type(&res_type)
+            .choose(&mut ctx.rng)
+            .cloned()
+            .unwrap();
+        let lhs = Box::new(Expr::generate_expr(ctx, &args_type)?);
+        let rhs = Box::new(Expr::generate_expr(ctx, &args_type)?);
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
@@ -510,30 +515,26 @@ impl FieldExpr {
         let struct_ty = StructTy::generate_type(ctx, Some(res_type.clone()))?;
         let base = Box::new(Expr::generate_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
-            StructTy::Field(field_struct) => {
-                Member::Named(
-                    field_struct
-                        .fields
-                        .iter()
-                        .filter(|f| &*f.ty == res_type)
-                        .collect::<Vec<_>>()
-                        .choose(&mut ctx.rng)
-                        .unwrap()
-                        .name
-                        .clone(),
-                )
-            }
-            StructTy::Tuple(tuple_struct) => {
-                Member::Unnamed(
-                    *(&tuple_struct.fields)
-                        .into_iter()
-                        .enumerate()
-                        .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
-                        .collect::<Vec<_>>()
-                        .choose(&mut ctx.rng)
-                        .unwrap(),
-                )
-            }
+            StructTy::Field(field_struct) => Member::Named(
+                field_struct
+                    .fields
+                    .iter()
+                    .filter(|f| &*f.ty == res_type)
+                    .collect::<Vec<_>>()
+                    .choose(&mut ctx.rng)
+                    .unwrap()
+                    .name
+                    .clone(),
+            ),
+            StructTy::Tuple(tuple_struct) => Member::Unnamed(
+                *(&tuple_struct.fields)
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
+                    .collect::<Vec<_>>()
+                    .choose(&mut ctx.rng)
+                    .unwrap(),
+            ),
         };
         Some(FieldExpr { base, member })
     }

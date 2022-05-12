@@ -143,7 +143,7 @@ impl From<EvalFieldStructExpr> for EvalStructExpr {
 
 impl EvalFieldStructExpr {
     pub fn get_field_by_name(&self, name: &str) -> Option<EvalField> {
-        self.fields.iter().find(|field|field.name == name).cloned()
+        self.fields.iter().find(|field| field.name == name).cloned()
     }
 }
 
@@ -331,6 +331,8 @@ impl BinaryOp {
             BinaryOp::Mul => self.apply_mul(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Div => self.apply_div(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Rem => self.apply_rem(lhs_u128, lhs, rhs_u128, rhs),
+            BinaryOp::Eq => Ok(LitExpr::Bool(lhs_u128 == rhs_u128)),
+            BinaryOp::Ne => Ok(LitExpr::Bool(lhs_u128 != rhs_u128)),
             _ => panic!("Undefined operation on ints"),
         }
     }

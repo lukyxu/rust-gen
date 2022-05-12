@@ -1,5 +1,11 @@
-use crate::ast::eval_expr::{EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr};
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntTy, Member, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::eval_expr::{
+    EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalStructExpr, EvalTupleExpr,
+    EvalTupleStructExpr,
+};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntTy, Member, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
@@ -213,10 +219,10 @@ impl Visitor for ExprVisitor {
             }
             (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
                 self.expr = Some(struct_expr.expr.tuple[*index].clone())
-            },
+            }
             (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
                 self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr)
-            },
+            }
             (_, _) => panic!(),
         }
     }
@@ -261,21 +267,21 @@ impl Visitor for ExprVisitor {
             let expr = self.safe_expr_visit(&mut field.expr);
             fields.push(EvalField {
                 name: field.name.clone(),
-                expr
+                expr,
             })
         }
-        self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(EvalFieldStructExpr {
-            fields
-        })))
+        self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(
+            EvalFieldStructExpr { fields },
+        )))
     }
 
     fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
         self.visit_tuple_expr(&mut expr.fields);
         let tuple_expr = self.expr.clone().unwrap();
         if let EvalExpr::Tuple(expr) = tuple_expr {
-            self.expr = Some(EvalExpr::Struct(EvalStructExpr::Tuple(EvalTupleStructExpr {
-                expr
-            })))
+            self.expr = Some(EvalExpr::Struct(EvalStructExpr::Tuple(
+                EvalTupleStructExpr { expr },
+            )))
         } else {
             panic!()
         }
