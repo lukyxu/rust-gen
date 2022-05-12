@@ -16,14 +16,17 @@ use std::mem::swap;
 pub enum EvalExpr {
     /// Literal such as `1`, `"foo"`
     Literal(LitExpr),
-    Tuple(Vec<EvalExpr>),
-    Array(Vec<EvalExpr>),
+    Tuple(EvalTupleExpr),
+    Array(EvalArrayExpr),
+    Struct(EvalStructExpr),
     Unknown,
 }
 
 impl EvalExpr {
     pub fn unit_expr() -> EvalExpr {
-        EvalExpr::Tuple(vec![])
+        EvalExpr::Tuple(EvalTupleExpr {
+            tuple: vec![]
+        })
     }
     pub fn cast(self, res_type: &Ty) -> Option<EvalExpr> {
         if let EvalExpr::Literal(lit_expr) = self {
@@ -83,6 +86,52 @@ impl EvalExpr {
         EvalExpr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalTupleExpr {
+    pub tuple: Vec<EvalExpr>
+}
+
+impl From<EvalTupleExpr> for EvalExpr {
+    fn from(expr: EvalTupleExpr) -> EvalExpr {
+        EvalExpr::Tuple(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalArrayExpr {
+    pub array: Vec<EvalExpr>
+}
+
+impl From<EvalArrayExpr> for EvalExpr {
+    fn from(expr: EvalArrayExpr) -> EvalExpr {
+        EvalExpr::Array(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum EvalStructExpr {
+    Tuple(EvalTupleStructExpr),
+    // Field(EvalFieldStructExpr),
+}
+
+impl From<EvalStructExpr> for EvalExpr {
+    fn from(expr: EvalStructExpr) -> EvalExpr {
+        EvalExpr::Struct(expr)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalTupleStructExpr {
+    tuple: EvalTupleExpr
+}
+
+impl From<EvalTupleStructExpr> for EvalStructExpr {
+    fn from(expr: EvalTupleStructExpr) -> EvalStructExpr {
+        EvalStructExpr::Tuple(expr)
+    }
+}
+
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EvalExprError {

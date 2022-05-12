@@ -1,4 +1,4 @@
-use crate::ast::eval_expr::EvalExpr;
+use crate::ast::eval_expr::{EvalArrayExpr, EvalExpr, EvalTupleExpr};
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr,
     IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, UnaryExpr,
@@ -192,7 +192,9 @@ impl Visitor for ExprVisitor {
         let res_expr: EvalExpr = if _return_none {
             EvalExpr::Unknown
         } else {
-            EvalExpr::Tuple(res)
+            EvalExpr::Tuple(EvalTupleExpr {
+                tuple: res
+            })
         };
         self.expr = Some(res_expr);
     }
@@ -223,7 +225,9 @@ impl Visitor for ExprVisitor {
         let res_expr: EvalExpr = if _return_none {
             EvalExpr::Unknown
         } else {
-            EvalExpr::Array(res)
+            EvalExpr::Array(EvalArrayExpr{
+                array: res
+            })
         };
         self.expr = Some(res_expr);
     }
@@ -233,7 +237,7 @@ impl Visitor for ExprVisitor {
         match (base, &expr.member) {
             (_, Member::Named(_)) => todo!(),
             (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
-                self.expr = Some(exprs[*index].clone());
+                self.expr = Some(exprs.tuple[*index].clone());
             }
             (_, Member::Unnamed(_index)) => panic!(),
         }
@@ -247,7 +251,7 @@ impl Visitor for ExprVisitor {
                 EvalExpr::Array(exprs),
                 EvalExpr::Literal(LitExpr::Int(index, LitExprTy::Unsigned(UIntTy::USize))),
             ) => {
-                self.expr = Some(exprs[index as usize].clone());
+                self.expr = Some(exprs.array[index as usize].clone());
             }
             _ => panic!(),
         };

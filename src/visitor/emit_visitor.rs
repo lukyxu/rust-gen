@@ -69,7 +69,7 @@ impl Visitor for EmitVisitor {
 
     fn visit_struct_item(&mut self, item: &mut StructItem) {
         // TODO: Remove this
-        self.output.push_str("#[derive(Clone, Copy)]\n");
+        self.output.push_str("#[derive(Clone, Copy, PartialEq)]\n");
         match &item.struct_ty {
             StructTy::Field(field_struct) => self.output.push_str(&format!(
                 "struct {} {{\n{}\n}} ",
