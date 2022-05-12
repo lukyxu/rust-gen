@@ -235,9 +235,9 @@ macro_rules! apply_int {
         fn $fn_name(
             self,
             lhs_u128: u128,
-            lhs: LitExprTy,
+            lhs: LitIntTy,
             rhs_u128: u128,
-            rhs: LitExprTy,
+            rhs: LitIntTy,
         ) -> Result<LitExpr, EvalExprError> {
             match (lhs, rhs) {
                 (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
@@ -349,7 +349,7 @@ trait Literal<
         + Copy
         + AsPrimitive<u128>
         + WrappingAdd<Output = T>
-        + ByLitExprTy<T>
+        + ByLitIntTy<T>
         + CheckedRem<Output = T>,
 >
 {
@@ -360,14 +360,14 @@ trait Literal<
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
 
-trait ByLitExprTy<T> {
+trait ByLitIntTy<T> {
     fn by_lit_expr_type() -> LitIntTy;
 }
 
 macro_rules! by_lit_expr_ty_impl {
     ($rust_ty: ident, $ty: expr) => {
-        impl ByLitExprTy<$rust_ty> for $rust_ty {
-            fn by_lit_expr_type() -> LitExprTy {
+        impl ByLitIntTy<$rust_ty> for $rust_ty {
+            fn by_lit_expr_type() -> LitIntTy {
                 $ty
             }
         }
@@ -379,7 +379,7 @@ impl<
             + Copy
             + AsPrimitive<u128>
             + WrappingAdd<Output = T>
-            + ByLitExprTy<T>
+            + ByLitIntTy<T>
             + CheckedRem<Output = T>,
     > Literal<T> for T
 {

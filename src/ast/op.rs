@@ -15,10 +15,10 @@ pub enum BinaryOp {
     // BitOr,
     // Shl,
     // Shr,
-    // Eq,
+    Eq,
     // Lq,
     // Le,
-    // Ne,
+    Ne,
     // Ge,
     // Gt
 }
@@ -33,6 +33,8 @@ impl ToString for BinaryOp {
             BinaryOp::Rem => "%",
             BinaryOp::And => "&&",
             BinaryOp::Or => "||",
+            BinaryOp::Eq => "==",
+            BinaryOp::Ne => "!=",
         }
         .to_owned()
     }

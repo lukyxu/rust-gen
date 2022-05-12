@@ -205,6 +205,22 @@ impl Visitor for ExprVisitor {
         self.expr = Some(EvalExpr::unit_expr());
     }
 
+    fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
+        let base = self.safe_expr_visit(&mut expr.base);
+        match (base, &expr.member) {
+            (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
+                self.expr = Some(exprs.tuple[*index].clone());
+            }
+            (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
+                self.expr = Some(struct_expr.expr.tuple[*index].clone())
+            },
+            (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
+                self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr)
+            },
+            (_, _) => panic!(),
+        }
+    }
+
     fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
         let mut res: Vec<EvalExpr> = vec![];
         let mut _return_none = false;
@@ -223,22 +239,6 @@ impl Visitor for ExprVisitor {
             EvalExpr::Array(EvalArrayExpr { array: res })
         };
         self.expr = Some(res_expr);
-    }
-
-    fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
-        let base = self.safe_expr_visit(&mut expr.base);
-        match (base, &expr.member) {
-            (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
-                self.expr = Some(exprs.tuple[*index].clone());
-            }
-            (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
-                self.expr = Some(struct_expr.expr.tuple[*index].clone())
-            },
-            (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
-                self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr)
-            },
-            (_, _) => panic!(),
-        }
     }
 
     fn visit_index_expr(&mut self, expr: &mut IndexExpr) {
