@@ -258,6 +258,7 @@ impl Policy {
             ],
 
             prim_type_dist: vec![
+                (PrimTy::Bool, 3.0),
                 (IntTy::I8.into(), 3.0),
                 (IntTy::I16.into(), 3.0),
                 (IntTy::I32.into(), 3.0),

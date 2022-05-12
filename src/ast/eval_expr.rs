@@ -339,6 +339,8 @@ impl BinaryOp {
         match self {
             BinaryOp::And => LitExpr::Bool(lhs && rhs),
             BinaryOp::Or => LitExpr::Bool(lhs || rhs),
+            BinaryOp::Eq => LitExpr::Bool(lhs == rhs),
+            BinaryOp::Ne => LitExpr::Bool(lhs != rhs),
             _ => panic!(),
         }
     }
