@@ -1,8 +1,8 @@
 use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
-use crate::ast::expr::LitExprTy::{Signed, Unsigned, Unsuffixed};
-use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitExprTy};
+use crate::ast::expr::LitIntTy::{Signed, Unsigned, Unsuffixed};
+use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntTy};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 #[cfg(test)]
@@ -77,11 +77,11 @@ impl EvalExpr {
     }
 
     pub fn i8(i: i8) -> EvalExpr {
-        EvalExpr::Literal(LitExpr::Int(i as u128, LitExprTy::Signed(IntTy::I8)))
+        EvalExpr::Literal(LitExpr::Int(i as u128, LitIntTy::Signed(IntTy::I8)))
     }
 
     pub fn u8(u: u8) -> EvalExpr {
-        EvalExpr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
+        EvalExpr::Literal(LitExpr::Int(u as u128, LitIntTy::Unsigned(UIntTy::U8)))
     }
 }
 
@@ -143,7 +143,7 @@ impl From<EvalFieldStructExpr> for EvalStructExpr {
 
 impl EvalFieldStructExpr {
     pub fn get_field_by_name(&self, name: &str) -> Option<EvalField> {
-        self.fields.iter().find(|field|field.name == name).cloned()
+        self.fields.iter().find(|field| field.name == name).cloned()
     }
 }
 
@@ -177,10 +177,10 @@ impl LitExpr {
         if let LitExpr::Int(u128, _) = self {
             match res_type {
                 Ty::Prim(PrimTy::Int(s_int)) => {
-                    LitExpr::Int(s_int.recast(u128), LitExprTy::Signed(*s_int))
+                    LitExpr::Int(s_int.recast(u128), LitIntTy::Signed(*s_int))
                 }
                 Ty::Prim(PrimTy::UInt(u_int)) => {
-                    LitExpr::Int(u_int.recast(u128), LitExprTy::Unsigned(*u_int))
+                    LitExpr::Int(u_int.recast(u128), LitIntTy::Unsigned(*u_int))
                 }
                 _ => panic!(),
             }
@@ -235,9 +235,9 @@ macro_rules! apply_int {
         fn $fn_name(
             self,
             lhs_u128: u128,
-            lhs: LitExprTy,
+            lhs: LitIntTy,
             rhs_u128: u128,
-            rhs: LitExprTy,
+            rhs: LitIntTy,
         ) -> Result<LitExpr, EvalExprError> {
             match (lhs, rhs) {
                 (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
@@ -321,9 +321,9 @@ impl BinaryOp {
     fn apply_int(
         self,
         lhs_u128: u128,
-        lhs: LitExprTy,
+        lhs: LitIntTy,
         rhs_u128: u128,
-        rhs: LitExprTy,
+        rhs: LitIntTy,
     ) -> Result<LitExpr, EvalExprError> {
         match self {
             BinaryOp::Add => self.apply_add(lhs_u128, lhs, rhs_u128, rhs),
@@ -331,6 +331,8 @@ impl BinaryOp {
             BinaryOp::Mul => self.apply_mul(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Div => self.apply_div(lhs_u128, lhs, rhs_u128, rhs),
             BinaryOp::Rem => self.apply_rem(lhs_u128, lhs, rhs_u128, rhs),
+            BinaryOp::Eq => Ok(LitExpr::Bool(lhs_u128 == rhs_u128)),
+            BinaryOp::Ne => Ok(LitExpr::Bool(lhs_u128 != rhs_u128)),
             _ => panic!("Undefined operation on ints"),
         }
     }
@@ -339,6 +341,8 @@ impl BinaryOp {
         match self {
             BinaryOp::And => LitExpr::Bool(lhs && rhs),
             BinaryOp::Or => LitExpr::Bool(lhs || rhs),
+            BinaryOp::Eq => LitExpr::Bool(lhs == rhs),
+            BinaryOp::Ne => LitExpr::Bool(lhs != rhs),
             _ => panic!(),
         }
     }
@@ -349,7 +353,7 @@ trait Literal<
         + Copy
         + AsPrimitive<u128>
         + WrappingAdd<Output = T>
-        + ByLitExprTy<T>
+        + ByLitIntTy<T>
         + CheckedRem<Output = T>,
 >
 {
@@ -360,14 +364,14 @@ trait Literal<
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
 
-trait ByLitExprTy<T> {
-    fn by_lit_expr_type() -> LitExprTy;
+trait ByLitIntTy<T> {
+    fn by_lit_expr_type() -> LitIntTy;
 }
 
 macro_rules! by_lit_expr_ty_impl {
     ($rust_ty: ident, $ty: expr) => {
-        impl ByLitExprTy<$rust_ty> for $rust_ty {
-            fn by_lit_expr_type() -> LitExprTy {
+        impl ByLitIntTy<$rust_ty> for $rust_ty {
+            fn by_lit_expr_type() -> LitIntTy {
                 $ty
             }
         }
@@ -379,7 +383,7 @@ impl<
             + Copy
             + AsPrimitive<u128>
             + WrappingAdd<Output = T>
-            + ByLitExprTy<T>
+            + ByLitIntTy<T>
             + CheckedRem<Output = T>,
     > Literal<T> for T
 {
@@ -491,7 +495,7 @@ impl UnaryOp {
                         .map(|isize| {
                             EvalExpr::Literal(LitExpr::Int(
                                 isize as u128,
-                                LitExprTy::Signed(IntTy::I32),
+                                LitIntTy::Signed(IntTy::I32),
                             ))
                         })
                         .ok_or(EvalExprError::SignedOverflow)
@@ -511,7 +515,7 @@ mod tests {
         MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
     };
     use crate::ast::eval_expr::{EvalExpr, EvalExprError};
-    use crate::ast::expr::LitExprTy::Unsigned;
+    use crate::ast::expr::LitIntTy::Unsigned;
     use crate::ast::expr::*;
     use crate::ast::op::{BinaryOp, UnaryOp};
     use crate::ast::ty::{IntTy, UIntTy};
@@ -656,7 +660,7 @@ mod tests {
 
     #[test]
     fn cast_expr_ok() {
-        let expr = LitExpr::Int(-27_i8 as u128, LitExprTy::Signed(IntTy::I8));
+        let expr = LitExpr::Int(-27_i8 as u128, LitIntTy::Signed(IntTy::I8));
         assert_eq!(
             expr.cast(&UIntTy::U32.into()).cast(&UIntTy::U64.into()),
             LitExpr::Int(4294967269, Unsigned(UIntTy::U64))

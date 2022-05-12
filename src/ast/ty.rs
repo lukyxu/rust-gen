@@ -152,6 +152,23 @@ impl PrimTy {
     pub fn generate_type(ctx: &mut Context) -> Option<PrimTy> {
         ctx.choose_prim_type()
     }
+
+    pub fn int_types() -> Vec<PrimTy> {
+        vec![
+            PrimTy::Int(IntTy::I8),
+            PrimTy::Int(IntTy::I16),
+            PrimTy::Int(IntTy::I32),
+            PrimTy::Int(IntTy::I64),
+            PrimTy::Int(IntTy::I128),
+            PrimTy::Int(IntTy::ISize),
+            PrimTy::UInt(UIntTy::U8),
+            PrimTy::UInt(UIntTy::U16),
+            PrimTy::UInt(UIntTy::U32),
+            PrimTy::UInt(UIntTy::U64),
+            PrimTy::UInt(UIntTy::U128),
+            PrimTy::UInt(UIntTy::USize),
+        ]
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]

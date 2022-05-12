@@ -7,9 +7,9 @@ use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::context::Context;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::{max, min};
-use rand::Rng;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -97,11 +97,11 @@ impl Expr {
     }
 
     pub fn i8(i: i8) -> Expr {
-        Expr::Literal(LitExpr::Int(i as u128, LitExprTy::Signed(IntTy::I8)))
+        Expr::Literal(LitExpr::Int(i as u128, LitIntTy::Signed(IntTy::I8)))
     }
 
     pub fn u8(u: u8) -> Expr {
-        Expr::Literal(LitExpr::Int(u as u128, LitExprTy::Unsigned(UIntTy::U8)))
+        Expr::Literal(LitExpr::Int(u as u128, LitIntTy::Unsigned(UIntTy::U8)))
     }
 }
 
@@ -114,7 +114,7 @@ pub enum LitExpr {
     Byte(u8),
     #[allow(dead_code)]
     Char(char),
-    Int(u128, LitExprTy),
+    Int(u128, LitIntTy),
     #[allow(dead_code)]
     Float(String, LitFloatTy),
     Bool(bool),
@@ -134,15 +134,15 @@ impl LitExpr {
             Ty::Prim(PrimTy::Int(t)) => {
                 let val = t.rand_val(ctx);
                 let expr_type = if matches!(t, IntTy::I32) && ctx.choose_unsuffixed_int() {
-                    LitExprTy::Unsuffixed
+                    LitIntTy::Unsuffixed
                 } else {
-                    LitExprTy::Signed(*t)
+                    LitIntTy::Signed(*t)
                 };
                 Some(LitExpr::Int(val, expr_type).into())
             }
             Ty::Prim(PrimTy::UInt(t)) => {
                 let val = t.rand_val(ctx);
-                Some(LitExpr::Int(val, LitExprTy::Unsigned(*t)).into())
+                Some(LitExpr::Int(val, LitIntTy::Unsigned(*t)).into())
             }
             Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
             Ty::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
@@ -156,7 +156,7 @@ impl LitExpr {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub enum LitExprTy {
+pub enum LitIntTy {
     /// `64_i32`
     Signed(IntTy),
     /// `64_u32`
@@ -197,8 +197,13 @@ impl BinaryExpr {
                 res_type.to_string()
             ),
         };
-        let lhs = Box::new(Expr::generate_expr(ctx, res_type)?);
-        let rhs = Box::new(Expr::generate_expr(ctx, res_type)?);
+        let args_type = op
+            .get_compatible_arg_type(&res_type)
+            .choose(&mut ctx.rng)
+            .cloned()
+            .unwrap();
+        let lhs = Box::new(Expr::generate_expr(ctx, &args_type)?);
+        let rhs = Box::new(Expr::generate_expr(ctx, &args_type)?);
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
@@ -510,30 +515,26 @@ impl FieldExpr {
         let struct_ty = StructTy::generate_type(ctx, Some(res_type.clone()))?;
         let base = Box::new(Expr::generate_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
-            StructTy::Field(field_struct) => {
-                Member::Named(
-                    field_struct
-                        .fields
-                        .iter()
-                        .filter(|f| &*f.ty == res_type)
-                        .collect::<Vec<_>>()
-                        .choose(&mut ctx.rng)
-                        .unwrap()
-                        .name
-                        .clone(),
-                )
-            }
-            StructTy::Tuple(tuple_struct) => {
-                Member::Unnamed(
-                    *(&tuple_struct.fields)
-                        .into_iter()
-                        .enumerate()
-                        .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
-                        .collect::<Vec<_>>()
-                        .choose(&mut ctx.rng)
-                        .unwrap(),
-                )
-            }
+            StructTy::Field(field_struct) => Member::Named(
+                field_struct
+                    .fields
+                    .iter()
+                    .filter(|f| &*f.ty == res_type)
+                    .collect::<Vec<_>>()
+                    .choose(&mut ctx.rng)
+                    .unwrap()
+                    .name
+                    .clone(),
+            ),
+            StructTy::Tuple(tuple_struct) => Member::Unnamed(
+                *(&tuple_struct.fields)
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(i, ty)| if ty == res_type { Some(i) } else { None })
+                    .collect::<Vec<_>>()
+                    .choose(&mut ctx.rng)
+                    .unwrap(),
+            ),
         };
         Some(FieldExpr { base, member })
     }
@@ -567,7 +568,7 @@ impl IndexExpr {
             lhs: index,
             rhs: Box::new(Expr::Literal(LitExpr::Int(
                 array_type.len as u128,
-                LitExprTy::Unsigned(UIntTy::USize),
+                LitIntTy::Unsigned(UIntTy::USize),
             ))),
             op: BinaryOp::Rem,
         }));

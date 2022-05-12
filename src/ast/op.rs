@@ -1,3 +1,4 @@
+use crate::ast::ty::{PrimTy, Ty};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -15,10 +16,10 @@ pub enum BinaryOp {
     // BitOr,
     // Shl,
     // Shr,
-    // Eq,
+    Eq,
     // Lq,
     // Le,
-    // Ne,
+    Ne,
     // Ge,
     // Gt
 }
@@ -33,8 +34,28 @@ impl ToString for BinaryOp {
             BinaryOp::Rem => "%",
             BinaryOp::And => "&&",
             BinaryOp::Or => "||",
+            BinaryOp::Eq => "==",
+            BinaryOp::Ne => "!=",
         }
         .to_owned()
+    }
+}
+
+impl BinaryOp {
+    pub fn get_compatible_arg_type(&self, res_type: &Ty) -> Vec<Ty> {
+        match self {
+            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
+                vec![res_type.clone()]
+            }
+            BinaryOp::And | BinaryOp::Or => {
+                vec![Ty::Prim(PrimTy::Bool)]
+            }
+            BinaryOp::Eq | BinaryOp::Ne => {
+                let mut y: Vec<Ty> = PrimTy::int_types().into_iter().map(From::from).collect();
+                y.append(&mut vec![Ty::Prim(PrimTy::Bool)]);
+                y
+            }
+        }
     }
 }
 

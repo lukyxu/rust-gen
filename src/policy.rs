@@ -258,6 +258,7 @@ impl Policy {
             ],
 
             prim_type_dist: vec![
+                (PrimTy::Bool, 3.0),
                 (IntTy::I8.into(), 3.0),
                 (IntTy::I16.into(), 3.0),
                 (IntTy::I32.into(), 3.0),
@@ -297,7 +298,12 @@ impl Policy {
                 (BinaryOp::Div, 1.0),
                 (BinaryOp::Rem, 1.0),
             ],
-            binary_bool_op_dist: vec![(BinaryOp::And, 1.0), (BinaryOp::Or, 1.0)],
+            binary_bool_op_dist: vec![
+                (BinaryOp::And, 1.0),
+                (BinaryOp::Or, 1.0),
+                (BinaryOp::Eq, 1.0),
+                (BinaryOp::Ne, 1.0),
+            ],
 
             unsuffixed_int_prob: 0.0,
             otherwise_if_stmt_prob: 0.5,

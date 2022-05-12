@@ -1,5 +1,11 @@
-use crate::ast::eval_expr::{EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr};
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitExprTy, Member, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::eval_expr::{
+    EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalStructExpr, EvalTupleExpr,
+    EvalTupleStructExpr,
+};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntTy, Member, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
@@ -205,6 +211,22 @@ impl Visitor for ExprVisitor {
         self.expr = Some(EvalExpr::unit_expr());
     }
 
+    fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
+        let base = self.safe_expr_visit(&mut expr.base);
+        match (base, &expr.member) {
+            (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
+                self.expr = Some(exprs.tuple[*index].clone());
+            }
+            (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
+                self.expr = Some(struct_expr.expr.tuple[*index].clone())
+            }
+            (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
+                self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr)
+            }
+            (_, _) => panic!(),
+        }
+    }
+
     fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
         let mut res: Vec<EvalExpr> = vec![];
         let mut _return_none = false;
@@ -225,29 +247,13 @@ impl Visitor for ExprVisitor {
         self.expr = Some(res_expr);
     }
 
-    fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
-        let base = self.safe_expr_visit(&mut expr.base);
-        match (base, &expr.member) {
-            (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
-                self.expr = Some(exprs.tuple[*index].clone());
-            }
-            (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
-                self.expr = Some(struct_expr.expr.tuple[*index].clone())
-            },
-            (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
-                self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr)
-            },
-            (_, _) => panic!(),
-        }
-    }
-
     fn visit_index_expr(&mut self, expr: &mut IndexExpr) {
         let base = self.safe_expr_visit(&mut expr.base);
         let index = self.safe_expr_visit(&mut expr.index);
         match (base, index) {
             (
                 EvalExpr::Array(exprs),
-                EvalExpr::Literal(LitExpr::Int(index, LitExprTy::Unsigned(UIntTy::USize))),
+                EvalExpr::Literal(LitExpr::Int(index, LitIntTy::Unsigned(UIntTy::USize))),
             ) => {
                 self.expr = Some(exprs.array[index as usize].clone());
             }
@@ -261,21 +267,21 @@ impl Visitor for ExprVisitor {
             let expr = self.safe_expr_visit(&mut field.expr);
             fields.push(EvalField {
                 name: field.name.clone(),
-                expr
+                expr,
             })
         }
-        self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(EvalFieldStructExpr {
-            fields
-        })))
+        self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(
+            EvalFieldStructExpr { fields },
+        )))
     }
 
     fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
         self.visit_tuple_expr(&mut expr.fields);
         let tuple_expr = self.expr.clone().unwrap();
         if let EvalExpr::Tuple(expr) = tuple_expr {
-            self.expr = Some(EvalExpr::Struct(EvalStructExpr::Tuple(EvalTupleStructExpr {
-                expr
-            })))
+            self.expr = Some(EvalExpr::Struct(EvalStructExpr::Tuple(
+                EvalTupleStructExpr { expr },
+            )))
         } else {
             panic!()
         }
@@ -303,7 +309,7 @@ impl ExprVisitor {
 mod tests {
     use super::*;
 
-    use crate::ast::expr::{BlockExpr, LitExprTy};
+    use crate::ast::expr::{BlockExpr, LitIntTy};
     use crate::ast::function::Function;
     use crate::ast::op::{BinaryOp, UnaryOp};
     use crate::ast::stmt::{LocalStmt, Stmt};
@@ -432,7 +438,7 @@ mod tests {
                                     name: "var_0".to_owned(),
                                     rhs: Box::new(Expr::Literal(LitExpr::Int(
                                         127,
-                                        LitExprTy::Signed(IntTy::I8),
+                                        LitIntTy::Signed(IntTy::I8),
                                     ))),
                                 }),
                             })],
@@ -448,7 +454,7 @@ mod tests {
                                 })),
                                 rhs: Box::new(Expr::Literal(LitExpr::Int(
                                     1,
-                                    LitExprTy::Signed(IntTy::I8),
+                                    LitIntTy::Signed(IntTy::I8),
                                 ))),
                                 op: BinaryOp::Add,
                             })),
