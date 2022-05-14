@@ -15,12 +15,16 @@ impl Item {
         let mut res: Option<Item> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
-            res = match ctx.choose_item_kind() {
+            let item_kind = ctx.choose_item_kind();
+            res = match item_kind {
                 ItemKind::Struct => StructItem::generate_item(ctx).map(From::from),
                 ItemKind::Function => FunctionItem::generate_item(ctx).map(From::from),
             };
             if res.is_none() {
                 num_failed_attempts += 1;
+                *ctx.statistics.failed_item_counter.entry(item_kind).or_insert(0) += 1;
+            } else {
+                *ctx.statistics.item_counter.entry(item_kind).or_insert(0) += 1;
             }
         }
         res
