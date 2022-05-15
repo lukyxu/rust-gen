@@ -53,8 +53,14 @@ impl EvalExpr {
 }
 
 impl From<LitExpr> for EvalExpr {
-    fn from(expr: LitExpr) -> Self {
+    fn from(expr: LitExpr) -> EvalExpr {
         EvalExpr::Literal(expr)
+    }
+}
+
+impl From<LitIntExpr> for EvalExpr {
+    fn from(expr: LitIntExpr) -> EvalExpr {
+        EvalExpr::Literal(expr.into())
     }
 }
 
@@ -76,17 +82,11 @@ impl EvalExpr {
     }
 
     pub fn i8(i: i8) -> EvalExpr {
-        EvalExpr::Literal(LitExpr::Int(LitIntExpr {
-            value: i as u128,
-            ty: LitIntTy::Signed(IntTy::I8),
-        }))
+        LitIntExpr::new(i as u128, IntTy::I8.into()).into()
     }
 
     pub fn u8(u: u8) -> EvalExpr {
-        EvalExpr::Literal(LitExpr::Int(LitIntExpr {
-            value: u as u128,
-            ty: LitIntTy::Unsigned(UIntTy::U8),
-        }))
+        LitIntExpr::new(u as u128, LitIntTy::Unsigned(UIntTy::U8)).into()
     }
 }
 
@@ -385,11 +385,7 @@ impl<
 {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_add(&rhs) {
-            Ok(LitIntExpr {
-                value: res.as_(),
-                ty: T::by_lit_expr_type(),
-            }
-            .into())
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else {
             Err(EvalExprError::overflow_error::<T>())
         }
@@ -397,11 +393,7 @@ impl<
 
     fn expr_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_sub(&rhs) {
-            Ok(LitIntExpr {
-                value: res.as_(),
-                ty: T::by_lit_expr_type(),
-            }
-            .into())
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else {
             Err(EvalExprError::overflow_error::<T>())
         }
@@ -409,11 +401,7 @@ impl<
 
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_mul(&rhs) {
-            Ok(LitIntExpr {
-                value: res.as_(),
-                ty: T::by_lit_expr_type(),
-            }
-            .into())
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else {
             let is_signed = T::min_value() < T::zero();
 
@@ -430,11 +418,7 @@ impl<
 
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_div(&rhs) {
-            Ok(LitIntExpr {
-                value: res.as_(),
-                ty: T::by_lit_expr_type(),
-            }
-            .into())
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else if rhs == T::zero() {
             Err(ZeroDiv)
         } else {
@@ -445,11 +429,7 @@ impl<
 
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_rem(&rhs) {
-            Ok(LitIntExpr {
-                value: res.as_(),
-                ty: T::by_lit_expr_type(),
-            }
-            .into())
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else if rhs == T::zero() {
             Err(ZeroDiv)
         } else {

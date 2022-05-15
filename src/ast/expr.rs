@@ -103,17 +103,11 @@ impl Expr {
     }
 
     pub fn i8(i: i8) -> Expr {
-        Expr::Literal(LitExpr::Int(LitIntExpr {
-            value: i as u128,
-            ty: LitIntTy::Signed(IntTy::I8),
-        }))
+        LitIntExpr::new(i as u128, IntTy::I8.into()).into()
     }
 
     pub fn u8(u: u8) -> Expr {
-        Expr::Literal(LitExpr::Int(LitIntExpr {
-            value: u as u128,
-            ty: LitIntTy::Unsigned(UIntTy::U8),
-        }))
+        LitIntExpr::new(i as u128, UIntTy::U8.into()).into()
     }
 }
 
@@ -146,21 +140,13 @@ impl LitExpr {
             Ty::Prim(PrimTy::Int(t)) => {
                 let value = t.rand_val(ctx);
                 Some(
-                    LitIntExpr {
-                        value,
-                        ty: LitIntTy::Signed(*t),
-                    }
-                    .into(),
+                    LitIntExpr::new(value, (*t).into()).into(),
                 )
             }
             Ty::Prim(PrimTy::UInt(t)) => {
                 let value = t.rand_val(ctx);
                 Some(
-                    LitIntExpr {
-                        value,
-                        ty: LitIntTy::Unsigned(*t),
-                    }
-                    .into(),
+                    LitIntExpr::new(value, (*t).into()).into(),
                 )
             }
             Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
@@ -188,7 +174,7 @@ pub struct LitIntExpr {
 
 impl From<LitIntExpr> for Expr {
     fn from(expr: LitIntExpr) -> Expr {
-        Expr::Literal(LitExpr::Int(expr))
+        Expr::Literal(expr.into())
     }
 }
 
@@ -605,11 +591,7 @@ impl IndexExpr {
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
             rhs: Box::new(
-                LitIntExpr {
-                    value: array_type.len as u128,
-                    ty: LitIntTy::Unsigned(UIntTy::USize),
-                }
-                .into(),
+                LitIntExpr::new(array_type.len as u128, UIntTy::USize.into()).into()
             ),
             op: BinaryOp::Rem,
         }));

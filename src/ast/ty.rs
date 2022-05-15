@@ -1,6 +1,7 @@
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use crate::ast::expr::LitIntTy;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -204,6 +205,12 @@ impl From<IntTy> for PrimTy {
     }
 }
 
+impl From<IntTy> for LitIntTy {
+    fn from(ty: IntTy) -> LitIntTy {
+        LitIntTy::Signed(ty)
+    }
+}
+
 impl ToString for IntTy {
     fn to_string(&self) -> String {
         match self {
@@ -262,6 +269,12 @@ impl From<UIntTy> for Ty {
 impl From<UIntTy> for PrimTy {
     fn from(ty: UIntTy) -> PrimTy {
         PrimTy::UInt(ty)
+    }
+}
+
+impl From<UIntTy> for LitIntTy {
+    fn from(ty: UIntTy) -> LitIntTy {
+        LitIntTy::Unsigned(ty)
     }
 }
 
