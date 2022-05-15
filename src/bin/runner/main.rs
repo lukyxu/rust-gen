@@ -15,6 +15,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::str::FromStr;
+use rust_gen::utils::write_as_ron;
 
 mod error;
 
@@ -166,15 +167,7 @@ fn run(seed: Option<u64>, policy: &Policy, base_name: &str, opts: Vec<&'static s
 
     // Write statistics
     let stats_file = "statistics.txt".to_owned();
-    let mut serializer = Serializer::new(
-        fs::File::create(&stats_file).expect("Unable to create file"),
-        Some(PrettyConfig::default()),
-        true,
-    )
-    .expect("Unable to create statistics serializer");
-    statistics
-        .serialize(&mut serializer)
-        .expect("Unable to serialize statistics");
+    write_as_ron(fs::File::create(&stats_file).expect("Unable to create file"), statistics);
 
     // Compile program (with multiple optimizations)
     let mut runs: Vec<(&str, u128)> = vec![];
