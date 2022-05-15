@@ -107,7 +107,7 @@ impl Expr {
     }
 
     pub fn u8(u: u8) -> Expr {
-        LitIntExpr::new(i as u128, UIntTy::U8.into()).into()
+        LitIntExpr::new(u as u128, UIntTy::U8.into()).into()
     }
 }
 

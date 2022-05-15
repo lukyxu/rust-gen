@@ -6,12 +6,9 @@ use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use ron::ser::PrettyConfig;
-use ron::Serializer;
 use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
 use rust_gen::utils::write_as_ron;
-use serde::Serialize;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
