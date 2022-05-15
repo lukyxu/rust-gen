@@ -38,7 +38,6 @@ pub struct Policy {
     pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
     pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
     // TODO: See if we can make this distribution generalized
-    pub unsuffixed_int_prob: f64,
     pub otherwise_if_stmt_prob: f64,
     pub bool_true_prob: f64,
     pub mutability_prob: f64,
@@ -307,7 +306,6 @@ impl Policy {
                 (BinaryOp::Ne, 1.0),
             ],
 
-            unsuffixed_int_prob: 0.0,
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
             mutability_prob: 0.5,

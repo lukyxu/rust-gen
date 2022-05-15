@@ -63,13 +63,19 @@ impl Expr {
             };
             if res.is_none() {
                 num_failed_attempts += 1;
-                *ctx.statistics.successful_expr_counter.entry(expr_kind).or_insert(0) += 1;
+                *ctx.statistics
+                    .successful_expr_counter
+                    .entry(expr_kind)
+                    .or_insert(0) += 1;
                 ctx.statistics.max_failed_generation_depth = max(
                     num_failed_attempts,
                     ctx.statistics.max_failed_generation_depth,
                 );
             } else {
-                *ctx.statistics.successful_expr_counter.entry(expr_kind).or_insert(0) += 1;
+                *ctx.statistics
+                    .successful_expr_counter
+                    .entry(expr_kind)
+                    .or_insert(0) += 1;
             }
         }
         res
@@ -97,11 +103,17 @@ impl Expr {
     }
 
     pub fn i8(i: i8) -> Expr {
-        Expr::Literal(LitExpr::Int(i as u128, LitIntTy::Signed(IntTy::I8)))
+        Expr::Literal(LitExpr::Int(LitIntExpr {
+            value: i as u128,
+            ty: LitIntTy::Signed(IntTy::I8),
+        }))
     }
 
     pub fn u8(u: u8) -> Expr {
-        Expr::Literal(LitExpr::Int(u as u128, LitIntTy::Unsigned(UIntTy::U8)))
+        Expr::Literal(LitExpr::Int(LitIntExpr {
+            value: u as u128,
+            ty: LitIntTy::Unsigned(UIntTy::U8),
+        }))
     }
 }
 
@@ -114,7 +126,7 @@ pub enum LitExpr {
     Byte(u8),
     #[allow(dead_code)]
     Char(char),
-    Int(u128, LitIntTy),
+    Int(LitIntExpr),
     #[allow(dead_code)]
     Float(String, LitFloatTy),
     Bool(bool),
@@ -132,17 +144,24 @@ impl LitExpr {
             Ty::Unit => Some(TupleExpr::empty_tuple()),
             Ty::Prim(PrimTy::Bool) => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
             Ty::Prim(PrimTy::Int(t)) => {
-                let val = t.rand_val(ctx);
-                let expr_type = if matches!(t, IntTy::I32) && ctx.choose_unsuffixed_int() {
-                    LitIntTy::Unsuffixed
-                } else {
-                    LitIntTy::Signed(*t)
-                };
-                Some(LitExpr::Int(val, expr_type).into())
+                let value = t.rand_val(ctx);
+                Some(
+                    LitIntExpr {
+                        value,
+                        ty: LitIntTy::Signed(*t),
+                    }
+                    .into(),
+                )
             }
             Ty::Prim(PrimTy::UInt(t)) => {
-                let val = t.rand_val(ctx);
-                Some(LitExpr::Int(val, LitIntTy::Unsigned(*t)).into())
+                let value = t.rand_val(ctx);
+                Some(
+                    LitIntExpr {
+                        value,
+                        ty: LitIntTy::Unsigned(*t),
+                    }
+                    .into(),
+                )
             }
             Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
             Ty::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
@@ -157,13 +176,32 @@ impl LitExpr {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum LitIntTy {
-    /// `64_i32`
     Signed(IntTy),
-    /// `64_u32`
     Unsigned(UIntTy),
-    /// `64`
-    /// Defaults to i32
-    Unsuffixed,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct LitIntExpr {
+    pub value: u128,
+    pub ty: LitIntTy,
+}
+
+impl From<LitIntExpr> for Expr {
+    fn from(expr: LitIntExpr) -> Expr {
+        Expr::Literal(LitExpr::Int(expr))
+    }
+}
+
+impl From<LitIntExpr> for LitExpr {
+    fn from(expr: LitIntExpr) -> LitExpr {
+        LitExpr::Int(expr)
+    }
+}
+
+impl LitIntExpr {
+    pub fn new(value: u128, ty: LitIntTy) -> LitIntExpr {
+        LitIntExpr { value, ty }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -566,10 +604,13 @@ impl IndexExpr {
         )?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
-            rhs: Box::new(Expr::Literal(LitExpr::Int(
-                array_type.len as u128,
-                LitIntTy::Unsigned(UIntTy::USize),
-            ))),
+            rhs: Box::new(
+                LitIntExpr {
+                    value: array_type.len as u128,
+                    ty: LitIntTy::Unsigned(UIntTy::USize),
+                }
+                .into(),
+            ),
             op: BinaryOp::Rem,
         }));
 
