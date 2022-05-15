@@ -19,28 +19,23 @@ pub enum Stmt {
 
 impl Stmt {
     pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
-        let ty = Ty::generate_type(ctx)?;
-        let stmt_kind = ctx.choose_stmt_kind();
-        let stmt = match stmt_kind {
-            StmtKind::Local => {
-                // TODO: Decl statements
-                let name = ctx.create_var_name();
-                let mutable = ctx.choose_mutability();
-                let stmt: Stmt = Stmt::Local(LocalStmt::Init(InitLocalStmt {
-                    name: name.clone(),
-                    ty: ty.clone(),
-                    rhs: Expr::generate_expr(ctx, &ty)?,
-                    mutable,
-                }));
-                ctx.type_symbol_table.add_var(name, ty, mutable);
-                stmt
+        let mut res: Option<Stmt> = None;
+        let mut num_failed_attempts = 0;
+        while res.is_none() && num_failed_attempts < ctx.policy.max_stmt_attempts {
+            let ty = Ty::generate_type(ctx)?;
+            let stmt_kind = ctx.choose_stmt_kind();
+            res = match stmt_kind {
+                StmtKind::Local => LocalStmt::generate_stmt(ctx, &ty).map(From::from),
+                StmtKind::Semi => SemiStmt::generate_stmt(ctx, &ty).map(From::from),
+            };
+            if res.is_none() {
+                num_failed_attempts += 1;
+                *ctx.statistics.failed_stmt_counter.entry(stmt_kind).or_insert(0) += 1;
+            } else {
+                *ctx.statistics.successful_stmt_counter.entry(stmt_kind).or_insert(0) += 1;
             }
-            StmtKind::Semi => Stmt::Semi(SemiStmt {
-                expr: Expr::generate_expr(ctx, &ty)?,
-            }),
-        };
-        *ctx.statistics.stmt_counter.entry(stmt_kind).or_insert(0) += 1;
-        Some(stmt)
+        }
+        res
     }
 
     pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
@@ -57,6 +52,29 @@ pub enum LocalStmt {
     Decl(DeclLocalStmt),
     /// Local declaration with initializer such as `let x = y`
     Init(InitLocalStmt), // TODO: InitElse
+}
+
+impl From<LocalStmt> for Stmt {
+    fn from(stmt: LocalStmt) -> Stmt {
+        Stmt::Local(stmt)
+    }
+}
+
+impl LocalStmt {
+    // TODO: Decl statements
+    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
+        let name = ctx.create_var_name();
+        let mutable = ctx.choose_mutability();
+
+        let res = Some(LocalStmt::Init(InitLocalStmt {
+            name: name.clone(),
+            ty: res_type.clone(),
+            rhs: Expr::generate_expr(ctx, res_type)?,
+            mutable,
+        }));
+        ctx.type_symbol_table.add_var(name.clone(), res_type.clone(), mutable);
+        res
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -80,14 +98,36 @@ pub struct ExprStmt {
 }
 
 impl From<ExprStmt> for Stmt {
-    fn from(expr_stmt: ExprStmt) -> Self {
-        Stmt::Expr(expr_stmt)
+    fn from(stmt: ExprStmt) -> Stmt {
+        Stmt::Expr(stmt)
+    }
+}
+
+impl ExprStmt {
+    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
+        Some(ExprStmt {
+            expr: Expr::generate_expr(ctx, res_type)?,
+        })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SemiStmt {
     pub expr: Expr,
+}
+
+impl From<SemiStmt> for Stmt {
+    fn from(stmt: SemiStmt) -> Stmt {
+        Stmt::Semi(stmt)
+    }
+}
+
+impl SemiStmt {
+    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
+        Some(SemiStmt {
+            expr: Expr::generate_expr(ctx, res_type)?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

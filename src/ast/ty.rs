@@ -26,8 +26,9 @@ impl Ty {
             };
             if res.is_none() {
                 num_failed_attempts += 1;
+                *ctx.statistics.failed_ty_counter.entry(ty_kind).or_insert(0) += 1;
             } else {
-                *ctx.statistics.ty_counter.entry(ty_kind).or_insert(0) += 1;
+                *ctx.statistics.successful_ty_counter.entry(ty_kind).or_insert(0) += 1;
             }
         }
         res

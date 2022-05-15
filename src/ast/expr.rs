@@ -63,13 +63,13 @@ impl Expr {
             };
             if res.is_none() {
                 num_failed_attempts += 1;
-                ctx.statistics.failed_expr_generations += 1;
+                *ctx.statistics.successful_expr_counter.entry(expr_kind).or_insert(0) += 1;
                 ctx.statistics.max_failed_generation_depth = max(
                     num_failed_attempts,
                     ctx.statistics.max_failed_generation_depth,
                 );
             } else {
-                *ctx.statistics.expr_counter.entry(expr_kind).or_insert(0) += 1;
+                *ctx.statistics.successful_expr_counter.entry(expr_kind).or_insert(0) += 1;
             }
         }
         res
