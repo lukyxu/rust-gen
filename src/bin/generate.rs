@@ -19,7 +19,7 @@ struct GeneratorArgs {
 pub fn main() {
     let args: GeneratorArgs = GeneratorArgs::parse();
     let policy = Policy::parse_policy_args(args.policy);
-    let GeneratorOutput { program, statistics, expected_checksum } = run_generator(args.seed, &policy);
+    let GeneratorOutput { program, statistics, .. } = run_generator(args.seed, &policy);
     if args.statistics {
         write_as_ron(std::io::stdout(), statistics);
     } else {

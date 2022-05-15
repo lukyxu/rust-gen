@@ -39,9 +39,7 @@ impl Stmt {
     }
 
     pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
-        Some(Stmt::Expr(ExprStmt {
-            expr: Expr::generate_expr(ctx, res_type)?,
-        }))
+        ExprStmt::generate_stmt(ctx, res_type).map(From::from)
     }
 }
 
