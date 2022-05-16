@@ -299,7 +299,6 @@ impl ExprVisitor {
             let mut res = unary_expr.op.apply(&eval_expr);
             if res.is_err() {
                 res = Ok(eval_expr);
-                // TODO: See if you can improve this
                 *expr = *unary_expr.clone().expr;
             }
             self.expr = Some(res.unwrap());

@@ -29,7 +29,7 @@ pub enum Expr {
     /// `if expr { block } else { expr }`
     If(IfExpr),
     /// Block expression
-    Block(BlockExpr), // TODO: Path, Assign, Arrays, Box, Tuples
+    Block(BlockExpr),
     /// A variable access such as `x` (Similar to Rust Path in Rust compiler)
     Ident(IdentExpr),
     Tuple(TupleExpr),
@@ -38,6 +38,7 @@ pub enum Expr {
     Index(IndexExpr),
     Field(FieldExpr),
     Struct(StructExpr),
+    // TODO: Path, Box
 }
 
 impl Expr {
@@ -293,7 +294,6 @@ impl CastExpr {
     }
 }
 
-// TODO: Improve IfExpr formatting in printing
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfExpr {
     pub condition: Box<Expr>,
@@ -392,7 +392,7 @@ impl BlockExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
-    // TODO: remove type
+    // TODO: check if type is necessary
     pub ty: Ty,
 }
 

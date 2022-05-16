@@ -129,12 +129,11 @@ impl Visitor for EmitVisitor {
             LitExpr::Str(str) => (*str).to_string(),
             LitExpr::Byte(byte) => byte.to_string(),
             LitExpr::Char(char) => char.to_string(),
-            // TODO: Tidy this logic up
             LitExpr::Int(LitIntExpr {
                 value: u128,
                 ty: int_type,
             }) => {
-                let to_emit: String = match int_type {
+                match int_type {
                     LitIntTy::Signed(t) => {
                         let int_str = match t {
                             IntTy::ISize => (*u128 as isize).to_string(),
@@ -157,8 +156,7 @@ impl Visitor for EmitVisitor {
                         };
                         format!("{}_{}", uint_str, (*t).to_string())
                     }
-                };
-                to_emit
+                }
             }
             LitExpr::Float(f_str, _float_type) => (*f_str).to_string(),
             LitExpr::Bool(bool) => bool.to_string(),
