@@ -1,5 +1,6 @@
 use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
+use crate::ast::utils::track_stmt;
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 
@@ -27,18 +28,10 @@ impl Stmt {
             res = match stmt_kind {
                 StmtKind::Local => LocalStmt::generate_stmt(ctx, &ty).map(From::from),
                 StmtKind::Semi => SemiStmt::generate_stmt(ctx, &ty).map(From::from),
+                StmtKind::Expr => panic!("Cannot generate expr stmt using generate_non_expr_stmt"),
             };
             if res.is_none() {
                 num_failed_attempts += 1;
-                *ctx.statistics
-                    .failed_stmt_counter
-                    .entry(stmt_kind)
-                    .or_insert(0) += 1;
-            } else {
-                *ctx.statistics
-                    .successful_stmt_counter
-                    .entry(stmt_kind)
-                    .or_insert(0) += 1;
             }
         }
         res
@@ -66,7 +59,11 @@ impl From<LocalStmt> for Stmt {
 
 impl LocalStmt {
     // TODO: Decl statements
-    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
+    pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
+        track_stmt(StmtKind::Local, Box::new(LocalStmt::generate_stmt_internal))(ctx, res_type)
+    }
+
+    fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
         let name = ctx.create_var_name();
         let mutable = ctx.choose_mutability();
 
@@ -109,7 +106,11 @@ impl From<ExprStmt> for Stmt {
 }
 
 impl ExprStmt {
-    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
+    pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
+        track_stmt(StmtKind::Expr, Box::new(ExprStmt::generate_stmt_internal))(ctx, res_type)
+    }
+
+    fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
         Some(ExprStmt {
             expr: Expr::fuzz_expr(ctx, res_type)?,
         })
@@ -128,7 +129,11 @@ impl From<SemiStmt> for Stmt {
 }
 
 impl SemiStmt {
-    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
+    pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
+        track_stmt(StmtKind::Semi, Box::new(SemiStmt::generate_stmt_internal))(ctx, res_type)
+    }
+
+    fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
         Some(SemiStmt {
             expr: Expr::fuzz_expr(ctx, res_type)?,
         })
@@ -145,6 +150,7 @@ pub struct CustomStmt {
 pub enum StmtKind {
     Local,
     Semi,
+    Expr,
 }
 
 #[allow(dead_code)]

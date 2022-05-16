@@ -1,4 +1,5 @@
 use crate::ast::expr::ExprKind;
+use crate::ast::stmt::StmtKind;
 use crate::ast::ty::Ty;
 use crate::context::Context;
 
@@ -25,7 +26,7 @@ limit_function!(limit_expr_depth, expr_depth, max_expr_depth);
 limit_function!(limit_if_else_depth, if_else_depth, max_if_else_depth);
 limit_function!(limit_block_depth, block_depth, max_block_depth);
 
-macro_rules! track_function {
+macro_rules! track_function_with_ty {
     ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
         pub fn $function_name<T: 'static>(
             kind: $kind,
@@ -34,15 +35,9 @@ macro_rules! track_function {
             Box::new(move |ctx, res_type| -> Option<T> {
                 let res = f(ctx, res_type);
                 if res.is_some() {
-                    *ctx.statistics
-                        .$success_counter
-                        .entry(kind)
-                        .or_insert(0) += 1
+                    *ctx.statistics.$success_counter.entry(kind).or_insert(0) += 1
                 } else {
-                    *ctx.statistics
-                        .$failed_counter
-                        .entry(kind)
-                        .or_insert(0) += 1
+                    *ctx.statistics.$failed_counter.entry(kind).or_insert(0) += 1
                 }
                 res
             })
@@ -50,4 +45,15 @@ macro_rules! track_function {
     };
 }
 
-track_function!(track_expr, ExprKind, successful_expr_counter, failed_expr_counter);
+track_function_with_ty!(
+    track_expr,
+    ExprKind,
+    successful_expr_counter,
+    failed_expr_counter
+);
+track_function_with_ty!(
+    track_stmt,
+    StmtKind,
+    successful_stmt_counter,
+    failed_stmt_counter
+);
