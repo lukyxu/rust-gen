@@ -181,12 +181,8 @@ impl LitExpr {
     pub fn cast(self, res_type: &Ty) -> Option<LitExpr> {
         if let LitExpr::Int(lit_int_expr) = self {
             match res_type {
-                Ty::Prim(PrimTy::Int(s_int)) => Some(
-                    lit_int_expr.cast((*s_int).into()).into()
-                ),
-                Ty::Prim(PrimTy::UInt(u_int)) => Some(
-                    lit_int_expr.cast((*u_int).into()).into()
-                ),
+                Ty::Prim(PrimTy::Int(s_int)) => Some(lit_int_expr.cast((*s_int).into()).into()),
+                Ty::Prim(PrimTy::UInt(u_int)) => Some(lit_int_expr.cast((*u_int).into()).into()),
                 _ => None,
             }
         } else {
@@ -237,17 +233,15 @@ impl BinaryExpr {
 
 macro_rules! apply_int {
     ($fn_name: ident, $op_name: ident) => {
-        fn $fn_name(
-            self,
-            lhs: &LitIntExpr,
-            rhs: &LitIntExpr,
-        ) -> Result<LitExpr, EvalExprError> {
+        fn $fn_name(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
             match (lhs.ty, rhs.ty) {
                 (Signed(I8), Signed(I8)) => i8::$op_name(lhs.value as i8, rhs.value as i8),
                 (Signed(I16), Signed(I16)) => i16::$op_name(lhs.value as i16, rhs.value as i16),
                 (Signed(I32), Signed(I32)) => i32::$op_name(lhs.value as i32, rhs.value as i32),
                 (Signed(I64), Signed(I64)) => i64::$op_name(lhs.value as i64, rhs.value as i64),
-                (Signed(I128), Signed(I128)) => i128::$op_name(lhs.value as i128, rhs.value as i128),
+                (Signed(I128), Signed(I128)) => {
+                    i128::$op_name(lhs.value as i128, rhs.value as i128)
+                }
                 (Signed(ISize), Signed(ISize)) => {
                     isize::$op_name(lhs.value as isize, rhs.value as isize)
                 }
