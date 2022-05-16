@@ -1,5 +1,8 @@
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
+use crate::ast::expr::{
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr,
+    LitIntTy, Member,
+};
 use crate::ast::function::Function;
 use crate::ast::op::BinaryOp;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
@@ -129,10 +132,9 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                         name: name.to_owned(),
                         ty: ty.clone(),
                     })),
-                    index: Box::new(LitIntExpr::new(
-                        i as u128,
-                        LitIntTy::Unsigned(UIntTy::USize),
-                    ).into()),
+                    index: Box::new(
+                        LitIntExpr::new(i as u128, LitIntTy::Unsigned(UIntTy::USize)).into(),
+                    ),
                 });
                 exprs_from_exprs(array_access, &ty, &mut accumulator);
             }
@@ -184,10 +186,9 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
             for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(expr.clone()),
-                    index: Box::new(LitIntExpr::new(
-                        i as u128,
-                        LitIntTy::Unsigned(UIntTy::USize),
-                    ).into()),
+                    index: Box::new(
+                        LitIntExpr::new(i as u128, LitIntTy::Unsigned(UIntTy::USize)).into(),
+                    ),
                 });
                 exprs_from_exprs(array_access, &ty, accumulator);
             }

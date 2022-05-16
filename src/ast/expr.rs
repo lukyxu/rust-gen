@@ -43,7 +43,6 @@ impl Expr {
         if ctx.expr_depth > ctx.policy.max_expr_depth {
             return None;
         }
-
         let mut res: Option<Expr> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
@@ -139,15 +138,11 @@ impl LitExpr {
             Ty::Prim(PrimTy::Bool) => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
             Ty::Prim(PrimTy::Int(t)) => {
                 let value = t.rand_val(ctx);
-                Some(
-                    LitIntExpr::new(value, (*t).into()).into(),
-                )
+                Some(LitIntExpr::new(value, (*t).into()).into())
             }
             Ty::Prim(PrimTy::UInt(t)) => {
                 let value = t.rand_val(ctx);
-                Some(
-                    LitIntExpr::new(value, (*t).into()).into(),
-                )
+                Some(LitIntExpr::new(value, (*t).into()).into())
             }
             Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
             Ty::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
@@ -187,6 +182,13 @@ impl From<LitIntExpr> for LitExpr {
 impl LitIntExpr {
     pub fn new(value: u128, ty: LitIntTy) -> LitIntExpr {
         LitIntExpr { value, ty }
+    }
+
+    pub fn cast(self, ty: LitIntTy) -> LitIntExpr {
+        match ty {
+            LitIntTy::Signed(ty) => LitIntExpr::new(ty.cast_value(self.value), ty.into()),
+            LitIntTy::Unsigned(ty) => LitIntExpr::new(ty.cast_value(self.value), ty.into()),
+        }
     }
 }
 
@@ -590,9 +592,7 @@ impl IndexExpr {
         )?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
-            rhs: Box::new(
-                LitIntExpr::new(array_type.len as u128, UIntTy::USize.into()).into()
-            ),
+            rhs: Box::new(LitIntExpr::new(array_type.len as u128, UIntTy::USize.into()).into()),
             op: BinaryOp::Rem,
         }));
 

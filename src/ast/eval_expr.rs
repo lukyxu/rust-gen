@@ -5,9 +5,9 @@ use crate::ast::expr::LitIntTy::{Signed, Unsigned};
 use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
+use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 #[cfg(test)]
 use crate::ast::ty::{IntTy, UIntTy};
-use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 use crate::ast::ty::{PrimTy, Ty};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use std::mem::swap;
@@ -28,7 +28,7 @@ impl EvalExpr {
     }
     pub fn cast(self, res_type: &Ty) -> Option<EvalExpr> {
         if let EvalExpr::Literal(lit_expr) = self {
-            Some(EvalExpr::Literal(lit_expr.cast(res_type)))
+            Some(EvalExpr::Literal(lit_expr.cast(res_type)?))
         } else if let EvalExpr::Unknown = self {
             Some(self)
         } else {
@@ -178,21 +178,19 @@ impl EvalExprError {
 }
 
 impl LitExpr {
-    pub fn cast(self, res_type: &Ty) -> LitExpr {
+    pub fn cast(self, res_type: &Ty) -> Option<LitExpr> {
         if let LitExpr::Int(lit_int_expr) = self {
             match res_type {
-                Ty::Prim(PrimTy::Int(s_int)) => {
-                    LitIntExpr::new(s_int.recast(lit_int_expr.value), LitIntTy::Signed(*s_int))
-                        .into()
-                }
-                Ty::Prim(PrimTy::UInt(u_int)) => {
-                    LitIntExpr::new(u_int.recast(lit_int_expr.value), LitIntTy::Unsigned(*u_int))
-                        .into()
-                }
-                _ => panic!(),
+                Ty::Prim(PrimTy::Int(s_int)) => Some(
+                    lit_int_expr.cast((*s_int).into()).into()
+                ),
+                Ty::Prim(PrimTy::UInt(u_int)) => Some(
+                    lit_int_expr.cast((*u_int).into()).into()
+                ),
+                _ => None,
             }
         } else {
-            panic!()
+            None
         }
     }
 }
@@ -656,7 +654,10 @@ mod tests {
     fn cast_expr_ok() {
         let expr: LitExpr = LitIntExpr::new(-27_i8 as u128, LitIntTy::Signed(IntTy::I8)).into();
         assert_eq!(
-            expr.cast(&UIntTy::U32.into()).cast(&UIntTy::U64.into()),
+            expr.cast(&UIntTy::U32.into())
+                .expect("Unable to cast")
+                .cast(&UIntTy::U64.into())
+                .expect("Unable to cast"),
             LitExpr::Int(LitIntExpr {
                 value: 4294967269,
                 ty: Unsigned(UIntTy::U64)

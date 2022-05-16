@@ -1,7 +1,7 @@
+use crate::ast::expr::LitIntTy;
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use crate::ast::expr::LitIntTy;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -238,7 +238,7 @@ impl IntTy {
         }
     }
 
-    pub fn recast(self, value: u128) -> u128 {
+    pub fn cast_value(self, value: u128) -> u128 {
         match self {
             IntTy::ISize => value as isize as u128,
             IntTy::I8 => value as i8 as u128,
@@ -305,7 +305,7 @@ impl UIntTy {
         }
     }
 
-    pub fn recast(self, value: u128) -> u128 {
+    pub fn cast_value(self, value: u128) -> u128 {
         match self {
             UIntTy::USize => value as usize as u128,
             UIntTy::U8 => value as u8 as u128,
