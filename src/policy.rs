@@ -68,7 +68,6 @@ pub struct Policy {
 //     Policy::default(),
 // ]
 
-#[allow(dead_code)]
 impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![

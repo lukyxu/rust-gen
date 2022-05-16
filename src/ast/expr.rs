@@ -24,7 +24,6 @@ pub enum Expr {
     /// Unary operation such as `!x`
     Unary(UnaryExpr),
     /// Cast expression such as `x as u64`
-    #[allow(dead_code)]
     Cast(CastExpr),
     /// If expression with optional `else` block
     /// `if expr { block } else { expr }`

@@ -172,7 +172,6 @@ pub enum StmtKind {
     Expr,
 }
 
-#[allow(dead_code)]
 pub enum LocalStmtKind {
     Decl,
     Init,
