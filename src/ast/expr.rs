@@ -12,7 +12,7 @@ use crate::ast::utils::{
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::cmp::min;
+use std::cmp::{max, min};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -49,6 +49,8 @@ impl Expr {
             res = Expr::generate_expr(ctx, res_type);
             if res.is_none() {
                 num_failed_attempts += 1;
+                ctx.statistics.max_failed_expr_depth =
+                    max(ctx.statistics.max_failed_expr_depth, num_failed_attempts)
             }
         }
         res

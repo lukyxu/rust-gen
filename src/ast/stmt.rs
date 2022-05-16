@@ -3,6 +3,7 @@ use crate::ast::ty::Ty;
 use crate::ast::utils::track_stmt;
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -26,6 +27,8 @@ impl Stmt {
             res = Stmt::generate_non_expr_stmt(ctx);
             if res.is_none() {
                 num_failed_attempts += 1;
+                ctx.statistics.max_failed_stmt_depth =
+                    max(ctx.statistics.max_failed_stmt_depth, num_failed_attempts)
             }
         }
         res

@@ -3,6 +3,7 @@ use crate::ast::utils::{increment_counter, track_type};
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -21,6 +22,8 @@ impl Ty {
             res = Ty::generate_type(ctx);
             if res.is_none() {
                 num_failed_attempts += 1;
+                ctx.statistics.max_failed_ty_depth =
+                    max(ctx.statistics.max_failed_ty_depth, num_failed_attempts)
             }
         }
         res

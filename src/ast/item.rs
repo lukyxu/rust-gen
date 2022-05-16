@@ -3,6 +3,7 @@ use crate::ast::ty::StructTy;
 use crate::ast::utils::track_item;
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -19,6 +20,8 @@ impl Item {
             res = Item::generate_item(ctx);
             if res.is_none() {
                 num_failed_attempts += 1;
+                ctx.statistics.max_failed_item_depth =
+                    max(ctx.statistics.max_failed_item_depth, num_failed_attempts)
             }
         }
         res
