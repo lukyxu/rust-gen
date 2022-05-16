@@ -47,6 +47,7 @@ pub struct Policy {
     pub max_arith_depth: usize,
     pub max_expr_depth: usize,
 
+    pub max_file_attempts: usize,
     pub max_main_fn_attempts: usize,
     pub max_item_attempts: usize,
     pub max_stmt_attempts: usize,
@@ -317,6 +318,7 @@ impl Policy {
             max_block_depth: 2,
             max_arith_depth: 5,
 
+            max_file_attempts: 1,
             max_main_fn_attempts: 1,
             max_item_attempts: 1,
             max_stmt_attempts: 1,
