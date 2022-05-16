@@ -24,13 +24,12 @@ pub enum Expr {
     /// Unary operation such as `!x`
     Unary(UnaryExpr),
     /// Cast expression such as `x as u64`
-    #[allow(dead_code)]
     Cast(CastExpr),
     /// If expression with optional `else` block
     /// `if expr { block } else { expr }`
     If(IfExpr),
     /// Block expression
-    Block(BlockExpr), // TODO: Path, Assign, Arrays, Box, Tuples
+    Block(BlockExpr),
     /// A variable access such as `x` (Similar to Rust Path in Rust compiler)
     Ident(IdentExpr),
     Tuple(TupleExpr),
@@ -39,6 +38,7 @@ pub enum Expr {
     Index(IndexExpr),
     Field(FieldExpr),
     Struct(StructExpr),
+    // TODO: Path, Box
 }
 
 impl Expr {
@@ -294,7 +294,6 @@ impl CastExpr {
     }
 }
 
-// TODO: Improve IfExpr formatting in printing
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfExpr {
     pub condition: Box<Expr>,
@@ -393,7 +392,7 @@ impl BlockExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
-    // TODO: remove type
+    // TODO: check if type is necessary
     pub ty: Ty,
 }
 
@@ -435,7 +434,7 @@ impl TupleExpr {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
             ctx.policy.max_expr_depth = min(
                 ctx.policy.max_expr_depth,
-                ctx.policy.max_expr_depth_in_tuple,
+                ctx.expr_depth + ctx.policy.max_expr_depth_in_tuple,
             );
             let expr = Expr::fuzz_expr(ctx, ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
@@ -498,7 +497,7 @@ impl ArrayExpr {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
             ctx.policy.max_expr_depth = min(
                 ctx.policy.max_expr_depth,
-                ctx.policy.max_expr_depth_in_array,
+                ctx.expr_depth + ctx.policy.max_expr_depth_in_array,
             );
             let expr = Expr::fuzz_expr(ctx, &ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
@@ -643,7 +642,7 @@ impl StructExpr {
         let prev_max_expr_depth = ctx.policy.max_expr_depth;
         ctx.policy.max_expr_depth = min(
             ctx.policy.max_expr_depth,
-            ctx.policy.max_expr_depth_in_struct,
+            ctx.expr_depth + ctx.policy.max_expr_depth_in_struct,
         );
         let res = match res_type {
             StructTy::Field(res_type) => {

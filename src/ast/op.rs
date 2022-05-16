@@ -60,9 +60,9 @@ impl BinaryOp {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub enum UnaryOp {
     // TODO: Deref when adding pointer types
+    #[allow(dead_code)]
     Deref,
     Not,
     Neg,
