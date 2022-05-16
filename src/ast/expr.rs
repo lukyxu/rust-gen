@@ -38,8 +38,22 @@ pub enum Expr {
     Struct(StructExpr),
 }
 
+fn limit_arith_depth<T: 'static>(
+    f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
+) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
+    Box::new(|ctx, res_type| -> Option<T> {
+        if ctx.arith_depth > ctx.policy.max_arith_depth {
+            return None;
+        }
+        ctx.arith_depth += 1;
+        let res = f(ctx, res_type);
+        ctx.arith_depth -= 1;
+        res
+    })
+}
+
 impl Expr {
-    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    pub fn fuzz_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         if ctx.expr_depth > ctx.policy.max_expr_depth {
             return None;
         }
@@ -77,20 +91,6 @@ impl Expr {
                     .or_insert(0) += 1;
             }
         }
-        res
-    }
-
-    fn generate_arith_expr<T>(
-        ctx: &mut Context,
-        res_type: &Ty,
-        f: fn(&mut Context, &Ty) -> Option<T>,
-    ) -> Option<T> {
-        if ctx.arith_depth > ctx.policy.max_arith_depth {
-            return None;
-        }
-        ctx.arith_depth += 1;
-        let res = f(ctx, res_type);
-        ctx.arith_depth -= 1;
         res
     }
 }
@@ -210,7 +210,7 @@ pub struct BinaryExpr {
 
 impl BinaryExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
-        Expr::generate_arith_expr(ctx, res_type, BinaryExpr::generate_expr_internal)
+        limit_arith_depth(Box::new(BinaryExpr::generate_expr_internal))(ctx, res_type)
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
@@ -228,8 +228,8 @@ impl BinaryExpr {
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
-        let lhs = Box::new(Expr::generate_expr(ctx, &args_type)?);
-        let rhs = Box::new(Expr::generate_expr(ctx, &args_type)?);
+        let lhs = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
+        let rhs = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
@@ -256,7 +256,7 @@ impl From<UnaryExpr> for Expr {
 impl UnaryExpr {
     #[allow(dead_code)]
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        Expr::generate_arith_expr(ctx, res_type, UnaryExpr::generate_expr_internal)
+        limit_arith_depth(Box::new(UnaryExpr::generate_expr_internal))(ctx, res_type)
     }
 
     #[allow(dead_code)]
@@ -266,7 +266,7 @@ impl UnaryExpr {
             Ty::Prim(PrimTy::Int(_)) => UnaryOp::Neg,
             _ => return None,
         };
-        let expr = Box::new(Expr::generate_expr(ctx, res_type)?);
+        let expr = Box::new(Expr::fuzz_expr(ctx, res_type)?);
         *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(Expr::Unary(UnaryExpr { expr, op }))
     }
@@ -286,7 +286,7 @@ impl From<CastExpr> for Expr {
 
 impl CastExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        Expr::generate_arith_expr(ctx, res_type, CastExpr::generate_expr_internal)
+        limit_arith_depth(Box::new(CastExpr::generate_expr_internal))(ctx, res_type)
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
@@ -294,7 +294,7 @@ impl CastExpr {
         if !source_type.compatible_cast(res_type) {
             return None;
         }
-        let expr = Box::new(Expr::generate_expr(ctx, &source_type)?);
+        let expr = Box::new(Expr::fuzz_expr(ctx, &source_type)?);
         Some(Expr::Cast(CastExpr {
             expr,
             ty: res_type.clone(),
@@ -323,7 +323,7 @@ impl IfExpr {
         }
         let outer_symbol_table = ctx.type_symbol_table.clone();
         ctx.if_else_depth += 1;
-        let cond = Expr::generate_expr(ctx, &PrimTy::Bool.into());
+        let cond = Expr::fuzz_expr(ctx, &PrimTy::Bool.into());
         let if_expr = match cond {
             None => None,
             Some(cond) => {
@@ -361,7 +361,7 @@ impl From<BlockExpr> for Expr {
 
 impl BlockExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
-        BlockExpr::generate_block_expr(ctx, res_type)
+        limit_arith_depth(Box::new(BlockExpr::generate_block_expr))(ctx, res_type)
     }
     pub fn generate_block_expr(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
         if ctx.block_depth > ctx.policy.max_block_depth {
@@ -428,7 +428,7 @@ impl TupleExpr {
                 ctx.policy.max_expr_depth,
                 ctx.policy.max_expr_depth_in_tuple,
             );
-            let expr = Expr::generate_expr(ctx, ty);
+            let expr = Expr::fuzz_expr(ctx, ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
             res.push(expr?);
         }
@@ -459,7 +459,7 @@ impl AssignExpr {
 
         Some(AssignExpr {
             name: ident_expr.name,
-            rhs: Box::new(Expr::generate_expr(ctx, &ident_expr.ty)?),
+            rhs: Box::new(Expr::fuzz_expr(ctx, &ident_expr.ty)?),
         })
     }
 }
@@ -484,7 +484,7 @@ impl ArrayExpr {
                 ctx.policy.max_expr_depth,
                 ctx.policy.max_expr_depth_in_array,
             );
-            let expr = Expr::generate_expr(ctx, &ty);
+            let expr = Expr::fuzz_expr(ctx, &ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
             res.push(expr?);
         }
@@ -512,7 +512,7 @@ impl From<FieldExpr> for Expr {
 
 impl FieldExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
-        Expr::generate_arith_expr(ctx, res_type, FieldExpr::generate_expr_internal)
+        limit_arith_depth(Box::new(FieldExpr::generate_expr_internal))(ctx, res_type)
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
@@ -526,7 +526,7 @@ impl FieldExpr {
     fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, Some(res_type.clone()))?;
 
-        let base = Box::new(Expr::generate_expr(ctx, &tuple.clone().into())?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
             .enumerate()
@@ -539,7 +539,7 @@ impl FieldExpr {
 
     fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, Some(res_type.clone()))?;
-        let base = Box::new(Expr::generate_expr(ctx, &struct_ty.clone().into())?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
                 field_struct
@@ -580,16 +580,13 @@ impl From<IndexExpr> for Expr {
 
 impl IndexExpr {
     fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
-        Expr::generate_arith_expr(ctx, res_type, IndexExpr::generate_expr_internal)
+        limit_arith_depth(Box::new(IndexExpr::generate_expr_internal))(ctx, res_type)
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, Some(res_type.clone()))?;
-        let base = Box::new(Expr::generate_expr(ctx, &array_type.clone().into())?);
-        let index = Box::new(Expr::generate_expr(
-            ctx,
-            &PrimTy::UInt(UIntTy::USize).into(),
-        )?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
+        let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
             rhs: Box::new(LitIntExpr::new(array_type.len as u128, UIntTy::USize.into()).into()),
@@ -691,7 +688,7 @@ impl Field {
     fn generate_field(ctx: &mut Context, field_def: &FieldDef) -> Option<Field> {
         Some(Field {
             name: field_def.name.clone(),
-            expr: Expr::generate_expr(ctx, &*field_def.ty)?,
+            expr: Expr::fuzz_expr(ctx, &*field_def.ty)?,
         })
     }
 }
