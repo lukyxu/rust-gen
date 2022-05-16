@@ -318,7 +318,7 @@ impl BinaryOp {
             BinaryOp::Div => self.apply_div(lhs, rhs),
             BinaryOp::Rem => self.apply_rem(lhs, rhs),
             BinaryOp::Eq => Ok(LitExpr::Bool(lhs.value == rhs.value)),
-            BinaryOp::Ne => Ok(LitExpr::Bool(lhs.value != lhs.value)),
+            BinaryOp::Ne => Ok(LitExpr::Bool(lhs.value != rhs.value)),
             _ => panic!("Undefined operation on ints"),
         }
     }
