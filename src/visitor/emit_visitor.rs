@@ -132,32 +132,30 @@ impl Visitor for EmitVisitor {
             LitExpr::Int(LitIntExpr {
                 value: u128,
                 ty: int_type,
-            }) => {
-                match int_type {
-                    LitIntTy::Signed(t) => {
-                        let int_str = match t {
-                            IntTy::ISize => (*u128 as isize).to_string(),
-                            IntTy::I8 => (*u128 as i8).to_string(),
-                            IntTy::I16 => (*u128 as i16).to_string(),
-                            IntTy::I32 => (*u128 as i32).to_string(),
-                            IntTy::I64 => (*u128 as i64).to_string(),
-                            IntTy::I128 => (*u128 as i128).to_string(),
-                        };
-                        format!("{}_{}", int_str, (*t).to_string())
-                    }
-                    LitIntTy::Unsigned(t) => {
-                        let uint_str = match t {
-                            UIntTy::USize => (*u128 as usize).to_string(),
-                            UIntTy::U8 => (*u128 as u8).to_string(),
-                            UIntTy::U16 => (*u128 as u16).to_string(),
-                            UIntTy::U32 => (*u128 as u32).to_string(),
-                            UIntTy::U64 => (*u128 as u64).to_string(),
-                            UIntTy::U128 => u128.to_string(),
-                        };
-                        format!("{}_{}", uint_str, (*t).to_string())
-                    }
+            }) => match int_type {
+                LitIntTy::Signed(t) => {
+                    let int_str = match t {
+                        IntTy::ISize => (*u128 as isize).to_string(),
+                        IntTy::I8 => (*u128 as i8).to_string(),
+                        IntTy::I16 => (*u128 as i16).to_string(),
+                        IntTy::I32 => (*u128 as i32).to_string(),
+                        IntTy::I64 => (*u128 as i64).to_string(),
+                        IntTy::I128 => (*u128 as i128).to_string(),
+                    };
+                    format!("{}_{}", int_str, (*t).to_string())
                 }
-            }
+                LitIntTy::Unsigned(t) => {
+                    let uint_str = match t {
+                        UIntTy::USize => (*u128 as usize).to_string(),
+                        UIntTy::U8 => (*u128 as u8).to_string(),
+                        UIntTy::U16 => (*u128 as u16).to_string(),
+                        UIntTy::U32 => (*u128 as u32).to_string(),
+                        UIntTy::U64 => (*u128 as u64).to_string(),
+                        UIntTy::U128 => u128.to_string(),
+                    };
+                    format!("{}_{}", uint_str, (*t).to_string())
+                }
+            },
             LitExpr::Float(f_str, _float_type) => (*f_str).to_string(),
             LitExpr::Bool(bool) => bool.to_string(),
         };

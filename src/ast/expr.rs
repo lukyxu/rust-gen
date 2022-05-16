@@ -434,7 +434,7 @@ impl TupleExpr {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
             ctx.policy.max_expr_depth = min(
                 ctx.policy.max_expr_depth,
-                ctx.policy.max_expr_depth_in_tuple,
+                ctx.expr_depth + ctx.policy.max_expr_depth_in_tuple,
             );
             let expr = Expr::fuzz_expr(ctx, ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
@@ -497,7 +497,7 @@ impl ArrayExpr {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
             ctx.policy.max_expr_depth = min(
                 ctx.policy.max_expr_depth,
-                ctx.policy.max_expr_depth_in_array,
+                ctx.expr_depth + ctx.policy.max_expr_depth_in_array,
             );
             let expr = Expr::fuzz_expr(ctx, &ty);
             ctx.policy.max_expr_depth = prev_max_expr_depth;
@@ -642,7 +642,7 @@ impl StructExpr {
         let prev_max_expr_depth = ctx.policy.max_expr_depth;
         ctx.policy.max_expr_depth = min(
             ctx.policy.max_expr_depth,
-            ctx.policy.max_expr_depth_in_struct,
+            ctx.expr_depth + ctx.policy.max_expr_depth_in_struct,
         );
         let res = match res_type {
             StructTy::Field(res_type) => {
