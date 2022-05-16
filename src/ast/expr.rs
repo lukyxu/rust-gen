@@ -405,7 +405,7 @@ impl From<IdentExpr> for Expr {
 }
 
 impl IdentExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
         ctx.choose_ident_expr_by_type(res_type)
     }
 }
@@ -422,11 +422,11 @@ impl From<TupleExpr> for Expr {
 }
 
 impl TupleExpr {
-    fn empty_tuple() -> Expr {
+    pub fn empty_tuple() -> Expr {
         Expr::Tuple(TupleExpr { tuple: vec![] })
     }
 
-    fn generate_expr(ctx: &mut Context, res_type: &TupleTy) -> Option<TupleExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &TupleTy) -> Option<TupleExpr> {
         let mut res = vec![];
         for ty in &res_type.tuple {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
@@ -455,7 +455,7 @@ impl From<AssignExpr> for Expr {
 }
 
 impl AssignExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<AssignExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<AssignExpr> {
         if !res_type.is_unit() {
             return None;
         };
@@ -482,7 +482,7 @@ impl From<ArrayExpr> for Expr {
 }
 
 impl ArrayExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &ArrayTy) -> Option<ArrayExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &ArrayTy) -> Option<ArrayExpr> {
         let mut res = vec![];
         for ty in res_type.iter() {
             let prev_max_expr_depth = ctx.policy.max_expr_depth;
@@ -517,7 +517,7 @@ impl From<FieldExpr> for Expr {
 }
 
 impl FieldExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         limit_arith_depth(Box::new(FieldExpr::generate_expr_internal))(ctx, res_type)
     }
 
@@ -529,7 +529,7 @@ impl FieldExpr {
         }
     }
 
-    fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
+    pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, Some(res_type.clone()))?;
 
         let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
@@ -543,7 +543,7 @@ impl FieldExpr {
         Some(FieldExpr { base, member })
     }
 
-    fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
+    pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
@@ -585,7 +585,7 @@ impl From<IndexExpr> for Expr {
 }
 
 impl IndexExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
         limit_arith_depth(Box::new(IndexExpr::generate_expr_internal))(ctx, res_type)
     }
 
@@ -619,7 +619,7 @@ impl From<StructExpr> for Expr {
 }
 
 impl StructExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
         let prev_max_expr_depth = ctx.policy.max_expr_depth;
         ctx.policy.max_expr_depth = min(
             ctx.policy.max_expr_depth,
@@ -651,7 +651,7 @@ impl From<TupleStructExpr> for StructExpr {
 }
 
 impl TupleStructExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &TupleStructTy) -> Option<TupleStructExpr> {
+    pub  fn generate_expr(ctx: &mut Context, res_type: &TupleStructTy) -> Option<TupleStructExpr> {
         Some(TupleStructExpr {
             struct_name: res_type.name.clone(),
             fields: TupleExpr::generate_expr(ctx, &res_type.fields)?,
@@ -672,7 +672,7 @@ impl From<FieldStructExpr> for StructExpr {
 }
 
 impl FieldStructExpr {
-    fn generate_expr(ctx: &mut Context, res_type: &FieldStructTy) -> Option<FieldStructExpr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &FieldStructTy) -> Option<FieldStructExpr> {
         let mut fields: Vec<Field> = vec![];
         for field_def in &res_type.fields {
             fields.push(Field::generate_field(ctx, field_def)?);
@@ -691,7 +691,7 @@ pub struct Field {
 }
 
 impl Field {
-    fn generate_field(ctx: &mut Context, field_def: &FieldDef) -> Option<Field> {
+    pub fn generate_field(ctx: &mut Context, field_def: &FieldDef) -> Option<Field> {
         Some(Field {
             name: field_def.name.clone(),
             expr: Expr::fuzz_expr(ctx, &*field_def.ty)?,
