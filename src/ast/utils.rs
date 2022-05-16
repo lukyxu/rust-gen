@@ -25,23 +25,29 @@ limit_function!(limit_expr_depth, expr_depth, max_expr_depth);
 limit_function!(limit_if_else_depth, if_else_depth, max_if_else_depth);
 limit_function!(limit_block_depth, block_depth, max_block_depth);
 
-pub fn track_statistics<T: 'static>(
-    expr_kind: ExprKind,
-    f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
-) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
-    Box::new(move |ctx, res_type| -> Option<T> {
-        let res = f(ctx, res_type);
-        if res.is_some() {
-            *ctx.statistics
-                .successful_expr_counter
-                .entry(expr_kind)
-                .or_insert(0) += 1
-        } else {
-            *ctx.statistics
-                .failed_expr_counter
-                .entry(expr_kind)
-                .or_insert(0) += 1
+macro_rules! track_function {
+    ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
+        pub fn $function_name<T: 'static>(
+            kind: $kind,
+            f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
+        ) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
+            Box::new(move |ctx, res_type| -> Option<T> {
+                let res = f(ctx, res_type);
+                if res.is_some() {
+                    *ctx.statistics
+                        .$success_counter
+                        .entry(kind)
+                        .or_insert(0) += 1
+                } else {
+                    *ctx.statistics
+                        .$failed_counter
+                        .entry(kind)
+                        .or_insert(0) += 1
+                }
+                res
+            })
         }
-        res
-    })
+    };
 }
+
+track_function!(track_expr, ExprKind, successful_expr_counter, failed_expr_counter);
