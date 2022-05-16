@@ -56,9 +56,7 @@ impl Context {
             if_else_depth: 0,
             block_depth: 0,
             arith_depth: 0,
-            array_depth: 0,
-            tuple_depth: 0,
-            struct_depth: 0,
+
             array_type_dist: policy.default_array_type_dist.clone(),
             tuple_type_dist: policy.default_tuple_type_dist.clone(),
             struct_type_dist: policy.default_struct_type_dist.clone(),

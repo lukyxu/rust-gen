@@ -314,7 +314,6 @@ impl Policy {
 
             max_expr_depth: 100,
             max_if_else_depth: 2,
-            // max_block_depth: 3 + max_if_else_depth,
             max_block_depth: 2,
             max_arith_depth: 5,
 
