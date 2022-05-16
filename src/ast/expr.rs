@@ -232,7 +232,7 @@ impl From<UnaryExpr> for Expr {
 }
 
 impl UnaryExpr {
-    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<UnaryExpr> {
         track_expr(
             ExprKind::Unary,
             limit_expr_depth(limit_arith_depth(Box::new(
@@ -241,7 +241,7 @@ impl UnaryExpr {
         )(ctx, res_type)
     }
 
-    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<UnaryExpr> {
         let op = match res_type {
             Ty::Prim(PrimTy::Bool) => UnaryOp::Not,
             Ty::Prim(PrimTy::Int(_)) => UnaryOp::Neg,
@@ -249,7 +249,7 @@ impl UnaryExpr {
         };
         let expr = Box::new(Expr::fuzz_expr(ctx, res_type)?);
         *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
-        Some(Expr::Unary(UnaryExpr { expr, op }))
+        Some(UnaryExpr { expr, op })
     }
 }
 
@@ -266,7 +266,7 @@ impl From<CastExpr> for Expr {
 }
 
 impl CastExpr {
-    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<CastExpr> {
         track_expr(
             ExprKind::Cast,
             limit_expr_depth(limit_arith_depth(Box::new(
@@ -275,16 +275,16 @@ impl CastExpr {
         )(ctx, res_type)
     }
 
-    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<CastExpr> {
         let source_type: Ty = PrimTy::generate_type(ctx)?.into();
         if !source_type.compatible_cast(res_type) {
             return None;
         }
         let expr = Box::new(Expr::fuzz_expr(ctx, &source_type)?);
-        Some(Expr::Cast(CastExpr {
+        Some(CastExpr {
             expr,
             ty: res_type.clone(),
-        }))
+        })
     }
 }
 
