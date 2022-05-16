@@ -23,10 +23,6 @@ pub struct Context {
     pub block_depth: usize,
     pub arith_depth: usize,
 
-    pub array_depth: usize,
-    pub tuple_depth: usize,
-    pub struct_depth: usize,
-
     pub array_type_dist: Vec<(ArrayTy, f64)>,
     pub tuple_type_dist: Vec<(TupleTy, f64)>,
     pub struct_type_dist: Vec<(StructTy, f64)>,
@@ -229,21 +225,3 @@ impl NameHandler {
         format!("field_{}", index)
     }
 }
-
-// impl SymbolTable {
-//     fn add_var(&mut self, key: String, value: Variable) {
-//         self.var_mapping.insert(key, value);
-//     }
-//
-//     fn contains(&self, key: &String) -> bool {
-//         self.var_mapping.contains_key(key)
-//     }
-// }
-//
-// #[derive(Debug, Clone)]
-// pub struct Variable {
-//     name: String,
-//     ty: Ty,
-//     initial_value: LitExpr,
-//     current_value: LitExpr
-// }
