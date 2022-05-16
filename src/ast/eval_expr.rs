@@ -239,29 +239,27 @@ macro_rules! apply_int {
     ($fn_name: ident, $op_name: ident) => {
         fn $fn_name(
             self,
-            lhs_u128: u128,
-            lhs: LitIntTy,
-            rhs_u128: u128,
-            rhs: LitIntTy,
+            lhs: &LitIntExpr,
+            rhs: &LitIntExpr,
         ) -> Result<LitExpr, EvalExprError> {
-            match (lhs, rhs) {
-                (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
-                (Signed(I16), Signed(I16)) => i16::$op_name(lhs_u128 as i16, rhs_u128 as i16),
-                (Signed(I32), Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
-                (Signed(I64), Signed(I64)) => i64::$op_name(lhs_u128 as i64, rhs_u128 as i64),
-                (Signed(I128), Signed(I128)) => i128::$op_name(lhs_u128 as i128, rhs_u128 as i128),
+            match (lhs.ty, rhs.ty) {
+                (Signed(I8), Signed(I8)) => i8::$op_name(lhs.value as i8, rhs.value as i8),
+                (Signed(I16), Signed(I16)) => i16::$op_name(lhs.value as i16, rhs.value as i16),
+                (Signed(I32), Signed(I32)) => i32::$op_name(lhs.value as i32, rhs.value as i32),
+                (Signed(I64), Signed(I64)) => i64::$op_name(lhs.value as i64, rhs.value as i64),
+                (Signed(I128), Signed(I128)) => i128::$op_name(lhs.value as i128, rhs.value as i128),
                 (Signed(ISize), Signed(ISize)) => {
-                    isize::$op_name(lhs_u128 as isize, rhs_u128 as isize)
+                    isize::$op_name(lhs.value as isize, rhs.value as isize)
                 }
-                (Unsigned(U8), Unsigned(U8)) => u8::$op_name(lhs_u128 as u8, rhs_u128 as u8),
-                (Unsigned(U16), Unsigned(U16)) => u16::$op_name(lhs_u128 as u16, rhs_u128 as u16),
-                (Unsigned(U32), Unsigned(U32)) => u32::$op_name(lhs_u128 as u32, rhs_u128 as u32),
-                (Unsigned(U64), Unsigned(U64)) => u64::$op_name(lhs_u128 as u64, rhs_u128 as u64),
+                (Unsigned(U8), Unsigned(U8)) => u8::$op_name(lhs.value as u8, rhs.value as u8),
+                (Unsigned(U16), Unsigned(U16)) => u16::$op_name(lhs.value as u16, rhs.value as u16),
+                (Unsigned(U32), Unsigned(U32)) => u32::$op_name(lhs.value as u32, rhs.value as u32),
+                (Unsigned(U64), Unsigned(U64)) => u64::$op_name(lhs.value as u64, rhs.value as u64),
                 (Unsigned(U128), Unsigned(U128)) => {
-                    u128::$op_name(lhs_u128 as u128, rhs_u128 as u128)
+                    u128::$op_name(lhs.value as u128, rhs.value as u128)
                 }
                 (Unsigned(USize), Unsigned(USize)) => {
-                    usize::$op_name(lhs_u128 as usize, rhs_u128 as usize)
+                    usize::$op_name(lhs.value as usize, rhs.value as usize)
                 }
                 _ => panic!("Mismatch type in binary operation {:?} {:?}", lhs, rhs),
             }
@@ -320,11 +318,11 @@ impl BinaryOp {
 
     fn apply_int(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
         match self {
-            BinaryOp::Add => self.apply_add(lhs.value, lhs.ty, rhs.value, rhs.ty),
-            BinaryOp::Sub => self.apply_sub(lhs.value, lhs.ty, rhs.value, rhs.ty),
-            BinaryOp::Mul => self.apply_mul(lhs.value, lhs.ty, rhs.value, rhs.ty),
-            BinaryOp::Div => self.apply_div(lhs.value, lhs.ty, rhs.value, rhs.ty),
-            BinaryOp::Rem => self.apply_rem(lhs.value, lhs.ty, rhs.value, rhs.ty),
+            BinaryOp::Add => self.apply_add(lhs, rhs),
+            BinaryOp::Sub => self.apply_sub(lhs, rhs),
+            BinaryOp::Mul => self.apply_mul(lhs, rhs),
+            BinaryOp::Div => self.apply_div(lhs, rhs),
+            BinaryOp::Rem => self.apply_rem(lhs, rhs),
             BinaryOp::Eq => Ok(LitExpr::Bool(lhs.value == rhs.value)),
             BinaryOp::Ne => Ok(LitExpr::Bool(lhs.value != lhs.value)),
             _ => panic!("Undefined operation on ints"),
