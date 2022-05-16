@@ -1,7 +1,9 @@
 use crate::ast::expr::LitIntTy;
+use crate::ast::utils::{increment_counter, track_type};
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -13,29 +15,33 @@ pub enum Ty {
 }
 
 impl Ty {
-    pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
+    pub fn fuzz_type(ctx: &mut Context) -> Option<Ty> {
         let mut res: Option<Ty> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_ty_attempts {
-            let ty_kind = ctx.choose_base_expr_kind();
-            res = match ty_kind {
-                TyKind::Unit => Some(Ty::Unit),
-                TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
-                TyKind::Tuple => TupleTy::generate_type(ctx, None).map(From::from),
-                TyKind::Array => ArrayTy::generate_type(ctx, None).map(From::from),
-                TyKind::Struct => StructTy::generate_type(ctx, None).map(From::from),
-            };
+            res = Ty::generate_type(ctx);
             if res.is_none() {
                 num_failed_attempts += 1;
-                *ctx.statistics.failed_ty_counter.entry(ty_kind).or_insert(0) += 1;
-            } else {
-                *ctx.statistics
-                    .successful_ty_counter
-                    .entry(ty_kind)
-                    .or_insert(0) += 1;
+                ctx.statistics.max_failed_ty_depth =
+                    max(ctx.statistics.max_failed_ty_depth, num_failed_attempts)
             }
         }
         res
+    }
+
+    pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
+        let ty_kind = ctx.choose_base_expr_kind();
+        match ty_kind {
+            TyKind::Unit => track_type(TyKind::Unit, Box::new(Ty::generate_unit_internal))(ctx),
+            TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
+            TyKind::Tuple => TupleTy::generate_type(ctx, None).map(From::from),
+            TyKind::Array => ArrayTy::generate_type(ctx, None).map(From::from),
+            TyKind::Struct => StructTy::generate_type(ctx, None).map(From::from),
+        }
+    }
+
+    fn generate_unit_internal(_ctx: &mut Context) -> Option<Ty> {
+        Some(Ty::Unit)
     }
 
     pub fn is_unit(&self) -> bool {
@@ -155,6 +161,10 @@ impl From<PrimTy> for Ty {
 
 impl PrimTy {
     pub fn generate_type(ctx: &mut Context) -> Option<PrimTy> {
+        track_type(TyKind::Prim, Box::new(PrimTy::generate_type_internal))(ctx)
+    }
+
+    fn generate_type_internal(ctx: &mut Context) -> Option<PrimTy> {
         ctx.choose_prim_type()
     }
 
@@ -352,6 +362,17 @@ impl ToString for TupleTy {
 
 impl TupleTy {
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
+        let res = TupleTy::generate_type_internal(ctx, ty);
+        increment_counter(
+            &res,
+            TyKind::Tuple,
+            &mut ctx.statistics.successful_ty_counter,
+            &mut ctx.statistics.failed_ty_counter,
+        );
+        res
+    }
+
+    fn generate_type_internal(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
         let mut res: Option<TupleTy> = None;
         if !ctx.choose_new_tuple_type() {
             res = ctx.choose_tuple_type(ty.clone());
@@ -434,6 +455,17 @@ impl ArrayTy {
     }
 
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
+        let res = ArrayTy::generate_type_internal(ctx, ty);
+        increment_counter(
+            &res,
+            TyKind::Array,
+            &mut ctx.statistics.successful_ty_counter,
+            &mut ctx.statistics.failed_ty_counter,
+        );
+        res
+    }
+
+    fn generate_type_internal(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
         let mut res: Option<ArrayTy> = None;
         if !ctx.choose_new_array_type() {
             res = ctx.choose_array_type(ty.clone());
@@ -504,6 +536,17 @@ impl StructTy {
     }
 
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
+        let res = StructTy::generate_type_internal(ctx, ty);
+        increment_counter(
+            &res,
+            TyKind::Struct,
+            &mut ctx.statistics.successful_ty_counter,
+            &mut ctx.statistics.failed_ty_counter,
+        );
+        res
+    }
+
+    fn generate_type_internal(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
         ctx.choose_struct_type(ty)
     }
 

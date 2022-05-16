@@ -1,7 +1,9 @@
 use crate::ast::function::Function;
 use crate::ast::ty::StructTy;
+use crate::ast::utils::track_item;
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -11,30 +13,26 @@ pub enum Item {
 }
 
 impl Item {
-    pub fn generate_item(ctx: &mut Context) -> Option<Item> {
+    pub fn fuzz_item(ctx: &mut Context) -> Option<Item> {
         let mut res: Option<Item> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_item_attempts {
-            let item_kind = ctx.choose_item_kind();
-            res = match item_kind {
-                ItemKind::Struct => StructItem::generate_item(ctx).map(From::from),
-                ItemKind::Function => FunctionItem::generate_item(ctx).map(From::from),
-            };
+            res = Item::generate_item(ctx);
             if res.is_none() {
                 num_failed_attempts += 1;
-                *ctx.statistics
-                    .failed_item_counter
-                    .entry(item_kind)
-                    .or_insert(0) += 1;
-            } else {
-                *ctx.statistics
-                    .successful_item_counter
-                    .entry(item_kind)
-                    .or_insert(0) += 1;
+                ctx.statistics.max_failed_item_depth =
+                    max(ctx.statistics.max_failed_item_depth, num_failed_attempts)
             }
         }
         res
-        // None
+    }
+
+    pub fn generate_item(ctx: &mut Context) -> Option<Item> {
+        let item_kind = ctx.choose_item_kind();
+        match item_kind {
+            ItemKind::Struct => StructItem::generate_item(ctx).map(From::from),
+            ItemKind::Function => FunctionItem::generate_item(ctx).map(From::from),
+        }
     }
 }
 
@@ -58,14 +56,11 @@ impl From<FunctionItem> for Item {
 impl FunctionItem {
     pub fn generate_main(ctx: &mut Context) -> Option<FunctionItem> {
         Some(FunctionItem {
-            function: Function::create_main_fn(ctx)?,
+            function: Function::generate_main_fn(ctx)?,
         })
     }
     fn generate_item(_ctx: &mut Context) -> Option<FunctionItem> {
         todo!()
-        // FunctionItem {
-        //     function: Function::
-        // }
     }
 }
 
@@ -76,6 +71,13 @@ pub struct StructItem {
 
 impl StructItem {
     pub fn generate_item(ctx: &mut Context) -> Option<StructItem> {
+        track_item(
+            ItemKind::Struct,
+            Box::new(StructItem::generate_item_internal),
+        )(ctx)
+    }
+
+    fn generate_item_internal(ctx: &mut Context) -> Option<StructItem> {
         Some(StructItem {
             struct_ty: StructTy::generate_new_type(ctx)?,
         })

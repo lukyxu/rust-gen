@@ -1,7 +1,9 @@
 use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
+use crate::ast::utils::track_stmt;
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
+use std::cmp::max;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -18,27 +20,37 @@ pub enum Stmt {
 }
 
 impl Stmt {
-    pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
+    pub fn fuzz_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
         let mut res: Option<Stmt> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_stmt_attempts {
-            let ty = Ty::generate_type(ctx)?;
-            let stmt_kind = ctx.choose_stmt_kind();
-            res = match stmt_kind {
-                StmtKind::Local => LocalStmt::generate_stmt(ctx, &ty).map(From::from),
-                StmtKind::Semi => SemiStmt::generate_stmt(ctx, &ty).map(From::from),
-            };
+            res = Stmt::generate_non_expr_stmt(ctx);
             if res.is_none() {
                 num_failed_attempts += 1;
-                *ctx.statistics
-                    .failed_stmt_counter
-                    .entry(stmt_kind)
-                    .or_insert(0) += 1;
-            } else {
-                *ctx.statistics
-                    .successful_stmt_counter
-                    .entry(stmt_kind)
-                    .or_insert(0) += 1;
+                ctx.statistics.max_failed_stmt_depth =
+                    max(ctx.statistics.max_failed_stmt_depth, num_failed_attempts)
+            }
+        }
+        res
+    }
+
+    pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
+        let res_type = &Ty::generate_type(ctx)?;
+        let stmt_kind = ctx.choose_stmt_kind();
+        match stmt_kind {
+            StmtKind::Local => LocalStmt::generate_stmt(ctx, res_type).map(From::from),
+            StmtKind::Semi => SemiStmt::generate_stmt(ctx, res_type).map(From::from),
+            StmtKind::Expr => panic!("Cannot generate expr stmt using generate_non_expr_stmt"),
+        }
+    }
+
+    pub fn fuzz_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
+        let mut res: Option<Stmt> = None;
+        let mut num_failed_attempts = 0;
+        while res.is_none() && num_failed_attempts < ctx.policy.max_stmt_attempts {
+            res = Stmt::generate_expr_stmt(ctx, res_type);
+            if res.is_none() {
+                num_failed_attempts += 1;
             }
         }
         res
@@ -66,14 +78,18 @@ impl From<LocalStmt> for Stmt {
 
 impl LocalStmt {
     // TODO: Decl statements
-    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
+    pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
+        track_stmt(StmtKind::Local, Box::new(LocalStmt::generate_stmt_internal))(ctx, res_type)
+    }
+
+    fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
         let name = ctx.create_var_name();
         let mutable = ctx.choose_mutability();
 
         let res = Some(LocalStmt::Init(InitLocalStmt {
             name: name.clone(),
             ty: res_type.clone(),
-            rhs: Expr::generate_expr(ctx, res_type)?,
+            rhs: Expr::fuzz_expr(ctx, res_type)?,
             mutable,
         }));
         ctx.type_symbol_table
@@ -109,9 +125,13 @@ impl From<ExprStmt> for Stmt {
 }
 
 impl ExprStmt {
-    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
+    pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
+        track_stmt(StmtKind::Expr, Box::new(ExprStmt::generate_stmt_internal))(ctx, res_type)
+    }
+
+    fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
         Some(ExprStmt {
-            expr: Expr::generate_expr(ctx, res_type)?,
+            expr: Expr::fuzz_expr(ctx, res_type)?,
         })
     }
 }
@@ -128,9 +148,13 @@ impl From<SemiStmt> for Stmt {
 }
 
 impl SemiStmt {
-    fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
+    pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
+        track_stmt(StmtKind::Semi, Box::new(SemiStmt::generate_stmt_internal))(ctx, res_type)
+    }
+
+    fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
         Some(SemiStmt {
-            expr: Expr::generate_expr(ctx, res_type)?,
+            expr: Expr::fuzz_expr(ctx, res_type)?,
         })
     }
 }
@@ -145,6 +169,7 @@ pub struct CustomStmt {
 pub enum StmtKind {
     Local,
     Semi,
+    Expr,
 }
 
 #[allow(dead_code)]

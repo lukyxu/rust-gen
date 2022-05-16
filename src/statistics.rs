@@ -21,7 +21,10 @@ pub struct Statistics {
 
     pub bin_op_counter: HashMap<BinaryOp, usize>,
     pub un_op_counter: HashMap<UnaryOp, usize>,
-    pub max_failed_generation_depth: usize,
+    pub max_failed_item_depth: usize,
+    pub max_failed_stmt_depth: usize,
+    pub max_failed_expr_depth: usize,
+    pub max_failed_ty_depth: usize,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize)]
