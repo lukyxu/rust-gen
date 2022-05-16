@@ -9,6 +9,7 @@ pub struct Function {
 }
 
 impl Function {
+    /// Attempts multiple times given by ctx.policy.max_main_fn_attempts to generate a valid main function.
     pub fn fuzz_main_fn(ctx: &mut Context) -> Option<Function> {
         let mut res: Option<Function> = None;
         let mut num_failed_attempts = 0;
@@ -21,6 +22,7 @@ impl Function {
         res
     }
 
+    /// Attempts a single attempt to generate a valid main function.
     pub fn generate_main_fn(ctx: &mut Context) -> Option<Function> {
         let block = BlockExpr::generate_expr(ctx, &Ty::unit_type())?;
         ctx.statistics.main_fn_stmts = block.stmts.len();

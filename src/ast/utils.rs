@@ -8,6 +8,7 @@ use std::hash::Hash;
 
 macro_rules! limit_function {
     ($function_name: ident, $curr_depth: ident, $max_depth: ident) => {
+        /// Wrapper function that controls various depths.
         pub fn $function_name<T: 'static>(
             f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
         ) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
@@ -29,6 +30,7 @@ limit_function!(limit_expr_depth, expr_depth, max_expr_depth);
 limit_function!(limit_if_else_depth, if_else_depth, max_if_else_depth);
 limit_function!(limit_block_depth, block_depth, max_block_depth);
 
+/// Increments statistic counters.
 pub fn increment_counter<T, K: Eq + Hash>(
     res: &Option<T>,
     key: K,
@@ -64,6 +66,7 @@ macro_rules! track_function_with_ty {
 
 macro_rules! track_function {
     ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
+        /// Adds statistic counter calculations.
         pub fn $function_name<T: 'static>(
             kind: $kind,
             f: Box<dyn FnOnce(&mut Context) -> Option<T>>,
