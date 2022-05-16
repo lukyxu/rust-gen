@@ -1,8 +1,8 @@
 use crate::ast::function::Function;
 use crate::ast::ty::StructTy;
+use crate::ast::utils::track_item;
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
-use crate::ast::utils::track_item;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -68,7 +68,10 @@ pub struct StructItem {
 
 impl StructItem {
     pub fn generate_item(ctx: &mut Context) -> Option<StructItem> {
-        track_item(ItemKind::Struct, Box::new(StructItem::generate_item_internal))(ctx)
+        track_item(
+            ItemKind::Struct,
+            Box::new(StructItem::generate_item_internal),
+        )(ctx)
     }
 
     fn generate_item_internal(ctx: &mut Context) -> Option<StructItem> {

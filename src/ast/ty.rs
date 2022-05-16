@@ -1,9 +1,8 @@
-use std::intrinsics::likely;
 use crate::ast::expr::LitIntTy;
+use crate::ast::utils::{increment_counter, track_type};
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use crate::ast::utils::{track_type};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Ty {
@@ -361,12 +360,12 @@ impl ToString for TupleTy {
 impl TupleTy {
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
         let res = TupleTy::generate_type_internal(ctx, ty);
-        let kind = TyKind::Tuple;
-        if res.is_some() {
-            *ctx.statistics.successful_ty_counter.entry(kind).or_insert(0) += 1
-        } else {
-            *ctx.statistics.failed_ty_counter.entry(kind).or_insert(0) += 1
-        };
+        increment_counter(
+            &res,
+            TyKind::Tuple,
+            &mut ctx.statistics.successful_ty_counter,
+            &mut ctx.statistics.failed_ty_counter,
+        );
         res
     }
 
@@ -454,12 +453,12 @@ impl ArrayTy {
 
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
         let res = ArrayTy::generate_type_internal(ctx, ty);
-        let kind = TyKind::Array;
-        if res.is_some() {
-            *ctx.statistics.successful_ty_counter.entry(kind).or_insert(0) += 1
-        } else {
-            *ctx.statistics.failed_ty_counter.entry(kind).or_insert(0) += 1
-        };
+        increment_counter(
+            &res,
+            TyKind::Array,
+            &mut ctx.statistics.successful_ty_counter,
+            &mut ctx.statistics.failed_ty_counter,
+        );
         res
     }
 
@@ -535,12 +534,12 @@ impl StructTy {
 
     pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
         let res = StructTy::generate_type_internal(ctx, ty);
-        let kind = TyKind::Struct;
-        if res.is_some() {
-            *ctx.statistics.successful_ty_counter.entry(kind).or_insert(0) += 1
-        } else {
-            *ctx.statistics.failed_ty_counter.entry(kind).or_insert(0) += 1
-        };
+        increment_counter(
+            &res,
+            TyKind::Struct,
+            &mut ctx.statistics.successful_ty_counter,
+            &mut ctx.statistics.failed_ty_counter,
+        );
         res
     }
 
