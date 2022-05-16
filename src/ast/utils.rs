@@ -50,11 +50,12 @@ macro_rules! track_function_with_ty {
         ) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
             Box::new(move |ctx, res_type| -> Option<T> {
                 let res = f(ctx, res_type);
-                if res.is_some() {
-                    *ctx.statistics.$success_counter.entry(kind).or_insert(0) += 1
-                } else {
-                    *ctx.statistics.$failed_counter.entry(kind).or_insert(0) += 1
-                }
+                increment_counter(
+                    &res,
+                    kind,
+                    &mut ctx.statistics.$success_counter,
+                    &mut ctx.statistics.$failed_counter,
+                );
                 res
             })
         }
@@ -69,11 +70,12 @@ macro_rules! track_function {
         ) -> Box<dyn FnOnce(&mut Context) -> Option<T>> {
             Box::new(move |ctx| -> Option<T> {
                 let res = f(ctx);
-                if res.is_some() {
-                    *ctx.statistics.$success_counter.entry(kind).or_insert(0) += 1
-                } else {
-                    *ctx.statistics.$failed_counter.entry(kind).or_insert(0) += 1
-                }
+                increment_counter(
+                    &res,
+                    kind,
+                    &mut ctx.statistics.$success_counter,
+                    &mut ctx.statistics.$failed_counter,
+                );
                 res
             })
         }
