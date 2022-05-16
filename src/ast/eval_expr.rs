@@ -1,14 +1,14 @@
 use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
-use crate::ast::expr::LitIntTy::{Signed, Unsigned, Unsuffixed};
-use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntTy};
+use crate::ast::expr::LitIntTy::{Signed, Unsigned};
+use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
-#[cfg(test)]
-use crate::ast::ty::UIntTy;
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
-use crate::ast::ty::{IntTy, PrimTy, Ty};
+#[cfg(test)]
+use crate::ast::ty::{IntTy, UIntTy};
+use crate::ast::ty::{PrimTy, Ty};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use std::mem::swap;
 
@@ -28,7 +28,7 @@ impl EvalExpr {
     }
     pub fn cast(self, res_type: &Ty) -> Option<EvalExpr> {
         if let EvalExpr::Literal(lit_expr) = self {
-            Some(EvalExpr::Literal(lit_expr.cast(res_type)))
+            Some(EvalExpr::Literal(lit_expr.cast(res_type)?))
         } else if let EvalExpr::Unknown = self {
             Some(self)
         } else {
@@ -38,10 +38,9 @@ impl EvalExpr {
     pub fn get_type(&self) -> Ty {
         match self {
             EvalExpr::Literal(lit) => match lit {
-                LitExpr::Int(_, int_ty) => match int_ty {
-                    Signed(t) => (*t).into(),
-                    Unsigned(t) => (*t).into(),
-                    Unsuffixed => todo!(),
+                LitExpr::Int(lit_int) => match lit_int.ty {
+                    Signed(t) => t.into(),
+                    Unsigned(t) => t.into(),
                 },
                 LitExpr::Bool(_) => PrimTy::Bool.into(),
                 LitExpr::Str(_) | LitExpr::Byte(_) | LitExpr::Char(_) | LitExpr::Float(_, _) => {
@@ -54,8 +53,14 @@ impl EvalExpr {
 }
 
 impl From<LitExpr> for EvalExpr {
-    fn from(expr: LitExpr) -> Self {
+    fn from(expr: LitExpr) -> EvalExpr {
         EvalExpr::Literal(expr)
+    }
+}
+
+impl From<LitIntExpr> for EvalExpr {
+    fn from(expr: LitIntExpr) -> EvalExpr {
+        EvalExpr::Literal(expr.into())
     }
 }
 
@@ -77,11 +82,11 @@ impl EvalExpr {
     }
 
     pub fn i8(i: i8) -> EvalExpr {
-        EvalExpr::Literal(LitExpr::Int(i as u128, LitIntTy::Signed(IntTy::I8)))
+        LitIntExpr::new(i as u128, IntTy::I8.into()).into()
     }
 
     pub fn u8(u: u8) -> EvalExpr {
-        EvalExpr::Literal(LitExpr::Int(u as u128, LitIntTy::Unsigned(UIntTy::U8)))
+        LitIntExpr::new(u as u128, LitIntTy::Unsigned(UIntTy::U8)).into()
     }
 }
 
@@ -173,19 +178,15 @@ impl EvalExprError {
 }
 
 impl LitExpr {
-    pub fn cast(self, res_type: &Ty) -> LitExpr {
-        if let LitExpr::Int(u128, _) = self {
+    pub fn cast(self, res_type: &Ty) -> Option<LitExpr> {
+        if let LitExpr::Int(lit_int_expr) = self {
             match res_type {
-                Ty::Prim(PrimTy::Int(s_int)) => {
-                    LitExpr::Int(s_int.recast(u128), LitIntTy::Signed(*s_int))
-                }
-                Ty::Prim(PrimTy::UInt(u_int)) => {
-                    LitExpr::Int(u_int.recast(u128), LitIntTy::Unsigned(*u_int))
-                }
-                _ => panic!(),
+                Ty::Prim(PrimTy::Int(s_int)) => Some(lit_int_expr.cast((*s_int).into()).into()),
+                Ty::Prim(PrimTy::UInt(u_int)) => Some(lit_int_expr.cast((*u_int).into()).into()),
+                _ => None,
             }
         } else {
-            panic!()
+            None
         }
     }
 }
@@ -232,35 +233,28 @@ impl BinaryExpr {
 
 macro_rules! apply_int {
     ($fn_name: ident, $op_name: ident) => {
-        fn $fn_name(
-            self,
-            lhs_u128: u128,
-            lhs: LitIntTy,
-            rhs_u128: u128,
-            rhs: LitIntTy,
-        ) -> Result<LitExpr, EvalExprError> {
-            match (lhs, rhs) {
-                (Signed(I8), Signed(I8)) => i8::$op_name(lhs_u128 as i8, rhs_u128 as i8),
-                (Signed(I16), Signed(I16)) => i16::$op_name(lhs_u128 as i16, rhs_u128 as i16),
-                (Signed(I32), Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
-                (Signed(I32), Unsuffixed) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
-                (Unsuffixed, Signed(I32)) => i32::$op_name(lhs_u128 as i32, rhs_u128 as i32),
-                (Signed(I64), Signed(I64)) => i64::$op_name(lhs_u128 as i64, rhs_u128 as i64),
-                (Signed(I128), Signed(I128)) => i128::$op_name(lhs_u128 as i128, rhs_u128 as i128),
-                (Signed(ISize), Signed(ISize)) => {
-                    isize::$op_name(lhs_u128 as isize, rhs_u128 as isize)
+        fn $fn_name(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
+            match (lhs.ty, rhs.ty) {
+                (Signed(I8), Signed(I8)) => i8::$op_name(lhs.value as i8, rhs.value as i8),
+                (Signed(I16), Signed(I16)) => i16::$op_name(lhs.value as i16, rhs.value as i16),
+                (Signed(I32), Signed(I32)) => i32::$op_name(lhs.value as i32, rhs.value as i32),
+                (Signed(I64), Signed(I64)) => i64::$op_name(lhs.value as i64, rhs.value as i64),
+                (Signed(I128), Signed(I128)) => {
+                    i128::$op_name(lhs.value as i128, rhs.value as i128)
                 }
-                (Unsigned(U8), Unsigned(U8)) => u8::$op_name(lhs_u128 as u8, rhs_u128 as u8),
-                (Unsigned(U16), Unsigned(U16)) => u16::$op_name(lhs_u128 as u16, rhs_u128 as u16),
-                (Unsigned(U32), Unsigned(U32)) => u32::$op_name(lhs_u128 as u32, rhs_u128 as u32),
-                (Unsigned(U64), Unsigned(U64)) => u64::$op_name(lhs_u128 as u64, rhs_u128 as u64),
+                (Signed(ISize), Signed(ISize)) => {
+                    isize::$op_name(lhs.value as isize, rhs.value as isize)
+                }
+                (Unsigned(U8), Unsigned(U8)) => u8::$op_name(lhs.value as u8, rhs.value as u8),
+                (Unsigned(U16), Unsigned(U16)) => u16::$op_name(lhs.value as u16, rhs.value as u16),
+                (Unsigned(U32), Unsigned(U32)) => u32::$op_name(lhs.value as u32, rhs.value as u32),
+                (Unsigned(U64), Unsigned(U64)) => u64::$op_name(lhs.value as u64, rhs.value as u64),
                 (Unsigned(U128), Unsigned(U128)) => {
-                    u128::$op_name(lhs_u128 as u128, rhs_u128 as u128)
+                    u128::$op_name(lhs.value as u128, rhs.value as u128)
                 }
                 (Unsigned(USize), Unsigned(USize)) => {
-                    usize::$op_name(lhs_u128 as usize, rhs_u128 as usize)
+                    usize::$op_name(lhs.value as usize, rhs.value as usize)
                 }
-                (Unsuffixed, Unsuffixed) => (i32::$op_name(lhs_u128 as i32, rhs_u128 as i32)),
                 _ => panic!("Mismatch type in binary operation {:?} {:?}", lhs, rhs),
             }
         }
@@ -290,9 +284,9 @@ impl BinaryOp {
                 }
             }
             (BinaryOp::Div | BinaryOp::Rem, _, EvalExpr::Literal(rhs)) => {
-                if let LitExpr::Int(0, _) = rhs {
+                if let LitExpr::Int(LitIntExpr { value: 0, .. }) = rhs {
                     Err(ZeroDiv)
-                } else if let LitExpr::Int(_, _) = rhs {
+                } else if let LitExpr::Int(_) = rhs {
                     Ok(EvalExpr::Literal(rhs.clone()))
                 } else {
                     Ok(EvalExpr::Unknown)
@@ -305,9 +299,7 @@ impl BinaryOp {
     pub fn apply_lit(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
         use LitExpr::{Bool, Int};
         match (lhs, rhs) {
-            (Int(lhs_u128, lhs_ty), Int(rhs_u128, rhs_ty)) => {
-                self.apply_int(*lhs_u128, *lhs_ty, *rhs_u128, *rhs_ty)
-            }
+            (Int(lhs), Int(rhs)) => self.apply_int(lhs, rhs),
             (Bool(lhs), Bool(rhs)) => Ok(self.apply_bool(*lhs, *rhs)),
             _ => panic!("Non integer/booleans"),
         }
@@ -318,21 +310,15 @@ impl BinaryOp {
     apply_int!(apply_div, expr_div);
     apply_int!(apply_rem, expr_rem);
 
-    fn apply_int(
-        self,
-        lhs_u128: u128,
-        lhs: LitIntTy,
-        rhs_u128: u128,
-        rhs: LitIntTy,
-    ) -> Result<LitExpr, EvalExprError> {
+    fn apply_int(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
         match self {
-            BinaryOp::Add => self.apply_add(lhs_u128, lhs, rhs_u128, rhs),
-            BinaryOp::Sub => self.apply_sub(lhs_u128, lhs, rhs_u128, rhs),
-            BinaryOp::Mul => self.apply_mul(lhs_u128, lhs, rhs_u128, rhs),
-            BinaryOp::Div => self.apply_div(lhs_u128, lhs, rhs_u128, rhs),
-            BinaryOp::Rem => self.apply_rem(lhs_u128, lhs, rhs_u128, rhs),
-            BinaryOp::Eq => Ok(LitExpr::Bool(lhs_u128 == rhs_u128)),
-            BinaryOp::Ne => Ok(LitExpr::Bool(lhs_u128 != rhs_u128)),
+            BinaryOp::Add => self.apply_add(lhs, rhs),
+            BinaryOp::Sub => self.apply_sub(lhs, rhs),
+            BinaryOp::Mul => self.apply_mul(lhs, rhs),
+            BinaryOp::Div => self.apply_div(lhs, rhs),
+            BinaryOp::Rem => self.apply_rem(lhs, rhs),
+            BinaryOp::Eq => Ok(LitExpr::Bool(lhs.value == rhs.value)),
+            BinaryOp::Ne => Ok(LitExpr::Bool(lhs.value != rhs.value)),
             _ => panic!("Undefined operation on ints"),
         }
     }
@@ -389,7 +375,7 @@ impl<
 {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_add(&rhs) {
-            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else {
             Err(EvalExprError::overflow_error::<T>())
         }
@@ -397,7 +383,7 @@ impl<
 
     fn expr_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_sub(&rhs) {
-            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else {
             Err(EvalExprError::overflow_error::<T>())
         }
@@ -405,7 +391,7 @@ impl<
 
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_mul(&rhs) {
-            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else {
             let is_signed = T::min_value() < T::zero();
 
@@ -422,7 +408,7 @@ impl<
 
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_div(&rhs) {
-            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else if rhs == T::zero() {
             Err(ZeroDiv)
         } else {
@@ -433,7 +419,7 @@ impl<
 
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_rem(&rhs) {
-            Ok(LitExpr::Int(res.as_(), T::by_lit_expr_type()))
+            Ok(LitIntExpr::new(res.as_(), T::by_lit_expr_type()).into())
         } else if rhs == T::zero() {
             Err(ZeroDiv)
         } else {
@@ -468,37 +454,35 @@ impl UnaryOp {
                 }
             }
             UnaryOp::Neg => {
-                if let EvalExpr::Literal(LitExpr::Int(u128, ty @ Signed(int_type))) = expr {
+                // LitExpr::Int(u128, ty @ Signed(int_type))
+                if let EvalExpr::Literal(LitExpr::Int(LitIntExpr {
+                    value: u128,
+                    ty: ty @ Signed(int_type),
+                })) = expr
+                {
                     let (u128, ty) = (*u128, *ty);
                     match int_type {
                         ISize => isize::checked_neg(u128 as isize)
-                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .map(|isize| {
+                                EvalExpr::Literal(LitIntExpr::new(isize as u128, ty).into())
+                            })
                             .ok_or(EvalExprError::SignedOverflow),
                         I8 => i8::checked_neg(u128 as i8)
-                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .map(|i8| EvalExpr::Literal(LitIntExpr::new(i8 as u128, ty).into()))
                             .ok_or(EvalExprError::SignedOverflow),
                         I16 => i16::checked_neg(u128 as i16)
-                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .map(|i16| EvalExpr::Literal(LitIntExpr::new(i16 as u128, ty).into()))
                             .ok_or(EvalExprError::SignedOverflow),
                         I32 => i32::checked_neg(u128 as i32)
-                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .map(|i32| EvalExpr::Literal(LitIntExpr::new(i32 as u128, ty).into()))
                             .ok_or(EvalExprError::SignedOverflow),
                         I64 => i64::checked_neg(u128 as i64)
-                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .map(|i64| EvalExpr::Literal(LitIntExpr::new(i64 as u128, ty).into()))
                             .ok_or(EvalExprError::SignedOverflow),
                         I128 => i128::checked_neg(u128 as i128)
-                            .map(|isize| EvalExpr::Literal(LitExpr::Int(isize as u128, ty)))
+                            .map(|i128| EvalExpr::Literal(LitIntExpr::new(i128 as u128, ty).into()))
                             .ok_or(EvalExprError::SignedOverflow),
                     }
-                } else if let EvalExpr::Literal(LitExpr::Int(u128, Unsuffixed)) = expr {
-                    i32::checked_neg(*u128 as i32)
-                        .map(|isize| {
-                            EvalExpr::Literal(LitExpr::Int(
-                                isize as u128,
-                                LitIntTy::Signed(IntTy::I32),
-                            ))
-                        })
-                        .ok_or(EvalExprError::SignedOverflow)
                 } else if let EvalExpr::Unknown = expr {
                     Ok(EvalExpr::Unknown)
                 } else {
@@ -660,10 +644,16 @@ mod tests {
 
     #[test]
     fn cast_expr_ok() {
-        let expr = LitExpr::Int(-27_i8 as u128, LitIntTy::Signed(IntTy::I8));
+        let expr: LitExpr = LitIntExpr::new(-27_i8 as u128, LitIntTy::Signed(IntTy::I8)).into();
         assert_eq!(
-            expr.cast(&UIntTy::U32.into()).cast(&UIntTy::U64.into()),
-            LitExpr::Int(4294967269, Unsigned(UIntTy::U64))
+            expr.cast(&UIntTy::U32.into())
+                .expect("Unable to cast")
+                .cast(&UIntTy::U64.into())
+                .expect("Unable to cast"),
+            LitExpr::Int(LitIntExpr {
+                value: 4294967269,
+                ty: Unsigned(UIntTy::U64)
+            })
         );
     }
 }

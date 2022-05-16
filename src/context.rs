@@ -196,10 +196,6 @@ impl Context {
         self.rng.gen_bool(self.policy.otherwise_if_stmt_prob)
     }
 
-    pub fn choose_unsuffixed_int(&mut self) -> bool {
-        self.rng.gen_bool(self.policy.unsuffixed_int_prob)
-    }
-
     pub fn choose_boolean_true(&mut self) -> bool {
         self.rng.gen_bool(self.policy.bool_true_prob)
     }

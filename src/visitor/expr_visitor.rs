@@ -4,7 +4,8 @@ use crate::ast::eval_expr::{
 };
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntTy, Member, TupleExpr, TupleStructExpr, UnaryExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, TupleExpr,
+    TupleStructExpr, UnaryExpr,
 };
 
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
@@ -253,7 +254,10 @@ impl Visitor for ExprVisitor {
         match (base, index) {
             (
                 EvalExpr::Array(exprs),
-                EvalExpr::Literal(LitExpr::Int(index, LitIntTy::Unsigned(UIntTy::USize))),
+                EvalExpr::Literal(LitExpr::Int(LitIntExpr {
+                    value: index,
+                    ty: LitIntTy::Unsigned(UIntTy::USize),
+                })),
             ) => {
                 self.expr = Some(exprs.array[index as usize].clone());
             }
@@ -309,7 +313,7 @@ impl ExprVisitor {
 mod tests {
     use super::*;
 
-    use crate::ast::expr::{BlockExpr, LitIntTy};
+    use crate::ast::expr::BlockExpr;
     use crate::ast::function::Function;
     use crate::ast::op::{BinaryOp, UnaryOp};
     use crate::ast::stmt::{LocalStmt, Stmt};
@@ -436,10 +440,7 @@ mod tests {
                             stmts: vec![Stmt::Semi(SemiStmt {
                                 expr: Expr::Assign(AssignExpr {
                                     name: "var_0".to_owned(),
-                                    rhs: Box::new(Expr::Literal(LitExpr::Int(
-                                        127,
-                                        LitIntTy::Signed(IntTy::I8),
-                                    ))),
+                                    rhs: Box::new(Expr::i8(127)),
                                 }),
                             })],
                         }),
@@ -452,10 +453,7 @@ mod tests {
                                     name: "var_0".to_owned(),
                                     ty: IntTy::I8.into(),
                                 })),
-                                rhs: Box::new(Expr::Literal(LitExpr::Int(
-                                    1,
-                                    LitIntTy::Signed(IntTy::I8),
-                                ))),
+                                rhs: Box::new(Expr::i8(1)),
                                 op: BinaryOp::Add,
                             })),
                         }),

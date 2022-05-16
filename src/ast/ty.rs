@@ -1,3 +1,4 @@
+use crate::ast::expr::LitIntTy;
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -28,7 +29,10 @@ impl Ty {
                 num_failed_attempts += 1;
                 *ctx.statistics.failed_ty_counter.entry(ty_kind).or_insert(0) += 1;
             } else {
-                *ctx.statistics.successful_ty_counter.entry(ty_kind).or_insert(0) += 1;
+                *ctx.statistics
+                    .successful_ty_counter
+                    .entry(ty_kind)
+                    .or_insert(0) += 1;
             }
         }
         res
@@ -201,6 +205,12 @@ impl From<IntTy> for PrimTy {
     }
 }
 
+impl From<IntTy> for LitIntTy {
+    fn from(ty: IntTy) -> LitIntTy {
+        LitIntTy::Signed(ty)
+    }
+}
+
 impl ToString for IntTy {
     fn to_string(&self) -> String {
         match self {
@@ -228,7 +238,7 @@ impl IntTy {
         }
     }
 
-    pub fn recast(self, value: u128) -> u128 {
+    pub fn cast_value(self, value: u128) -> u128 {
         match self {
             IntTy::ISize => value as isize as u128,
             IntTy::I8 => value as i8 as u128,
@@ -262,6 +272,12 @@ impl From<UIntTy> for PrimTy {
     }
 }
 
+impl From<UIntTy> for LitIntTy {
+    fn from(ty: UIntTy) -> LitIntTy {
+        LitIntTy::Unsigned(ty)
+    }
+}
+
 impl ToString for UIntTy {
     fn to_string(&self) -> String {
         match self {
@@ -289,7 +305,7 @@ impl UIntTy {
         }
     }
 
-    pub fn recast(self, value: u128) -> u128 {
+    pub fn cast_value(self, value: u128) -> u128 {
         match self {
             UIntTy::USize => value as usize as u128,
             UIntTy::U8 => value as u8 as u128,

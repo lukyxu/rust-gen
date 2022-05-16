@@ -6,16 +6,13 @@ use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use ron::ser::PrettyConfig;
-use ron::Serializer;
 use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
-use serde::Serialize;
+use rust_gen::utils::write_as_ron;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::str::FromStr;
-use rust_gen::utils::write_as_ron;
 
 mod error;
 
@@ -167,7 +164,10 @@ fn run(seed: Option<u64>, policy: &Policy, base_name: &str, opts: Vec<&'static s
 
     // Write statistics
     let stats_file = "statistics.txt".to_owned();
-    write_as_ron(fs::File::create(&stats_file).expect("Unable to create file"), statistics);
+    write_as_ron(
+        fs::File::create(&stats_file).expect("Unable to create file"),
+        statistics,
+    );
 
     // Compile program (with multiple optimizations)
     let mut runs: Vec<(&str, u128)> = vec![];

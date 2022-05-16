@@ -22,9 +22,15 @@ impl Item {
             };
             if res.is_none() {
                 num_failed_attempts += 1;
-                *ctx.statistics.failed_item_counter.entry(item_kind).or_insert(0) += 1;
+                *ctx.statistics
+                    .failed_item_counter
+                    .entry(item_kind)
+                    .or_insert(0) += 1;
             } else {
-                *ctx.statistics.successful_item_counter.entry(item_kind).or_insert(0) += 1;
+                *ctx.statistics
+                    .successful_item_counter
+                    .entry(item_kind)
+                    .or_insert(0) += 1;
             }
         }
         res

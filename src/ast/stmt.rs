@@ -30,9 +30,15 @@ impl Stmt {
             };
             if res.is_none() {
                 num_failed_attempts += 1;
-                *ctx.statistics.failed_stmt_counter.entry(stmt_kind).or_insert(0) += 1;
+                *ctx.statistics
+                    .failed_stmt_counter
+                    .entry(stmt_kind)
+                    .or_insert(0) += 1;
             } else {
-                *ctx.statistics.successful_stmt_counter.entry(stmt_kind).or_insert(0) += 1;
+                *ctx.statistics
+                    .successful_stmt_counter
+                    .entry(stmt_kind)
+                    .or_insert(0) += 1;
             }
         }
         res
@@ -70,7 +76,8 @@ impl LocalStmt {
             rhs: Expr::generate_expr(ctx, res_type)?,
             mutable,
         }));
-        ctx.type_symbol_table.add_var(name.clone(), res_type.clone(), mutable);
+        ctx.type_symbol_table
+            .add_var(name.clone(), res_type.clone(), mutable);
         res
     }
 }

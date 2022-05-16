@@ -1,6 +1,7 @@
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntTy, Member, TupleExpr, TupleStructExpr, UnaryExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, TupleExpr,
+    TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
@@ -129,7 +130,10 @@ impl Visitor for EmitVisitor {
             LitExpr::Byte(byte) => byte.to_string(),
             LitExpr::Char(char) => char.to_string(),
             // TODO: Tidy this logic up
-            LitExpr::Int(u128, int_type) => {
+            LitExpr::Int(LitIntExpr {
+                value: u128,
+                ty: int_type,
+            }) => {
                 let to_emit: String = match int_type {
                     LitIntTy::Signed(t) => {
                         let int_str = match t {
@@ -153,8 +157,6 @@ impl Visitor for EmitVisitor {
                         };
                         format!("{}_{}", uint_str, (*t).to_string())
                     }
-                    // Unsuffixed defaults to i32
-                    LitIntTy::Unsuffixed => (*u128 as i32).to_string(),
                 };
                 to_emit
             }
