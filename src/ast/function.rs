@@ -10,7 +10,7 @@ pub struct Function {
 
 impl Function {
     pub fn create_main_fn(ctx: &mut Context) -> Option<Function> {
-        let block = BlockExpr::generate_block_expr(ctx, &Ty::unit_type())?;
+        let block = BlockExpr::generate_expr(ctx, &Ty::unit_type())?;
         ctx.statistics.main_fn_stmts = block.stmts.len();
         Some(Function {
             name: String::from("main"),
