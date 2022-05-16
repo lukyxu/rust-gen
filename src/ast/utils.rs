@@ -1,6 +1,7 @@
 use crate::ast::expr::ExprKind;
+use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::Ty;
+use crate::ast::ty::{Ty, TyKind};
 use crate::context::Context;
 
 macro_rules! limit_function {
@@ -45,6 +46,25 @@ macro_rules! track_function_with_ty {
     };
 }
 
+macro_rules! track_function {
+    ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
+        pub fn $function_name<T: 'static>(
+            kind: $kind,
+            f: Box<dyn FnOnce(&mut Context) -> Option<T>>,
+        ) -> Box<dyn FnOnce(&mut Context) -> Option<T>> {
+            Box::new(move |ctx| -> Option<T> {
+                let res = f(ctx);
+                if res.is_some() {
+                    *ctx.statistics.$success_counter.entry(kind).or_insert(0) += 1
+                } else {
+                    *ctx.statistics.$failed_counter.entry(kind).or_insert(0) += 1
+                }
+                res
+            })
+        }
+    };
+}
+
 track_function_with_ty!(
     track_expr,
     ExprKind,
@@ -56,4 +76,16 @@ track_function_with_ty!(
     StmtKind,
     successful_stmt_counter,
     failed_stmt_counter
+);
+track_function!(
+    track_item,
+    ItemKind,
+    successful_item_counter,
+    failed_item_counter
+);
+track_function!(
+    track_type,
+    TyKind,
+    successful_ty_counter,
+    failed_ty_counter
 );
