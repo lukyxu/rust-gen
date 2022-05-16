@@ -38,19 +38,25 @@ pub enum Expr {
     Struct(StructExpr),
 }
 
-fn limit_arith_depth<T: 'static>(
-    f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
-) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
-    Box::new(|ctx, res_type| -> Option<T> {
-        if ctx.arith_depth > ctx.policy.max_arith_depth {
-            return None;
+macro_rules! limit_function {
+    ($function_name: ident, $curr_depth: ident, $max_depth: ident) => {
+        fn $function_name<T: 'static>(
+            f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
+        ) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
+            Box::new(|ctx, res_type| -> Option<T> {
+                if ctx.$curr_depth > ctx.policy.$max_depth {
+                    return None;
+                }
+                ctx.$curr_depth += 1;
+                let res = f(ctx, res_type);
+                ctx.$curr_depth -= 1;
+                res
+            })
         }
-        ctx.arith_depth += 1;
-        let res = f(ctx, res_type);
-        ctx.arith_depth -= 1;
-        res
-    })
+    }
 }
+
+limit_function!(limit_arith_depth, arith_depth, max_arith_depth);
 
 impl Expr {
     pub fn fuzz_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
