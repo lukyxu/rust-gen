@@ -58,7 +58,7 @@ impl From<FunctionItem> for Item {
 impl FunctionItem {
     pub fn generate_main(ctx: &mut Context) -> Option<FunctionItem> {
         Some(FunctionItem {
-            function: Function::create_main_fn(ctx)?,
+            function: Function::generate_main_fn(ctx)?,
         })
     }
     fn generate_item(_ctx: &mut Context) -> Option<FunctionItem> {

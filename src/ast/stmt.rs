@@ -19,17 +19,33 @@ pub enum Stmt {
 }
 
 impl Stmt {
-    pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
+    pub fn fuzz_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
         let mut res: Option<Stmt> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_stmt_attempts {
-            let ty = Ty::generate_type(ctx)?;
-            let stmt_kind = ctx.choose_stmt_kind();
-            res = match stmt_kind {
-                StmtKind::Local => LocalStmt::generate_stmt(ctx, &ty).map(From::from),
-                StmtKind::Semi => SemiStmt::generate_stmt(ctx, &ty).map(From::from),
-                StmtKind::Expr => panic!("Cannot generate expr stmt using generate_non_expr_stmt"),
-            };
+            res = Stmt::generate_non_expr_stmt(ctx);
+            if res.is_none() {
+                num_failed_attempts += 1;
+            }
+        }
+        res
+    }
+
+    pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
+        let res_type = &Ty::generate_type(ctx)?;
+        let stmt_kind = ctx.choose_stmt_kind();
+        match stmt_kind {
+            StmtKind::Local => LocalStmt::generate_stmt(ctx, res_type).map(From::from),
+            StmtKind::Semi => SemiStmt::generate_stmt(ctx, res_type).map(From::from),
+            StmtKind::Expr => panic!("Cannot generate expr stmt using generate_non_expr_stmt"),
+        }
+    }
+
+    pub fn fuzz_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
+        let mut res: Option<Stmt> = None;
+        let mut num_failed_attempts = 0;
+        while res.is_none() && num_failed_attempts < ctx.policy.max_stmt_attempts {
+            res = Stmt::generate_expr_stmt(ctx, res_type);
             if res.is_none() {
                 num_failed_attempts += 1;
             }

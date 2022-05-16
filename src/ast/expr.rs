@@ -31,7 +31,7 @@ pub enum Expr {
     If(IfExpr),
     /// Block expression
     Block(BlockExpr), // TODO: Path, Assign, Arrays, Box, Tuples
-    /// A variable access such as `x` (Equivalent to Rust Path in Rust compiler)
+    /// A variable access such as `x` (Similar to Rust Path in Rust compiler)
     Ident(IdentExpr),
     Tuple(TupleExpr),
     Assign(AssignExpr),
@@ -46,25 +46,29 @@ impl Expr {
         let mut res: Option<Expr> = None;
         let mut num_failed_attempts = 0;
         while res.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
-            let expr_kind = ctx.choose_expr_kind();
-            res = match expr_kind {
-                ExprKind::Literal => LitExpr::generate_expr(ctx, res_type),
-                ExprKind::If => IfExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Block => BlockExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Cast => CastExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Index => IndexExpr::generate_expr(ctx, res_type).map(From::from),
-                ExprKind::Field => FieldExpr::generate_expr(ctx, res_type).map(From::from),
-                _ => panic!("ExprKind {:?} not supported yet", expr_kind),
-            };
+            res = Expr::generate_expr(ctx, res_type);
             if res.is_none() {
                 num_failed_attempts += 1;
             }
         }
         res
+    }
+
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let expr_kind = ctx.choose_expr_kind();
+        match expr_kind {
+            ExprKind::Literal => LitExpr::generate_expr(ctx, res_type),
+            ExprKind::If => IfExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Binary => BinaryExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Ident => IdentExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Block => BlockExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Assign => AssignExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Unary => UnaryExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Cast => CastExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Index => IndexExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Field => FieldExpr::generate_expr(ctx, res_type).map(From::from),
+            _ => panic!("ExprKind {:?} not supported yet", expr_kind),
+        }
     }
 }
 
@@ -374,10 +378,10 @@ impl BlockExpr {
         }
         for _ in 0..num_stmts {
             // TODO: Make sure these statements are not expression statements
-            stmts.push(Stmt::generate_non_expr_stmt(ctx)?);
+            stmts.push(Stmt::fuzz_non_expr_stmt(ctx)?);
         }
         if !res_type.is_unit() {
-            stmts.push(Stmt::generate_expr_stmt(ctx, res_type)?);
+            stmts.push(Stmt::fuzz_expr_stmt(ctx, res_type)?);
         }
         ctx.type_symbol_table = outer_symbol_table;
         Some(BlockExpr { stmts })
