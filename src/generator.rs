@@ -1,5 +1,3 @@
-use std::error::Error;
-use std::fmt::{Display, Formatter};
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
 use crate::context::Context;
@@ -10,6 +8,8 @@ use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
 use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 pub struct GeneratorOutput {
     pub program: String,
@@ -31,7 +31,10 @@ impl Display for GeneratorError {
     }
 }
 
-pub fn run_generator(seed: Option<u64>, policy: &Policy) -> Result<GeneratorOutput, GeneratorError> {
+pub fn run_generator(
+    seed: Option<u64>,
+    policy: &Policy,
+) -> Result<GeneratorOutput, GeneratorError> {
     let add_checksum = true;
     let mut ctx = Context::with_policy(seed, policy);
     let mut file = RustFile::generate_file(&mut ctx).ok_or(GeneratorError {
@@ -54,9 +57,9 @@ pub fn run_generator(seed: Option<u64>, policy: &Policy) -> Result<GeneratorOutp
     })
 }
 
-fn _print_program(main: &mut Function) {
+fn _print_program(file: &mut RustFile) {
     let mut emit_visitor = EmitVisitor::default();
-    emit_visitor.visit_function(main);
+    emit_visitor.visit_file(file);
     println!("{}", emit_visitor.output());
 }
 

@@ -10,7 +10,11 @@ use rust_gen::utils::write_as_ron;
 struct GeneratorArgs {
     #[clap(short, long, help = "Optional seed.")]
     seed: Option<u64>,
-    #[clap(short, long, help = "Generation policy [default: default]. Use the flag \"-p help\" for a list of available policies")]
+    #[clap(
+        short,
+        long,
+        help = "Generation policy [default: default]. Use the flag \"-p help\" for a list of available policies"
+    )]
     policy: Option<String>,
     #[clap(long, help = "Output statistics instead of program.")]
     statistics: bool,

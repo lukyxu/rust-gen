@@ -1,9 +1,9 @@
+use rust_gen::generator::GeneratorError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::Path;
 use std::process::Output;
-use rust_gen::generator::GeneratorError;
 
 #[derive(Debug)]
 pub enum RunnerError {
@@ -69,7 +69,7 @@ impl CompilationError {
     }
 
     pub fn files(&self) -> Vec<String> {
-        return vec![self.rust_file_path.clone()]
+        return vec![self.rust_file_path.clone()];
     }
 }
 
@@ -111,7 +111,7 @@ impl RunError {
     }
 
     pub fn files(&self) -> Vec<String> {
-        return vec![self.rust_file_path.clone(), self.bin_file_path.clone()]
+        return vec![self.rust_file_path.clone(), self.bin_file_path.clone()];
     }
 }
 
@@ -140,7 +140,7 @@ pub struct DifferingChecksumError {
 
 impl DifferingChecksumError {
     pub fn files(&self) -> Vec<String> {
-        return self.files.clone()
+        return self.files.clone();
     }
 }
 
@@ -168,7 +168,7 @@ pub struct UnexpectedChecksumError {
 
 impl UnexpectedChecksumError {
     pub fn files(&self) -> Vec<String> {
-        return self.files.clone()
+        return self.files.clone();
     }
 }
 

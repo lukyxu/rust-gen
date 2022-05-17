@@ -391,19 +391,22 @@ impl BlockExpr {
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
         let mut stmts: Vec<Stmt> = Vec::new();
         let outer_symbol_table = ctx.type_symbol_table.clone();
-        let mut num_stmts = ctx.choose_num_stmts();
-        if !res_type.is_unit() {
-            num_stmts -= 1;
-        }
-        for _ in 0..num_stmts {
-            // TODO: Make sure these statements are not expression statements.
-            stmts.push(Stmt::fuzz_non_expr_stmt(ctx)?);
-        }
-        if !res_type.is_unit() {
-            stmts.push(Stmt::fuzz_expr_stmt(ctx, res_type)?);
-        }
+        let block_expr = (|| {
+            let mut num_stmts = ctx.choose_num_stmts();
+            if !res_type.is_unit() {
+                num_stmts -= 1;
+            }
+            for _ in 0..num_stmts {
+                // TODO: Make sure these statements are not expression statements.
+                stmts.push(Stmt::fuzz_non_expr_stmt(ctx)?);
+            }
+            if !res_type.is_unit() {
+                stmts.push(Stmt::fuzz_expr_stmt(ctx, res_type)?);
+            }
+            Some(BlockExpr { stmts })
+        })();
         ctx.type_symbol_table = outer_symbol_table;
-        Some(BlockExpr { stmts })
+        block_expr
     }
 }
 

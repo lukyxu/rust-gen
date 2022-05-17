@@ -6,7 +6,7 @@ use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use rust_gen::generator::{run_generator, GeneratorOutput, GeneratorError};
+use rust_gen::generator::{run_generator, GeneratorError, GeneratorOutput};
 use rust_gen::policy::Policy;
 use rust_gen::utils::write_as_ron;
 use std::fs;
@@ -25,7 +25,11 @@ struct Args {
         help = "Number of programs to be generated, compiled and run."
     )]
     num_runs: Option<u64>,
-    #[clap(short, long, help = "Generation policy [default: default]. Use the flag \"-p help\" for a list of available policies.")]
+    #[clap(
+        short,
+        long,
+        help = "Generation policy [default: default]. Use the flag \"-p help\" for a list of available policies."
+    )]
     policy: Option<String>,
     #[clap(
         short,
@@ -71,13 +75,11 @@ pub fn main() {
                 let directory = &format!("{}/pass/{}", output_path, i);
                 let directory: &Path = Path::new(directory);
                 if args.save_passing_programs {
-                    fs::create_dir_all(directory)
-                        .expect("Unable to create directory");
+                    fs::create_dir_all(directory).expect("Unable to create directory");
                 }
                 for file in files {
                     if args.save_passing_programs {
-                        fs::rename(file, directory.join(file))
-                            .expect("Cannot move file");
+                        fs::rename(file, directory.join(file)).expect("Cannot move file");
                     } else {
                         fs::remove_file(file).expect("Unable to remove file");
                     }
@@ -88,8 +90,7 @@ pub fn main() {
                 println!("{}", err);
                 let directory = &format!("{}/fail/{}/{}", &output_path, err.folder_name(), i);
                 let directory: &Path = Path::new(directory);
-                fs::create_dir_all(directory)
-                    .expect("Unable to create directory");
+                fs::create_dir_all(directory).expect("Unable to create directory");
                 for file in err.files() {
                     fs::rename(&file, directory.join(&file)).expect("Cannot move file")
                 }
