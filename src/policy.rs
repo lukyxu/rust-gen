@@ -320,7 +320,7 @@ impl Policy {
             max_file_attempts: 1,
             max_main_fn_attempts: 1,
             max_item_attempts: 1,
-            max_stmt_attempts: 1,
+            max_stmt_attempts: 20,
             max_expr_attempts: 100,
             max_ty_attempts: 5,
         }
