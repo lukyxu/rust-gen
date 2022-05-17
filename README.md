@@ -1,6 +1,6 @@
 # Rust Gen
 
-Rust gen is a random program that can generate correct runnable Rust programs along with the expected output of the program. It's primary purpose is to find compiler bugs either through comparing the output of running the test program with the expected output, or through differential testing.
+Rustgen is a random program that can generate correct runnable Rust programs along with the expected output of the program. It's primary purpose is to find compiler bugs either through comparing the output of running the test program with the expected output, or through differential testing.
 
 
 ## Building and running
@@ -17,11 +17,18 @@ Go to the project directory
   cd rust-gen
 ```
 
-Build and run
+Build and run rustgen generator
 
 ```bash
   cargo run
 ```
+
+Build and run rustgen runner for 100 programs and saving all outputs including generated code and binaries.
+
+```bash
+  cargo run --bin runner -- -n 100 -s
+```
+
 ## Running Tests
 
 To run tests, run the following command
