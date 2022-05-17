@@ -22,25 +22,25 @@ struct Args {
     #[clap(
         short,
         long,
-        help = "Number of programs to be generated, compiled and run"
+        help = "Number of programs to be generated, compiled and run."
     )]
     num_runs: Option<u64>,
-    #[clap(short, long, help = "Generation policy [default: default]")]
+    #[clap(short, long, help = "Generation policy [default: default]. Use the flag \"-p help\" for a list of available policies.")]
     policy: Option<String>,
     #[clap(
         short,
         long,
-        help = "Output base name of generated program",
+        help = "Output base name of generated program.",
         default_value = "base"
     )]
     base_name: String,
     #[clap(short, long, help = "Output path", default_value = "output")]
     output_path: String,
-    #[clap(short, long, help = "Store passing programs in output path")]
+    #[clap(short, long, help = "Store passing programs in output path.")]
     save_passing_programs: bool,
     #[clap(
         long,
-        help = "Do not run differential testing with different optimizations"
+        help = "Option to not run differential testing with different optimizations."
     )]
     no_opt: bool,
 }
