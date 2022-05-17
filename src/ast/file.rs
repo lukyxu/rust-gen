@@ -1,11 +1,13 @@
 use crate::ast::item::{FunctionItem, Item};
 use crate::context::Context;
 
+/// Rust file. The current root node of a program.
 pub struct RustFile {
     pub items: Vec<Item>,
 }
 
 impl RustFile {
+    /// Attempts multiple times given by ctx.policy.max_file_attempts to generate a valid Rust file.
     pub fn fuzz_file(ctx: &mut Context) -> Option<RustFile> {
         let mut res: Option<RustFile> = None;
         let mut num_failed_attempts = 0;
@@ -18,6 +20,7 @@ impl RustFile {
         res
     }
 
+    /// Attempts a single attempt to generate a valid Rust file.
     pub fn generate_file(ctx: &mut Context) -> Option<RustFile> {
         let mut items = vec![];
         for _ in 0..ctx.choose_num_items() - 1 {

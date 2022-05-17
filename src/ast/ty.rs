@@ -15,6 +15,7 @@ pub enum Ty {
 }
 
 impl Ty {
+    /// Attempts multiple times given by ctx.policy.max_ty_attempts to generate a valid type.
     pub fn fuzz_type(ctx: &mut Context) -> Option<Ty> {
         let mut res: Option<Ty> = None;
         let mut num_failed_attempts = 0;
@@ -28,7 +29,7 @@ impl Ty {
         }
         res
     }
-
+    /// Attempts a single attempt to generate a valid type.
     pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
         let ty_kind = ctx.choose_base_expr_kind();
         match ty_kind {
@@ -44,6 +45,8 @@ impl Ty {
         Some(Ty::Unit)
     }
 
+    /// Returns whether a given type is the unit type.
+    /// Both Ty::Unit and Ty::Tuple(vec![]) correspond to the unit type.
     pub fn is_unit(&self) -> bool {
         match self {
             Ty::Unit => true,
@@ -56,16 +59,19 @@ impl Ty {
         Ty::Unit
     }
 
+    /// Returns whether a given type is a primitive integer.
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
         matches!(self, Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
     }
 
+    /// Checks to see if a given cast is compatible.
     pub fn compatible_cast(&self, target_type: &Ty) -> bool {
         // TODO: More thorough casting
         self.is_primitive_number() && target_type.is_primitive_number()
     }
 
+    /// Returns the array depth of a type.
     pub fn array_depth(&self) -> usize {
         match self {
             Ty::Array(array_ty) => 1 + array_ty.base_ty.array_depth(),
@@ -73,6 +79,7 @@ impl Ty {
         }
     }
 
+    /// Returns the tuple depth of a type.
     pub fn tuple_depth(&self) -> usize {
         match self {
             Ty::Tuple(tuple_ty) => {
@@ -87,6 +94,7 @@ impl Ty {
         }
     }
 
+    /// Returns the struct depth of a type.
     pub fn struct_depth(&self) -> usize {
         match self {
             Ty::Struct(struct_ty) => {

@@ -6,7 +6,7 @@ use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use rust_gen::generator::{run_generator, GeneratorOutput};
+use rust_gen::generator::{run_generator, GeneratorOutput, GeneratorError};
 use rust_gen::policy::Policy;
 use rust_gen::utils::write_as_ron;
 use std::fs;
@@ -22,25 +22,25 @@ struct Args {
     #[clap(
         short,
         long,
-        help = "Number of programs to be generated, compiled and run"
+        help = "Number of programs to be generated, compiled and run."
     )]
     num_runs: Option<u64>,
-    #[clap(short, long, help = "Generation policy [default: default]")]
+    #[clap(short, long, help = "Generation policy [default: default]. Use the flag \"-p help\" for a list of available policies.")]
     policy: Option<String>,
     #[clap(
         short,
         long,
-        help = "Output base name of generated program",
+        help = "Output base name of generated program.",
         default_value = "base"
     )]
     base_name: String,
     #[clap(short, long, help = "Output path", default_value = "output")]
     output_path: String,
-    #[clap(short, long, help = "Store passing programs in output path")]
+    #[clap(short, long, help = "Store passing programs in output path.")]
     save_passing_programs: bool,
     #[clap(
         long,
-        help = "Do not run differential testing with different optimizations"
+        help = "Option to not run differential testing with different optimizations."
     )]
     no_opt: bool,
 }
@@ -68,13 +68,15 @@ pub fn main() {
         };
         match &run(Some(i), &policy, &base_name, opts) {
             Ok(files) => {
+                let directory = &format!("{}/pass/{}", output_path, i);
+                let directory: &Path = Path::new(directory);
                 if args.save_passing_programs {
-                    fs::create_dir_all(format!("{}/pass/{}", output_path, i))
+                    fs::create_dir_all(directory)
                         .expect("Unable to create directory");
                 }
                 for file in files {
                     if args.save_passing_programs {
-                        fs::rename(file, format!("{}/pass/{}/{}", output_path, i, file))
+                        fs::rename(file, directory.join(file))
                             .expect("Cannot move file");
                     } else {
                         fs::remove_file(file).expect("Unable to remove file");
@@ -84,62 +86,12 @@ pub fn main() {
             Err(err) => {
                 println!("Failed seed {}", i);
                 println!("{}", err);
-                fs::create_dir_all(format!("{}/fail/{}/{}", &output_path, err.folder_name(), i))
+                let directory = &format!("{}/fail/{}/{}", &output_path, err.folder_name(), i);
+                let directory: &Path = Path::new(directory);
+                fs::create_dir_all(directory)
                     .expect("Unable to create directory");
-                match err {
-                    RunnerError::Compilation(compilation_err) => {
-                        fs::rename(
-                            &compilation_err.rust_file_path,
-                            format!(
-                                "{}/fail/{}/{}/{}",
-                                output_path,
-                                err.folder_name(),
-                                i,
-                                &compilation_err.rust_file_path
-                            ),
-                        )
-                        .expect("Cannot move file");
-                    }
-                    RunnerError::Run(run_err) => {
-                        fs::rename(
-                            &run_err.rust_file_path,
-                            format!(
-                                "{}/fail/{}/{}/{}",
-                                output_path,
-                                err.folder_name(),
-                                i,
-                                &run_err.rust_file_path
-                            ),
-                        )
-                        .expect("Cannot move file");
-                        fs::rename(
-                            &run_err.bin_file_path,
-                            format!(
-                                "{}/fail/{}/{}/{}",
-                                output_path,
-                                err.folder_name(),
-                                i,
-                                &run_err.bin_file_path
-                            ),
-                        )
-                        .expect("Cannot move file");
-                    }
-                    RunnerError::DifferingChecksum(DifferingChecksumError { files, .. })
-                    | RunnerError::UnexpectedChecksum(UnexpectedChecksumError { files, .. }) => {
-                        for file in files {
-                            fs::rename(
-                                file,
-                                format!(
-                                    "{}/fail/{}/{}/{}",
-                                    output_path,
-                                    err.folder_name(),
-                                    i,
-                                    file
-                                ),
-                            )
-                            .expect("Cannot move file");
-                        }
-                    }
+                for file in err.files() {
+                    fs::rename(&file, directory.join(&file)).expect("Cannot move file")
                 }
             }
         }
@@ -156,8 +108,7 @@ fn run(seed: Option<u64>, policy: &Policy, base_name: &str, opts: Vec<&'static s
         program,
         statistics,
         expected_checksum,
-    } = run_generator(seed, &policy);
-
+    } = run_generator(seed, &policy).or_else(|err| Err(RunnerError::Generator(err)))?;
     // Save program
     let rust_file = base_name.to_string() + ".rs";
     fs::write(&rust_file, program).expect("Unable to write file");

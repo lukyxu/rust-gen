@@ -8,18 +8,20 @@ use std::cmp::max;
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum Stmt {
-    /// Let binding
+    /// Let binding such as `let x: u32 = 5_u32`.
     Local(LocalStmt),
     // Item definition including struct, enums, etc.
     // Item(ItemStmt),
-    /// Expr without trailing semi-colon.
+    /// Expr without trailing semi-colon such as `5_u32 + 5_u32`.
     Expr(ExprStmt),
-    /// Expr with trailing semi-colon.
+    /// Expr with trailing semi-colon such as `5_u32 + 5_u32;`.
     Semi(SemiStmt),
+    /// Other statements that can have custom behaviour such as `println`.
     Custom(CustomStmt), // TODO: Macros and empty statements
 }
 
 impl Stmt {
+    /// Attempts multiple times given by ctx.policy.max_stmt_attempts to generate a valid non expression statement (local and semi expressions).
     pub fn fuzz_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
         let mut res: Option<Stmt> = None;
         let mut num_failed_attempts = 0;
@@ -34,6 +36,7 @@ impl Stmt {
         res
     }
 
+    /// Attempts a single attempt to generate a valid non expression statement (local and semi expressions).
     pub fn generate_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
         let res_type = &Ty::generate_type(ctx)?;
         let stmt_kind = ctx.choose_stmt_kind();
@@ -44,6 +47,7 @@ impl Stmt {
         }
     }
 
+    /// Attempts multiple times given by ctx.policy.max_stmt_attempts to generate a valid expression statement.
     pub fn fuzz_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
         let mut res: Option<Stmt> = None;
         let mut num_failed_attempts = 0;
@@ -56,6 +60,7 @@ impl Stmt {
         res
     }
 
+    /// Attempts a single attempt to generate a valid expression statement.
     pub fn generate_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
         ExprStmt::generate_stmt(ctx, res_type).map(From::from)
     }
@@ -63,10 +68,10 @@ impl Stmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LocalStmt {
-    /// Local declaration such as `let x;`
+    /// Local declaration such as `let x;` (not implemented yet).
     #[allow(dead_code)]
     Decl(DeclLocalStmt),
-    /// Local declaration with initializer such as `let x = y`
+    /// Local declaration with initializer such as `let x = y`.
     Init(InitLocalStmt), // TODO: InitElse
 }
 

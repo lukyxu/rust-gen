@@ -16,8 +16,9 @@ use std::cmp::{max, min};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
+/// Rust expression
 pub enum Expr {
-    /// Literal such as `1`, `"foo"`
+    /// Literal such as `1_u32`, `"foo"`
     Literal(LitExpr),
     /// Binary operation such as `a + b`, `a * b`
     Binary(BinaryExpr),
@@ -30,18 +31,25 @@ pub enum Expr {
     If(IfExpr),
     /// Block expression
     Block(BlockExpr),
-    /// A variable access such as `x` (Similar to Rust Path in Rust compiler)
+    /// A variable access such as `x` (Similar to Rust Path in Rust compiler).
     Ident(IdentExpr),
+    /// Tuple literal expression such as `(1_u32, "hello")`.
     Tuple(TupleExpr),
+    /// Assignment expression such as `(1_u32, "hello")`.
     Assign(AssignExpr),
+    /// Array literal expression such as `[1_u32, 2_u32, 3_u32]`.
     Array(ArrayExpr),
+    /// Index expression with squared brackets such as `array[5]`.
     Index(IndexExpr),
+    /// Field expression representing access to structs and tuples such as `struct.field`.
     Field(FieldExpr),
+    /// Struct literal expression such as `S { field1: value1, field2: value2 }` and `S(5_u32, "hello")`.
     Struct(StructExpr),
     // TODO: Path, Box
 }
 
 impl Expr {
+    /// Attempts multiple times given by ctx.policy.max_expr_attempts to generate a valid expression.
     pub fn fuzz_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let mut res: Option<Expr> = None;
         let mut num_failed_attempts = 0;
@@ -56,6 +64,7 @@ impl Expr {
         res
     }
 
+    /// Attempts a single attempt to generate a valid expression.
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let expr_kind = ctx.choose_expr_kind();
         match expr_kind {
@@ -93,14 +102,20 @@ impl Expr {
 pub enum LitExpr {
     // TODO: Support different styles of Strings such as raw strings `r##"foo"##`
     #[allow(dead_code)]
+    /// String literal.
     Str(String),
     #[allow(dead_code)]
+    /// Byte literal.
     Byte(u8),
     #[allow(dead_code)]
+    /// Char literal.
     Char(char),
+    /// Integer literal.
     Int(LitIntExpr),
     #[allow(dead_code)]
+    /// Float literal.
     Float(String, LitFloatTy),
+    /// Boolean literal.
     Bool(bool),
 }
 
@@ -115,6 +130,7 @@ impl LitExpr {
         track_expr(ExprKind::Literal, Box::new(LitExpr::generate_expr_internal))(ctx, res_type)
     }
 
+    /// Attempts to generate a base literal type (not necessarily LitExpr).
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
             Ty::Unit => Some(TupleExpr::empty_tuple()),
@@ -145,6 +161,8 @@ pub enum LitIntTy {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+/// Literal integer expression of a LitIntTy type.
+/// The actual value of the integer is represented as the u128 value casted with respect to the type.
 pub struct LitIntExpr {
     pub value: u128,
     pub ty: LitIntTy,
@@ -178,9 +196,9 @@ impl LitIntExpr {
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum LitFloatTy {
-    /// Float literal with suffix such as `1f32`, `1E10f32`
+    /// Float literal with suffix such as `1f32`, `1E10f32`.
     Suffixed(FloatTy),
-    /// Float literal without suffix such as `1.0`, `1.0E10`
+    /// Float literal without suffix such as `1.0`, `1.0E10` (To remove once floats are implemented).
     Unsuffixed,
 }
 
@@ -378,7 +396,7 @@ impl BlockExpr {
             num_stmts -= 1;
         }
         for _ in 0..num_stmts {
-            // TODO: Make sure these statements are not expression statements
+            // TODO: Make sure these statements are not expression statements.
             stmts.push(Stmt::fuzz_non_expr_stmt(ctx)?);
         }
         if !res_type.is_unit() {
@@ -392,7 +410,7 @@ impl BlockExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
-    // TODO: check if type is necessary
+    // TODO: check if type is necessary.
     pub ty: Ty,
 }
 
@@ -627,7 +645,9 @@ impl IndexExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StructExpr {
+    /// Tuple struct such as `S { field1: value1, field2: value2 }`.
     Tuple(TupleStructExpr),
+    /// Field struct such as `S(5_u32, "hello")`.
     Field(FieldStructExpr),
 }
 

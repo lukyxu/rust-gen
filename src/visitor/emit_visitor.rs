@@ -11,6 +11,8 @@ use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, StructTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 
+/// Visitor used to print a given ast.
+/// Output can be parsed through rustfmt to reformat it to a given style.
 pub struct EmitVisitor {
     output: String,
     curr_indent: usize,

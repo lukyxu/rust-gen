@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Represents a binary operation between two arguments of a valid type.
 pub enum BinaryOp {
     Add,
     Sub,
@@ -42,6 +43,8 @@ impl ToString for BinaryOp {
 }
 
 impl BinaryOp {
+    /// Returns compatible argument types of a binary operation for a given operation.
+    /// Both arguments in binary operation must be of the same type.
     pub fn get_compatible_arg_type(&self, res_type: &Ty) -> Vec<Ty> {
         match self {
             BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {

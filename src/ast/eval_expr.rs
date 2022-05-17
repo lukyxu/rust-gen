@@ -13,12 +13,17 @@ use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
 use std::mem::swap;
 
 #[derive(Debug, Clone, PartialEq)]
+/// Evaluated Rust expression
 pub enum EvalExpr {
-    /// Literal such as `1`, `"foo"`
+    /// Evaluated literal such as `1`, `"foo"`
     Literal(LitExpr),
+    /// Evaluated tuple such as `(1_u32, "hello")`
     Tuple(EvalTupleExpr),
+    /// Evaluated array such as `[1_u32, 2_u32, 3_u32]`
     Array(EvalArrayExpr),
+    /// Evaluated struct such as `S { field1: value1, field2: value2 }` and `S(5_u32, "hello")`
     Struct(EvalStructExpr),
+    /// Unknown evaluation (Not currently used but can be used to indicate that a value is unknown)
     Unknown,
 }
 

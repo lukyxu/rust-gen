@@ -13,6 +13,7 @@ pub enum Item {
 }
 
 impl Item {
+    /// Attempts multiple times given by ctx.policy.max_item_attempts to generate a valid item.
     pub fn fuzz_item(ctx: &mut Context) -> Option<Item> {
         let mut res: Option<Item> = None;
         let mut num_failed_attempts = 0;
@@ -27,6 +28,7 @@ impl Item {
         res
     }
 
+    /// Attempts a single attempt to generate a valid item.
     pub fn generate_item(ctx: &mut Context) -> Option<Item> {
         let item_kind = ctx.choose_item_kind();
         match item_kind {
@@ -56,7 +58,7 @@ impl From<FunctionItem> for Item {
 impl FunctionItem {
     pub fn generate_main(ctx: &mut Context) -> Option<FunctionItem> {
         Some(FunctionItem {
-            function: Function::generate_main_fn(ctx)?,
+            function: Function::fuzz_main_fn(ctx)?,
         })
     }
     fn generate_item(_ctx: &mut Context) -> Option<FunctionItem> {
