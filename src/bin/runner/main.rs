@@ -68,13 +68,15 @@ pub fn main() {
         };
         match &run(Some(i), &policy, &base_name, opts) {
             Ok(files) => {
+                let directory = &format!("{}/pass/{}", output_path, i);
+                let directory: &Path = Path::new(directory);
                 if args.save_passing_programs {
-                    fs::create_dir_all(format!("{}/pass/{}", output_path, i))
+                    fs::create_dir_all(directory)
                         .expect("Unable to create directory");
                 }
                 for file in files {
                     if args.save_passing_programs {
-                        fs::rename(file, format!("{}/pass/{}/{}", output_path, i, file))
+                        fs::rename(file, directory.join(file))
                             .expect("Cannot move file");
                     } else {
                         fs::remove_file(file).expect("Unable to remove file");
@@ -84,62 +86,12 @@ pub fn main() {
             Err(err) => {
                 println!("Failed seed {}", i);
                 println!("{}", err);
-                fs::create_dir_all(format!("{}/fail/{}/{}", &output_path, err.folder_name(), i))
+                let directory = &format!("{}/fail/{}/{}", &output_path, err.folder_name(), i);
+                let directory: &Path = Path::new(directory);
+                fs::create_dir_all(directory)
                     .expect("Unable to create directory");
-                match err {
-                    RunnerError::Compilation(compilation_err) => {
-                        fs::rename(
-                            &compilation_err.rust_file_path,
-                            format!(
-                                "{}/fail/{}/{}/{}",
-                                output_path,
-                                err.folder_name(),
-                                i,
-                                &compilation_err.rust_file_path
-                            ),
-                        )
-                        .expect("Cannot move file");
-                    }
-                    RunnerError::Run(run_err) => {
-                        fs::rename(
-                            &run_err.rust_file_path,
-                            format!(
-                                "{}/fail/{}/{}/{}",
-                                output_path,
-                                err.folder_name(),
-                                i,
-                                &run_err.rust_file_path
-                            ),
-                        )
-                        .expect("Cannot move file");
-                        fs::rename(
-                            &run_err.bin_file_path,
-                            format!(
-                                "{}/fail/{}/{}/{}",
-                                output_path,
-                                err.folder_name(),
-                                i,
-                                &run_err.bin_file_path
-                            ),
-                        )
-                        .expect("Cannot move file");
-                    }
-                    RunnerError::DifferingChecksum(DifferingChecksumError { files, .. })
-                    | RunnerError::UnexpectedChecksum(UnexpectedChecksumError { files, .. }) => {
-                        for file in files {
-                            fs::rename(
-                                file,
-                                format!(
-                                    "{}/fail/{}/{}/{}",
-                                    output_path,
-                                    err.folder_name(),
-                                    i,
-                                    file
-                                ),
-                            )
-                            .expect("Cannot move file");
-                        }
-                    }
+                for file in err.files() {
+                    fs::rename(&file, directory.join(&file)).expect("Cannot move file")
                 }
             }
         }

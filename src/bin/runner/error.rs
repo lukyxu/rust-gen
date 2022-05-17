@@ -1,5 +1,7 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::fs;
+use std::path::Path;
 use std::process::Output;
 
 #[derive(Debug)]
@@ -17,6 +19,15 @@ impl RunnerError {
             RunnerError::Run(_) => "run_error",
             RunnerError::DifferingChecksum(_) => "differing_checksum_error",
             RunnerError::UnexpectedChecksum(_) => "unexpected_checksum_error",
+        }
+    }
+
+    pub fn files(&self) -> Vec<String> {
+        match self {
+            RunnerError::Compilation(err) => err.files(),
+            RunnerError::Run(err) => err.files(),
+            RunnerError::DifferingChecksum(err) => err.files(),
+            RunnerError::UnexpectedChecksum(err) => err.files(),
         }
     }
 }
@@ -50,6 +61,10 @@ impl CompilationError {
                 .parse()
                 .unwrap(),
         };
+    }
+
+    pub fn files(&self) -> Vec<String> {
+        return vec![self.rust_file_path.clone()]
     }
 }
 
@@ -89,6 +104,10 @@ impl RunError {
                 .unwrap(),
         };
     }
+
+    pub fn files(&self) -> Vec<String> {
+        return vec![self.rust_file_path.clone(), self.bin_file_path.clone()]
+    }
 }
 
 impl Error for RunError {}
@@ -114,6 +133,12 @@ pub struct DifferingChecksumError {
     pub checksums: Vec<(&'static str, u128)>,
 }
 
+impl DifferingChecksumError {
+    pub fn files(&self) -> Vec<String> {
+        return self.files.clone()
+    }
+}
+
 impl Error for DifferingChecksumError {}
 
 impl Display for DifferingChecksumError {
@@ -134,6 +159,12 @@ pub struct UnexpectedChecksumError {
     pub files: Vec<String>,
     pub expected_checksum: u128,
     pub checksums: Vec<(&'static str, u128)>,
+}
+
+impl UnexpectedChecksumError {
+    pub fn files(&self) -> Vec<String> {
+        return self.files.clone()
+    }
 }
 
 impl Error for UnexpectedChecksumError {}
