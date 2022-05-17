@@ -138,7 +138,7 @@ pub struct DifferingChecksumError {
 
 impl DifferingChecksumError {
     pub fn files(&self) -> Vec<String> {
-        return self.files.clone();
+        self.files.clone()
     }
 }
 
@@ -166,7 +166,7 @@ pub struct UnexpectedChecksumError {
 
 impl UnexpectedChecksumError {
     pub fn files(&self) -> Vec<String> {
-        return self.files.clone();
+        self.files.clone()
     }
 }
 

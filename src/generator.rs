@@ -18,7 +18,7 @@ pub struct GeneratorOutput {
 
 #[derive(Debug)]
 pub struct GeneratorError {
-    pub statistics: FullStatistics,
+    pub statistics: Box<FullStatistics>,
     pub error_message: String,
 }
 
@@ -37,7 +37,7 @@ pub fn run_generator(
     let add_checksum = true;
     let mut ctx = Context::with_policy(seed, policy);
     let mut file = RustFile::generate_file(&mut ctx).ok_or(GeneratorError {
-        statistics: ctx.statistics.clone().into(),
+        statistics: Box::new(ctx.statistics.clone().into()),
         error_message: "Unable to generate rust file".to_string(),
     })?;
     let mut expr_visitor = ExprVisitor::default();

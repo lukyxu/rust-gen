@@ -92,7 +92,7 @@ pub fn main() {
                 let directory: &Path = Path::new(directory);
                 fs::create_dir_all(directory).expect("Unable to create directory");
                 for file in err.files() {
-                    fs::rename(&file, directory.join(&file)).expect("Cannot move file")
+                    fs::rename(&file, directory.join(&file)).expect("Cannot move file");
                 }
             }
         }
@@ -109,7 +109,7 @@ fn run(seed: Option<u64>, policy: &Policy, base_name: &str, opts: Vec<&'static s
         program,
         statistics,
         expected_checksum,
-    } = run_generator(seed, &policy).or_else(|err| Err(RunnerError::Generator(err)))?;
+    } = run_generator(seed, policy).map_err(RunnerError::Generator)?;
     // Save program
     let rust_file = base_name.to_string() + ".rs";
     fs::write(&rust_file, program).expect("Unable to write file");

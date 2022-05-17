@@ -21,7 +21,7 @@ pub enum Stmt {
 }
 
 impl Stmt {
-    /// Attempts multiple times given by ctx.policy.max_stmt_attempts to generate a valid non expression statement (local and semi expressions).
+    /// Attempts multiple times given by `ctx.policy.max_stmt_attempts` to generate a valid non expression statement (local and semi expressions).
     pub fn fuzz_non_expr_stmt(ctx: &mut Context) -> Option<Stmt> {
         let mut res: Option<Stmt> = None;
         let mut num_failed_attempts = 0;
@@ -30,7 +30,7 @@ impl Stmt {
             if res.is_none() {
                 num_failed_attempts += 1;
                 ctx.statistics.max_failed_stmt_depth =
-                    max(ctx.statistics.max_failed_stmt_depth, num_failed_attempts)
+                    max(ctx.statistics.max_failed_stmt_depth, num_failed_attempts);
             }
         }
         res
@@ -47,7 +47,7 @@ impl Stmt {
         }
     }
 
-    /// Attempts multiple times given by ctx.policy.max_stmt_attempts to generate a valid expression statement.
+    /// Attempts multiple times given by `ctx.policy.max_stmt_attempts` to generate a valid expression statement.
     pub fn fuzz_expr_stmt(ctx: &mut Context, res_type: &Ty) -> Option<Stmt> {
         let mut res: Option<Stmt> = None;
         let mut num_failed_attempts = 0;
@@ -98,7 +98,7 @@ impl LocalStmt {
             mutable,
         }));
         ctx.type_symbol_table
-            .add_var(name.clone(), res_type.clone(), mutable);
+            .add_var(name, res_type.clone(), mutable);
         res
     }
 }

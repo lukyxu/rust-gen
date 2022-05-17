@@ -15,7 +15,7 @@ pub enum Ty {
 }
 
 impl Ty {
-    /// Attempts multiple times given by ctx.policy.max_ty_attempts to generate a valid type.
+    /// Attempts multiple times given by `ctx.policy.max_ty_attempts` to generate a valid type.
     pub fn fuzz_type(ctx: &mut Context) -> Option<Ty> {
         let mut res: Option<Ty> = None;
         let mut num_failed_attempts = 0;
@@ -24,7 +24,7 @@ impl Ty {
             if res.is_none() {
                 num_failed_attempts += 1;
                 ctx.statistics.max_failed_ty_depth =
-                    max(ctx.statistics.max_failed_ty_depth, num_failed_attempts)
+                    max(ctx.statistics.max_failed_ty_depth, num_failed_attempts);
             }
         }
         res
@@ -35,9 +35,9 @@ impl Ty {
         match ty_kind {
             TyKind::Unit => track_type(TyKind::Unit, Box::new(Ty::generate_unit_internal))(ctx),
             TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
-            TyKind::Tuple => TupleTy::generate_type(ctx, None).map(From::from),
-            TyKind::Array => ArrayTy::generate_type(ctx, None).map(From::from),
-            TyKind::Struct => StructTy::generate_type(ctx, None).map(From::from),
+            TyKind::Tuple => TupleTy::generate_type(ctx, &None).map(From::from),
+            TyKind::Array => ArrayTy::generate_type(ctx, &None).map(From::from),
+            TyKind::Struct => StructTy::generate_type(ctx, &None).map(From::from),
         }
     }
 
@@ -46,7 +46,7 @@ impl Ty {
     }
 
     /// Returns whether a given type is the unit type.
-    /// Both Ty::Unit and Ty::Tuple(vec![]) correspond to the unit type.
+    /// Both `Ty::Unit` and `Ty::Tuple(vec![])` correspond to the unit type.
     pub fn is_unit(&self) -> bool {
         match self {
             Ty::Unit => true,
@@ -369,7 +369,7 @@ impl ToString for TupleTy {
 }
 
 impl TupleTy {
-    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
+    pub fn generate_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleTy> {
         let res = TupleTy::generate_type_internal(ctx, ty);
         increment_counter(
             &res,
@@ -380,13 +380,13 @@ impl TupleTy {
         res
     }
 
-    fn generate_type_internal(ctx: &mut Context, ty: Option<Ty>) -> Option<TupleTy> {
+    fn generate_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleTy> {
         let mut res: Option<TupleTy> = None;
         if !ctx.choose_new_tuple_type() {
-            res = ctx.choose_tuple_type(ty.clone());
+            res = ctx.choose_tuple_type(ty);
         }
         if res.is_none() && ctx.gen_new_tuple_types {
-            res = TupleTy::generate_new_type(ctx, &ty);
+            res = TupleTy::generate_new_type(ctx, ty);
         }
         res
     }
@@ -462,7 +462,7 @@ impl ArrayTy {
         std::iter::repeat(*self.base_ty.clone()).take(self.len)
     }
 
-    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
+    pub fn generate_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
         let res = ArrayTy::generate_type_internal(ctx, ty);
         increment_counter(
             &res,
@@ -473,13 +473,13 @@ impl ArrayTy {
         res
     }
 
-    fn generate_type_internal(ctx: &mut Context, ty: Option<Ty>) -> Option<ArrayTy> {
+    fn generate_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
         let mut res: Option<ArrayTy> = None;
         if !ctx.choose_new_array_type() {
-            res = ctx.choose_array_type(ty.clone());
+            res = ctx.choose_array_type(ty);
         }
         if res.is_none() && ctx.gen_new_array_types {
-            res = ArrayTy::generate_new_type(ctx, &ty);
+            res = ArrayTy::generate_new_type(ctx, ty);
         }
         res
     }
@@ -543,7 +543,7 @@ impl StructTy {
         matches!(self, StructTy::Tuple(_))
     }
 
-    pub fn generate_type(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
+    pub fn generate_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<StructTy> {
         let res = StructTy::generate_type_internal(ctx, ty);
         increment_counter(
             &res,
@@ -554,7 +554,7 @@ impl StructTy {
         res
     }
 
-    fn generate_type_internal(ctx: &mut Context, ty: Option<Ty>) -> Option<StructTy> {
+    fn generate_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<StructTy> {
         ctx.choose_struct_type(ty)
     }
 
@@ -633,10 +633,10 @@ impl FieldDef {
             return None;
         }
         let name = ctx.create_field_name(i);
-        return Some(FieldDef {
+        Some(FieldDef {
             name,
             ty: Box::new(base_type),
-        });
+        })
     }
 }
 
@@ -662,7 +662,7 @@ impl TupleStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
         for _ in 0..10 {
             // let len = ctx.choose_struct_length();
-            let fields = if let Some(tuple) = TupleTy::generate_type(ctx, ty.clone()) {
+            let fields = if let Some(tuple) = TupleTy::generate_type(ctx, ty) {
                 tuple
             } else {
                 continue;

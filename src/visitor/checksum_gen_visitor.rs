@@ -142,7 +142,7 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
         }
         Ty::Struct(struct_ty) => match struct_ty {
             StructTy::Field(field_struct) => {
-                for field in field_struct.fields.iter() {
+                for field in &field_struct.fields {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(Expr::Ident(IdentExpr {
                             name: name.to_owned(),
@@ -196,7 +196,7 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
         }
         Ty::Struct(struct_ty) => match struct_ty {
             StructTy::Field(field_struct) => {
-                for field in field_struct.fields.iter() {
+                for field in &field_struct.fields {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(expr.clone()),
                         member: Member::Named(field.name.clone()),

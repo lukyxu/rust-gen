@@ -16,7 +16,7 @@ use crate::visitor::base_visitor::Visitor;
 
 #[derive(Clone)]
 /// Visitor used to correct certain behaviours that would result in runtime errors.
-/// Any program generated using generate functions and passed through ExprVisitor
+/// Any program generated using generate functions and passed through `ExprVisitor`
 /// should result in valid rust programs which are executable and do not crash.
 pub struct ExprVisitor {
     expr: Option<EvalExpr>,
@@ -192,13 +192,13 @@ impl Visitor for ExprVisitor {
             let res_expr = self.safe_expr_visit(inner_expr);
             if let EvalExpr::Unknown = res_expr {
                 _return_none = true;
-                panic!();
             } else {
                 res.push(res_expr);
             }
         }
         let res_expr: EvalExpr = if _return_none {
-            EvalExpr::Unknown
+            drop(EvalExpr::Unknown);
+            panic!();
         } else {
             EvalExpr::Tuple(EvalTupleExpr { tuple: res })
         };
@@ -223,10 +223,10 @@ impl Visitor for ExprVisitor {
                 self.expr = Some(exprs.tuple[*index].clone());
             }
             (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
-                self.expr = Some(struct_expr.expr.tuple[*index].clone())
+                self.expr = Some(struct_expr.expr.tuple[*index].clone());
             }
             (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
-                self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr)
+                self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr);
             }
             (_, _) => panic!(),
         }
@@ -239,13 +239,13 @@ impl Visitor for ExprVisitor {
             let res_expr = self.safe_expr_visit(inner_expr);
             if let EvalExpr::Unknown = res_expr {
                 _return_none = true;
-                panic!()
             } else {
                 res.push(res_expr);
             }
         }
         let res_expr: EvalExpr = if _return_none {
-            EvalExpr::Unknown
+            drop(EvalExpr::Unknown);
+            panic!()
         } else {
             EvalExpr::Array(EvalArrayExpr { array: res })
         };
@@ -271,16 +271,16 @@ impl Visitor for ExprVisitor {
 
     fn visit_field_struct_expr(&mut self, expr: &mut FieldStructExpr) {
         let mut fields = vec![];
-        for field in expr.fields.iter_mut() {
+        for field in &mut expr.fields {
             let expr = self.safe_expr_visit(&mut field.expr);
             fields.push(EvalField {
                 name: field.name.clone(),
                 expr,
-            })
+            });
         }
         self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(
             EvalFieldStructExpr { fields },
-        )))
+        )));
     }
 
     fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
@@ -289,7 +289,7 @@ impl Visitor for ExprVisitor {
         if let EvalExpr::Tuple(expr) = tuple_expr {
             self.expr = Some(EvalExpr::Struct(EvalStructExpr::Tuple(
                 EvalTupleStructExpr { expr },
-            )))
+            )));
         } else {
             panic!()
         }

@@ -13,7 +13,7 @@ pub enum Item {
 }
 
 impl Item {
-    /// Attempts multiple times given by ctx.policy.max_item_attempts to generate a valid item.
+    /// Attempts multiple times given by `ctx.policy.max_item_attempts` to generate a valid item.
     pub fn fuzz_item(ctx: &mut Context) -> Option<Item> {
         let mut res: Option<Item> = None;
         let mut num_failed_attempts = 0;
@@ -22,7 +22,7 @@ impl Item {
             if res.is_none() {
                 num_failed_attempts += 1;
                 ctx.statistics.max_failed_item_depth =
-                    max(ctx.statistics.max_failed_item_depth, num_failed_attempts)
+                    max(ctx.statistics.max_failed_item_depth, num_failed_attempts);
             }
         }
         res

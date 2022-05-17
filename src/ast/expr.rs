@@ -49,7 +49,7 @@ pub enum Expr {
 }
 
 impl Expr {
-    /// Attempts multiple times given by ctx.policy.max_expr_attempts to generate a valid expression.
+    /// Attempts multiple times given by `ctx.policy.max_expr_attempts` to generate a valid expression.
     pub fn fuzz_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         let mut res: Option<Expr> = None;
         let mut num_failed_attempts = 0;
@@ -58,7 +58,7 @@ impl Expr {
             if res.is_none() {
                 num_failed_attempts += 1;
                 ctx.statistics.max_failed_expr_depth =
-                    max(ctx.statistics.max_failed_expr_depth, num_failed_attempts)
+                    max(ctx.statistics.max_failed_expr_depth, num_failed_attempts);
             }
         }
         res
@@ -130,7 +130,7 @@ impl LitExpr {
         track_expr(ExprKind::Literal, Box::new(LitExpr::generate_expr_internal))(ctx, res_type)
     }
 
-    /// Attempts to generate a base literal type (not necessarily LitExpr).
+    /// Attempts to generate a base literal type (not necessarily `LitExpr` but also includes arrays and structs).
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
             Ty::Unit => Some(TupleExpr::empty_tuple()),
@@ -161,7 +161,7 @@ pub enum LitIntTy {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-/// Literal integer expression of a LitIntTy type.
+/// Literal integer expression of a `LitIntTy` type.
 /// The actual value of the integer is represented as the u128 value casted with respect to the type.
 pub struct LitIntExpr {
     pub value: u128,
@@ -226,7 +226,7 @@ impl BinaryExpr {
             _ => return None,
         };
         let args_type = op
-            .get_compatible_arg_type(&res_type)
+            .get_compatible_arg_type(res_type)
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
@@ -565,7 +565,7 @@ impl FieldExpr {
     }
 
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
-        let tuple = TupleTy::generate_type(ctx, Some(res_type.clone()))?;
+        let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
         let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
@@ -579,7 +579,7 @@ impl FieldExpr {
     }
 
     pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
-        let struct_ty = StructTy::generate_type(ctx, Some(res_type.clone()))?;
+        let struct_ty = StructTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
@@ -630,7 +630,7 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
-        let array_type: ArrayTy = ArrayTy::generate_type(ctx, Some(res_type.clone()))?;
+        let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {

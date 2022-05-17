@@ -7,7 +7,7 @@ pub struct RustFile {
 }
 
 impl RustFile {
-    /// Attempts multiple times given by ctx.policy.max_file_attempts to generate a valid Rust file.
+    /// Attempts multiple times given by `ctx.policy.max_file_attempts` to generate a valid Rust file.
     pub fn fuzz_file(ctx: &mut Context) -> Option<RustFile> {
         let mut res: Option<RustFile> = None;
         let mut num_failed_attempts = 0;
