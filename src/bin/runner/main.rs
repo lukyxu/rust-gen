@@ -142,6 +142,7 @@ fn run(seed: Option<u64>, policy: &Policy, base_name: &str, opts: Vec<&'static s
         .into());
     }
 
+    // Compare checksum
     if !runs.iter().all(|output| output.1 == expected_checksum) {
         return Err(UnexpectedChecksumError {
             files,
