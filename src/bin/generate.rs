@@ -23,7 +23,7 @@ pub fn main() {
         program,
         statistics,
         ..
-    } = run_generator(args.seed, &policy);
+    } = run_generator(args.seed, &policy).unwrap();
     if args.statistics {
         write_as_ron(std::io::stdout(), statistics);
     } else {

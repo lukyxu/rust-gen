@@ -1,3 +1,5 @@
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
 use crate::context::Context;
@@ -15,10 +17,27 @@ pub struct GeneratorOutput {
     pub expected_checksum: u128,
 }
 
-pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
+#[derive(Debug)]
+pub struct GeneratorError {
+    pub statistics: FullStatistics,
+    pub error_message: String,
+}
+
+impl Error for GeneratorError {}
+
+impl Display for GeneratorError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.error_message)
+    }
+}
+
+pub fn run_generator(seed: Option<u64>, policy: &Policy) -> Result<GeneratorOutput, GeneratorError> {
     let add_checksum = true;
     let mut ctx = Context::with_policy(seed, policy);
-    let mut file = RustFile::generate_file(&mut ctx).expect("Cannot create main function");
+    let mut file = RustFile::generate_file(&mut ctx).ok_or(GeneratorError {
+        statistics: ctx.statistics.clone().into(),
+        error_message: "Unable to generate rust file".to_string(),
+    })?;
     let mut expr_visitor = ExprVisitor::default();
     expr_visitor.visit_file(&mut file);
     // Make program compilable
@@ -28,11 +47,11 @@ pub fn run_generator(seed: Option<u64>, policy: &Policy) -> GeneratorOutput {
     checksum_eval_visitor.visit_file(&mut file);
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_file(&mut file);
-    GeneratorOutput {
+    Ok(GeneratorOutput {
         program: emit_visitor.output(),
         statistics: std::mem::take(&mut ctx.statistics.into()),
         expected_checksum: checksum_eval_visitor.res.unwrap(),
-    }
+    })
 }
 
 fn _print_program(main: &mut Function) {
@@ -44,6 +63,6 @@ fn _print_program(main: &mut Function) {
 #[test]
 fn generator_bench() {
     for i in 0..10 {
-        run_generator(Some(i), &Policy::default());
+        run_generator(Some(i), &Policy::default()).unwrap();
     }
 }

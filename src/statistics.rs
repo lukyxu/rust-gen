@@ -6,7 +6,7 @@ use crate::ast::ty::TyKind;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Default, Debug, Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize)]
 pub struct Statistics {
     pub main_fn_stmts: usize,
 

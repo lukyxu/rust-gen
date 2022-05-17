@@ -318,7 +318,7 @@ impl Policy {
             max_arith_depth: 5,
 
             max_file_attempts: 1,
-            max_main_fn_attempts: 2,
+            max_main_fn_attempts: 1,
             max_item_attempts: 1,
             max_stmt_attempts: 1,
             max_expr_attempts: 100,

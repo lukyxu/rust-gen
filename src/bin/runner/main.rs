@@ -6,7 +6,7 @@ use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use rust_gen::generator::{run_generator, GeneratorOutput};
+use rust_gen::generator::{run_generator, GeneratorOutput, GeneratorError};
 use rust_gen::policy::Policy;
 use rust_gen::utils::write_as_ron;
 use std::fs;
@@ -108,8 +108,7 @@ fn run(seed: Option<u64>, policy: &Policy, base_name: &str, opts: Vec<&'static s
         program,
         statistics,
         expected_checksum,
-    } = run_generator(seed, &policy);
-
+    } = run_generator(seed, &policy).or_else(|err| Err(RunnerError::Generator(err)))?;
     // Save program
     let rust_file = base_name.to_string() + ".rs";
     fs::write(&rust_file, program).expect("Unable to write file");

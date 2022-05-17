@@ -3,9 +3,11 @@ use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::Path;
 use std::process::Output;
+use rust_gen::generator::GeneratorError;
 
 #[derive(Debug)]
 pub enum RunnerError {
+    Generator(GeneratorError),
     Compilation(CompilationError),
     Run(RunError),
     DifferingChecksum(DifferingChecksumError),
@@ -15,6 +17,7 @@ pub enum RunnerError {
 impl RunnerError {
     pub fn folder_name(&self) -> &'static str {
         match self {
+            RunnerError::Generator(_) => "generator_error",
             RunnerError::Compilation(_) => "compilation_error",
             RunnerError::Run(_) => "run_error",
             RunnerError::DifferingChecksum(_) => "differing_checksum_error",
@@ -24,6 +27,7 @@ impl RunnerError {
 
     pub fn files(&self) -> Vec<String> {
         match self {
+            RunnerError::Generator(_err) => vec![],
             RunnerError::Compilation(err) => err.files(),
             RunnerError::Run(err) => err.files(),
             RunnerError::DifferingChecksum(err) => err.files(),
@@ -37,6 +41,7 @@ impl Error for RunnerError {}
 impl Display for RunnerError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            RunnerError::Generator(err) => Display::fmt(err, f),
             RunnerError::Compilation(err) => Display::fmt(err, f),
             RunnerError::Run(err) => Display::fmt(err, f),
             RunnerError::DifferingChecksum(err) => Display::fmt(err, f),
