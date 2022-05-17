@@ -51,8 +51,8 @@ Rust Gen creates programs with the following features:
 
 | Feature      | Status |
 | -----------  | -------|
-| Tuple        | 🟡    |
-| Array        | 🟡    |
+| Tuple        | 🟢    |
+| Array        | 🟢    |
 | Box          | 🔴    |
 | Pointer      | 🔴    |
 | Enum         | 🔴    |
@@ -68,7 +68,7 @@ Rust Gen creates programs with the following features:
 | Local Initialization | 🔴    |
 | Expression           | 🟢    |
 | Semicolon            | 🟢    |
-| Item                 | 🔴    |
+| Item                 | 🟡    |
 
 </details>
 
@@ -82,7 +82,7 @@ Rust Gen creates programs with the following features:
 | Cast                  | 🟡    |
 | If                    | 🟢    |
 | Block                 | 🟢    |
-| Ident                 | 🟢    |
+| Ident                 | 🟡    |
 | Tuple                 | 🟢    |
 | Assign                | 🟢    |
 | Call (Function)       | 🔴    |
@@ -92,11 +92,11 @@ Rust Gen creates programs with the following features:
 | For Loop              | 🔴    |
 | Loop                  | 🔴    |
 | Match                 | 🔴    |
-| Field                 | 🔴    |
-| Index                 | 🔴    |
+| Field                 | 🟢    |
+| Index                 | 🟢    |
 | Address Of            | 🔴    |
 | Repeat (Array)        | 🔴    |
-| Struct                | 🔴    |
+| Struct                | 🟢    |
 
 </details>
 
@@ -116,9 +116,9 @@ Rust Gen creates programs with the following features:
 | BitOr       | 🔴    |
 | Shl         | 🔴    |
 | Shr         | 🔴    |
-| Eq          | 🔴    |
+| Eq          | 🟢    |
 | Lq          | 🔴    |
-| Ne          | 🔴    |
+| Ne          | 🟢    |
 | Ge          | 🔴    |
 | Gt          | 🔴    |
 
@@ -137,4 +137,3 @@ Rust Gen creates programs with the following features:
 
 ## Authors
 - [@Kerry Xu](https://www.github.com/lukyxu)
-

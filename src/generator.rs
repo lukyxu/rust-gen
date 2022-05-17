@@ -1,5 +1,4 @@
 use crate::ast::file::RustFile;
-use crate::ast::function::Function;
 use crate::context::Context;
 use crate::policy::Policy;
 use crate::statistics::FullStatistics;
