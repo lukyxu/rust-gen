@@ -300,6 +300,7 @@ impl Policy {
                 (BinaryOp::Div, 1.0),
                 (BinaryOp::Rem, 1.0),
             ],
+
             binary_bool_op_dist: vec![
                 (BinaryOp::And, 1.0),
                 (BinaryOp::Or, 1.0),
@@ -317,7 +318,7 @@ impl Policy {
             max_arith_depth: 5,
 
             max_file_attempts: 1,
-            max_main_fn_attempts: 1,
+            max_main_fn_attempts: 2,
             max_item_attempts: 1,
             max_stmt_attempts: 1,
             max_expr_attempts: 100,
