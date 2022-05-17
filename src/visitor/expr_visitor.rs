@@ -15,6 +15,9 @@ use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
 
 #[derive(Clone)]
+/// Visitor used to correct certain behaviours that would result in runtime errors.
+/// Any program generated using generate functions and passed through ExprVisitor
+/// should result in valid rust programs which are executable and do not crash.
 pub struct ExprVisitor {
     expr: Option<EvalExpr>,
     pub symbol_table: ExprSymbolTable,
@@ -32,6 +35,7 @@ impl Default for ExprVisitor {
         }
     }
 }
+
 impl ExprVisitor {
     fn safe_expr_visit(&mut self, expr: &mut Expr) -> EvalExpr {
         self.expr = None;

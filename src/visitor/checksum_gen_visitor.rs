@@ -10,6 +10,7 @@ use crate::ast::ty::{PrimTy, StructTy, Ty, UIntTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
 
+/// Visitor used to generate and insert checksum calculations into the program.
 pub struct ChecksumGenVisitor {
     add_checksum: bool,
     local_type_symbol_table: TypeSymbolTable,

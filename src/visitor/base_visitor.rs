@@ -13,6 +13,8 @@ use crate::ast::stmt::{
 };
 use crate::ast::ty::Ty;
 
+/// AST visitor trait.
+/// The default implementation visits in execution order.
 pub trait Visitor: Sized {
     fn enter_scope(&mut self) {}
     fn exit_scope(&mut self) {}

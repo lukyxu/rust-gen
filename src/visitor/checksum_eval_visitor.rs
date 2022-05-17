@@ -6,6 +6,7 @@ use crate::ast::ty::UIntTy;
 use crate::visitor::base_visitor::Visitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 
+/// Visitor used to evaluate the checksum of a main function.
 pub struct ChecksumEvalVisitor {
     expr_visitor: ExprVisitor,
     checksum_name: &'static str,
