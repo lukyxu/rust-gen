@@ -6,7 +6,7 @@ use error::{
     CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
 };
 use indicatif::{ProgressBar, ProgressStyle};
-use rust_gen::generator::{run_generator, GeneratorError, GeneratorOutput};
+use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
 use rust_gen::utils::write_as_ron;
 use std::fs;

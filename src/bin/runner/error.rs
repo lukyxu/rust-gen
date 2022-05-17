@@ -1,8 +1,6 @@
 use rust_gen::generator::GeneratorError;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::fs;
-use std::path::Path;
 use std::process::Output;
 
 #[derive(Debug)]
