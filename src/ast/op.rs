@@ -43,21 +43,32 @@ impl ToString for BinaryOp {
 }
 
 impl BinaryOp {
+    pub fn get_compatible_return_types(&self) -> Vec<Ty> {
+        match self {
+            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
+                PrimTy::int_types().into_iter().map(From::from).collect()
+            }
+            BinaryOp::And | BinaryOp::Or | BinaryOp::Eq | BinaryOp::Ne => {
+                vec![PrimTy::Bool.into()]
+            }
+        }
+    }
+
     /// Returns compatible argument types of a binary operation for a given operation.
     /// Both arguments in binary operation must be of the same type.
-    pub fn get_compatible_arg_type(&self, res_type: &Ty) -> Vec<Ty> {
+    pub fn get_compatible_arg_types(&self, res_type: &Ty) -> Vec<Ty> {
         match self {
             BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
                 vec![res_type.clone()]
             }
             BinaryOp::And | BinaryOp::Or => {
-                vec![Ty::Prim(PrimTy::Bool)]
+                vec![PrimTy::Bool.into()]
             }
-            BinaryOp::Eq | BinaryOp::Ne => {
-                let mut y: Vec<Ty> = PrimTy::int_types().into_iter().map(From::from).collect();
-                y.append(&mut vec![Ty::Prim(PrimTy::Bool)]);
-                y
-            }
+            BinaryOp::Eq | BinaryOp::Ne => PrimTy::int_types()
+                .into_iter()
+                .map(From::from)
+                .chain(std::iter::once(Ty::Prim(PrimTy::Bool)))
+                .collect(),
         }
     }
 }

@@ -60,8 +60,7 @@ impl Context {
     }
 }
 
-// TODO: Check where this is used
-fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> Option<T> {
+pub fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> Option<T> {
     if dist.is_empty() {
         return None;
     };
@@ -150,12 +149,9 @@ impl Context {
         choose(&self.policy.expr_dist, &mut self.rng).unwrap()
     }
 
-    pub fn choose_binary_int_op(&mut self) -> BinaryOp {
-        choose(&self.policy.binary_int_op_dist, &mut self.rng).unwrap()
-    }
-
-    pub fn choose_binary_bool_op(&mut self) -> BinaryOp {
-        choose(&self.policy.binary_bool_op_dist, &mut self.rng).unwrap()
+    pub fn choose_binary_op(&mut self, res_type: &Ty) -> Option<BinaryOp> {
+        let filtered_binary_ops: Vec<(BinaryOp, f64)> = self.policy.binary_op_dist.iter().filter(|x|x.0.get_compatible_return_types().contains(res_type)).cloned().collect();
+        choose(&filtered_binary_ops, &mut self.rng)
     }
 
     pub fn choose_num_items(&mut self) -> usize {

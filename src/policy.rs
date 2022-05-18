@@ -36,9 +36,7 @@ pub struct Policy {
     pub max_struct_depth: usize,
     pub max_expr_depth_in_struct: usize,
 
-    pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
-    pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
-    // TODO: See if we can make this distribution generalized
+    pub binary_op_dist: Vec<(BinaryOp, f64)>,
     pub otherwise_if_stmt_prob: f64,
     pub bool_true_prob: f64,
     pub mutability_prob: f64,
@@ -294,19 +292,16 @@ impl Policy {
             max_struct_depth: 5,
             max_expr_depth_in_struct: 5,
 
-            binary_int_op_dist: vec![
+            binary_op_dist: vec![
+                (BinaryOp::And, 1.0),
+                (BinaryOp::Or, 1.0),
+                (BinaryOp::Eq, 1.0),
+                (BinaryOp::Ne, 1.0),
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
                 (BinaryOp::Mul, 1.0),
                 (BinaryOp::Div, 1.0),
                 (BinaryOp::Rem, 1.0),
-            ],
-
-            binary_bool_op_dist: vec![
-                (BinaryOp::And, 1.0),
-                (BinaryOp::Or, 1.0),
-                (BinaryOp::Eq, 1.0),
-                (BinaryOp::Ne, 1.0),
             ],
 
             otherwise_if_stmt_prob: 0.5,

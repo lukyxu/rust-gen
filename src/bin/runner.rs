@@ -7,10 +7,10 @@ use rand::prelude::SliceRandom;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::Runner;
+use rust_gen::utils::write_as_ron;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
-use rust_gen::utils::write_as_ron;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -27,7 +27,12 @@ struct Args {
         help = "Generation policy [default: default]. Use the flag \"-p help\" for a list of available policies."
     )]
     policy: Option<String>,
-    #[clap(short, long, help = "Output base name of generated program.", default_value = "base")]
+    #[clap(
+        short,
+        long,
+        help = "Output base name of generated program.",
+        default_value = "base"
+    )]
     base_name: String,
     #[clap(short, long, help = "Output path", default_value = "output")]
     output_path: String,
@@ -41,8 +46,8 @@ struct Args {
     )]
     no_opt: bool,
     #[clap(
-    long,
-    help = "Option to not runtime differential testing with different versions."
+        long,
+        help = "Option to not runtime differential testing with different versions."
     )]
     no_version: bool,
 }
@@ -93,7 +98,8 @@ pub fn main() {
             args.include_binaries,
         );
         if args.policy.is_none() {
-            let file = File::create(output_path.as_path().join("policy.txt")).expect("Unable to create file");
+            let file = File::create(output_path.as_path().join("policy.txt"))
+                .expect("Unable to create file");
             write_as_ron(file, &runner.policy)
         }
         progress_bar.inc(1);
