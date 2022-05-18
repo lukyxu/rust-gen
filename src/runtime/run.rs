@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 use crate::generator::{run_generator, GeneratorOutput};
 use crate::policy::Policy;
 use crate::runtime::config::{OptLevel, RustVersion};
@@ -77,7 +78,7 @@ impl Runner {
         Ok(files)
     }
 
-    pub fn save_and_clean_up(output: &RunOutput, i: u64, output_path: &String, save_passing_programs: bool) -> PathBuf {
+    pub fn save_and_clean_up(output: &RunOutput, i: u64, output_path: &String, save_passing_programs: bool, include_binaries: bool) -> PathBuf {
         match &output {
             Ok(files) => {
                 let directory = &format!("{}/pass/{}", output_path, i);
@@ -86,7 +87,7 @@ impl Runner {
                     fs::create_dir_all(directory).expect("Unable to create directory");
                 }
                 for file in files {
-                    if save_passing_programs {
+                    if save_passing_programs && (include_binaries || !is_binary(file)) {
                         fs::rename(file, directory.join(file)).expect("Cannot move file");
                     } else {
                         fs::remove_file(file).expect("Unable to remove file");
@@ -98,12 +99,22 @@ impl Runner {
                 let directory = &format!("{}/fail/{}/{}", &output_path, err.folder_name(), i);
                 let directory: &Path = Path::new(directory);
                 fs::create_dir_all(directory).expect("Unable to create directory");
-                for file in err.files() {
-                    fs::rename(&file, directory.join(&file)).expect("Cannot move file");
+                for file in &err.files() {
+                    if include_binaries || !is_binary(file) {
+                        fs::rename(file, directory.join(file)).expect("Cannot move file");
+                    }
                 }
                 directory.to_path_buf()
             }
         }
+    }
+}
+
+fn is_binary(input_file: &String) -> bool {
+    let extension = Path::new(input_file).extension();
+    match extension {
+        None => true,
+        Some(extension) => extension.to_string_lossy().contains("-")
     }
 }
 

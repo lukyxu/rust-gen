@@ -35,6 +35,8 @@ struct Args {
     output_path: String,
     #[clap(short, long, help = "Store passing programs in output path.")]
     save_passing_programs: bool,
+    #[clap(short, long, help = "Include binaries from output.")]
+    include_binaries: bool,
     #[clap(
         long,
         help = "Option to not runtime differential testing with different optimizations."
@@ -76,7 +78,7 @@ pub fn main() {
             eprintln!("Failed seed {}", i);
             eprintln!("{}", err);
         }
-        Runner::save_and_clean_up(&output, i, &output_path, args.save_passing_programs);
+        Runner::save_and_clean_up(&output, i, &output_path, args.save_passing_programs, args.include_binaries);
         progress_bar.inc(1);
     }
 }
