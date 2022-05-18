@@ -34,6 +34,8 @@ impl RustVersion {
         vec![
             RustVersion("1.26.0".to_string()),
             RustVersion("1.42.0".to_string()),
+            RustVersion("1.59.0".to_string()),
+            RustVersion("stable".to_string()),
         ]
     }
 }

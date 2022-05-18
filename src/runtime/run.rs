@@ -125,7 +125,7 @@ fn compile_program(
             output_file,
         ])
         .output()
-        .expect("failed to execute compile process");
+        .expect("Failed to execute compile process");
 
     if !output.status.success() {
         return Err(CompilationError::new(input_file, &output));
@@ -136,7 +136,7 @@ fn compile_program(
 fn run_program(rust_file: &str, executable: &str) -> Result<u128, RunError> {
     let output = Command::new(format!("./{}", &executable))
         .output()
-        .expect("failed to execute runtime process");
+        .expect("Failed to execute runtime process");
     if !output.status.success() {
         return Err(RunError::new(rust_file, executable, &output));
     }
