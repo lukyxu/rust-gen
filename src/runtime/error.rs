@@ -1,4 +1,5 @@
-use rust_gen::generator::GeneratorError;
+use crate::generator::GeneratorError;
+use crate::runtime::run::ChecksumMapping;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::process::Output;
@@ -117,7 +118,7 @@ impl Error for RunError {}
 
 impl Display for RunError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Failed to run {}", self.rust_file_path)?;
+        writeln!(f, "Failed to runtime {}", self.rust_file_path)?;
         writeln!(f, "Status code {}", self.status_code)?;
         writeln!(f, "Standard error")?;
         writeln!(f, "{}", self.std_err)
@@ -133,7 +134,7 @@ impl From<RunError> for RunnerError {
 #[derive(Debug)]
 pub struct DifferingChecksumError {
     pub files: Vec<String>,
-    pub checksums: Vec<(&'static str, u128)>,
+    pub checksums: ChecksumMapping,
 }
 
 impl DifferingChecksumError {
@@ -161,7 +162,7 @@ impl From<DifferingChecksumError> for RunnerError {
 pub struct UnexpectedChecksumError {
     pub files: Vec<String>,
     pub expected_checksum: u128,
-    pub checksums: Vec<(&'static str, u128)>,
+    pub checksums: ChecksumMapping,
 }
 
 impl UnexpectedChecksumError {

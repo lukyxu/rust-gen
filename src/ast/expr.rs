@@ -413,7 +413,6 @@ impl BlockExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
-    // TODO: check if type is necessary.
     pub ty: Ty,
 }
 
@@ -470,6 +469,12 @@ pub struct AssignExpr {
     pub name: String,
     pub rhs: Box<Expr>,
 }
+
+// pub enum PlaceExpr {
+//     Field(),
+//     Index(),
+//     Ident()
+// }
 
 impl From<AssignExpr> for Expr {
     fn from(expr: AssignExpr) -> Self {
