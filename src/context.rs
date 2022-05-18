@@ -6,7 +6,7 @@ use crate::ast::ty::{ArrayTy, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
-use rand::prelude::{Distribution, SliceRandom, StdRng};
+use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
 
 pub struct Context {

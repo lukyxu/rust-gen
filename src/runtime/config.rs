@@ -23,6 +23,8 @@ impl ToString for OptLevel {
     }
 }
 
+static RUST_VERSIONS: [&str; 7] = ["1.26.0", "1.32.0", "1.37.0", "1.42.0", "1.48.0", "1.55.0", "stable"];
+
 #[derive(Debug, Clone)]
 pub struct RustVersion(String);
 impl RustVersion {
@@ -31,12 +33,7 @@ impl RustVersion {
     }
 
     pub fn supported_rust_versions() -> Vec<RustVersion> {
-        vec![
-            RustVersion("1.26.0".to_string()),
-            RustVersion("1.42.0".to_string()),
-            RustVersion("1.59.0".to_string()),
-            RustVersion("stable".to_string()),
-        ]
+        RUST_VERSIONS.map(&str::to_string).map(RustVersion).to_vec()
     }
 }
 

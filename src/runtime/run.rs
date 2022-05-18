@@ -1,4 +1,3 @@
-use std::ffi::OsStr;
 use crate::generator::{run_generator, GeneratorOutput};
 use crate::policy::Policy;
 use crate::runtime::config::{OptLevel, RustVersion};
@@ -78,7 +77,13 @@ impl Runner {
         Ok(files)
     }
 
-    pub fn save_and_clean_up(output: &RunOutput, i: u64, output_path: &String, save_passing_programs: bool, include_binaries: bool) -> PathBuf {
+    pub fn save_and_clean_up(
+        output: &RunOutput,
+        i: u64,
+        output_path: &String,
+        save_passing_programs: bool,
+        include_binaries: bool,
+    ) -> PathBuf {
         match &output {
             Ok(files) => {
                 let directory = &format!("{}/pass/{}", output_path, i);
@@ -114,7 +119,7 @@ fn is_binary(input_file: &String) -> bool {
     let extension = Path::new(input_file).extension();
     match extension {
         None => true,
-        Some(extension) => extension.to_string_lossy().contains("-")
+        Some(extension) => extension.to_string_lossy().contains("-"),
     }
 }
 

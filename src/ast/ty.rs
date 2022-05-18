@@ -5,7 +5,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Ty {
     Unit,
     Prim(PrimTy),
@@ -131,7 +131,7 @@ impl ToString for Ty {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum PrimTy {
     Bool,
     #[allow(dead_code)]
@@ -194,14 +194,14 @@ impl PrimTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum FloatTy {
     F32,
     F64,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum IntTy {
     ISize,
     I8,
@@ -268,7 +268,7 @@ impl IntTy {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum UIntTy {
     USize,
     U8,
@@ -335,7 +335,7 @@ impl UIntTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TupleTy {
     pub tuple: Vec<Ty>,
 }
@@ -439,7 +439,7 @@ impl TupleTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ArrayTy {
     pub base_ty: Box<Ty>,
     pub len: usize,
@@ -513,7 +513,7 @@ impl ArrayTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum StructTy {
     Field(FieldStructTy),
     Tuple(TupleStructTy),
@@ -567,7 +567,7 @@ impl StructTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FieldStructTy {
     pub name: String,
     pub fields: Vec<FieldDef>,
@@ -614,7 +614,7 @@ impl FieldStructTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FieldDef {
     pub name: String,
     pub ty: Box<Ty>,
@@ -640,7 +640,7 @@ impl FieldDef {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TupleStructTy {
     pub name: String,
     pub fields: TupleTy,

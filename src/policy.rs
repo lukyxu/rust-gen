@@ -3,14 +3,15 @@ use crate::ast::item::ItemKind;
 use crate::ast::op::BinaryOp;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
-use rand::distributions::Uniform;
+use crate::distribution::Distribution;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Policy {
     pub name: &'static str,
-    pub num_item_dist: Uniform<usize>,
+    pub num_item_dist: Distribution,
     pub item_dist: Vec<(ItemKind, f64)>,
-    pub num_stmt_dist: Uniform<usize>,
+    pub num_stmt_dist: Distribution,
     pub stmt_dist: Vec<(StmtKind, f64)>,
     pub expr_dist: Vec<(ExprKind, f64)>,
     pub type_dist: Vec<(TyKind, f64)>,
@@ -21,17 +22,17 @@ pub struct Policy {
     pub default_struct_type_dist: Vec<(StructTy, f64)>,
 
     pub new_array_prob: f64,
-    pub array_length_dist: Uniform<usize>,
+    pub array_length_dist: Distribution,
     pub max_array_depth: usize,
     pub max_expr_depth_in_array: usize,
 
     pub new_tuple_prob: f64,
-    pub tuple_length_dist: Uniform<usize>,
+    pub tuple_length_dist: Distribution,
     pub max_tuple_depth: usize,
     pub max_expr_depth_in_tuple: usize,
 
     pub field_struct_prob: f64,
-    pub struct_length_dist: Uniform<usize>,
+    pub struct_length_dist: Distribution,
     pub max_struct_depth: usize,
     pub max_expr_depth_in_struct: usize,
 
@@ -121,7 +122,7 @@ impl Policy {
                 },
                 1.0,
             )],
-            tuple_length_dist: Uniform::new_inclusive(3, 4),
+            tuple_length_dist: Distribution::new_uniform_inclusive(3, 4),
             max_tuple_depth: 1,
             expr_dist: vec![
                 (ExprKind::Literal, 5.0),
@@ -162,7 +163,7 @@ impl Policy {
             max_block_depth: 3,
             max_arith_depth: 1,
 
-            num_stmt_dist: Uniform::new_inclusive(2, 3),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 3),
             ..policy
         }
     }
@@ -174,7 +175,7 @@ impl Policy {
         policy.mutability_prob = 1.0;
         policy.max_if_else_depth = 3;
         policy.max_arith_depth = 3;
-        policy.num_stmt_dist = Uniform::new_inclusive(2, 5);
+        policy.num_stmt_dist = Distribution::new_uniform_inclusive(2, 5);
         policy
     }
 
@@ -191,7 +192,7 @@ impl Policy {
                 },
                 0.5,
             )],
-            array_length_dist: Uniform::new_inclusive(3, 4),
+            array_length_dist: Distribution::new_uniform_inclusive(3, 4),
             max_array_depth: 3,
 
             mutability_prob: 0.2,
@@ -207,7 +208,7 @@ impl Policy {
             max_block_depth: 3,
             max_arith_depth: 1,
 
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             ..policy
         }
     }
@@ -231,10 +232,10 @@ impl Policy {
     fn default_with_name(name: &'static str) -> Self {
         Policy {
             name,
-            num_item_dist: Uniform::new_inclusive(2, 10),
+            num_item_dist: Distribution::new_uniform_inclusive(2, 10),
             item_dist: vec![(ItemKind::Struct, 1.0)],
 
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             stmt_dist: vec![
                 (StmtKind::Local, 5.0),
                 (StmtKind::Semi, 1.0),
@@ -277,19 +278,19 @@ impl Policy {
 
             new_array_prob: 0.5,
             default_array_type_dist: vec![],
-            array_length_dist: Uniform::new_inclusive(2, 3),
+            array_length_dist: Distribution::new_uniform_inclusive(2, 3),
             max_array_depth: 2,
             max_expr_depth_in_array: 5,
 
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
-            tuple_length_dist: Uniform::new_inclusive(2, 3),
+            tuple_length_dist: Distribution::new_uniform_inclusive(2, 3),
             max_tuple_depth: 2,
             max_expr_depth_in_tuple: 5,
 
             field_struct_prob: 0.5,
             default_struct_type_dist: vec![],
-            struct_length_dist: Uniform::new_inclusive(2, 3),
+            struct_length_dist: Distribution::new_uniform_inclusive(2, 3),
             max_struct_depth: 5,
             max_expr_depth_in_struct: 5,
 
