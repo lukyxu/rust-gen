@@ -220,13 +220,9 @@ impl BinaryExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
-        let op = match res_type {
-            Ty::Prim(PrimTy::Bool) => ctx.choose_binary_bool_op(),
-            Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => ctx.choose_binary_int_op(),
-            _ => return None,
-        };
+        let op = ctx.choose_binary_op(res_type)?;
         let args_type = op
-            .get_compatible_arg_type(res_type)
+            .get_compatible_arg_types(res_type, ctx)
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
