@@ -176,21 +176,37 @@ impl PrimTy {
         ctx.choose_prim_type()
     }
 
-    pub fn int_types() -> Vec<PrimTy> {
-        vec![
-            PrimTy::Int(IntTy::I8),
-            PrimTy::Int(IntTy::I16),
-            PrimTy::Int(IntTy::I32),
-            PrimTy::Int(IntTy::I64),
-            PrimTy::Int(IntTy::I128),
-            PrimTy::Int(IntTy::ISize),
-            PrimTy::UInt(UIntTy::U8),
-            PrimTy::UInt(UIntTy::U16),
-            PrimTy::UInt(UIntTy::U32),
-            PrimTy::UInt(UIntTy::U64),
-            PrimTy::UInt(UIntTy::U128),
-            PrimTy::UInt(UIntTy::USize),
-        ]
+    pub fn int_types(ctx: &Context) -> Vec<PrimTy> {
+        let mut ints: Vec<PrimTy> = ctx
+            .policy
+            .prim_type_dist
+            .iter()
+            .filter_map(|(ty, _)| {
+                if matches!(ty, PrimTy::Int(_)) || matches!(ty, PrimTy::UInt(_)) {
+                    Some(ty)
+                } else {
+                    None
+                }
+            })
+            .cloned()
+            .collect();
+        if ints.is_empty() {
+            ints.append(&mut vec![
+                PrimTy::Int(IntTy::I8),
+                PrimTy::Int(IntTy::I16),
+                PrimTy::Int(IntTy::I32),
+                PrimTy::Int(IntTy::I64),
+                PrimTy::Int(IntTy::I128),
+                PrimTy::Int(IntTy::ISize),
+                PrimTy::UInt(UIntTy::U8),
+                PrimTy::UInt(UIntTy::U16),
+                PrimTy::UInt(UIntTy::U32),
+                PrimTy::UInt(UIntTy::U64),
+                PrimTy::UInt(UIntTy::U128),
+                PrimTy::UInt(UIntTy::USize),
+            ]);
+        }
+        return ints;
     }
 }
 

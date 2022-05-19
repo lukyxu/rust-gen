@@ -23,7 +23,9 @@ impl ToString for OptLevel {
     }
 }
 
-static RUST_VERSIONS: [&str; 7] = ["1.26.0", "1.32.0", "1.37.0", "1.42.0", "1.48.0", "1.55.0", "stable"];
+static RUST_VERSIONS: [&str; 7] = [
+    "1.26.0", "1.32.0", "1.37.0", "1.42.0", "1.48.0", "1.55.0", "stable",
+];
 
 #[derive(Debug, Clone)]
 pub struct RustVersion(String);

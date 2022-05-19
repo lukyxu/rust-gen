@@ -165,6 +165,7 @@ pub struct EvalField {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EvalExprError {
+    // TODO: Add TypeError
     SignedOverflow,
     UnsignedOverflow,
     MinMulOverflow,
@@ -314,16 +315,31 @@ impl BinaryOp {
     apply_int!(apply_mul, expr_mul);
     apply_int!(apply_div, expr_div);
     apply_int!(apply_rem, expr_rem);
+    apply_int!(apply_eq, expr_eq);
+    apply_int!(apply_ne, expr_ne);
+    apply_int!(apply_lq, expr_lq);
+    apply_int!(apply_le, expr_le);
+    apply_int!(apply_ge, expr_ge);
+    apply_int!(apply_gt, expr_gt);
+
 
     fn apply_int(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
+        if lhs.ty != rhs.ty {
+            panic!("Incompatible types");
+        }
         match self {
             BinaryOp::Add => self.apply_add(lhs, rhs),
             BinaryOp::Sub => self.apply_sub(lhs, rhs),
             BinaryOp::Mul => self.apply_mul(lhs, rhs),
             BinaryOp::Div => self.apply_div(lhs, rhs),
             BinaryOp::Rem => self.apply_rem(lhs, rhs),
-            BinaryOp::Eq => Ok(LitExpr::Bool(lhs.value == rhs.value)),
-            BinaryOp::Ne => Ok(LitExpr::Bool(lhs.value != rhs.value)),
+            BinaryOp::Eq => self.apply_eq(lhs, rhs),
+            BinaryOp::Ne => self.apply_ne(lhs, rhs),
+            BinaryOp::Lq => self.apply_lq(lhs, rhs),
+            BinaryOp::Le => self.apply_le(lhs, rhs),
+            BinaryOp::Ge => self.apply_ge(lhs, rhs),
+            BinaryOp::Gt => self.apply_gt(lhs, rhs),
+
             _ => panic!("Undefined operation on ints"),
         }
     }
@@ -353,6 +369,12 @@ trait Literal<
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_ne(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_lq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_le(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_ge(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_gt(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
 
 trait ByLitIntTy<T> {
@@ -431,6 +453,30 @@ impl<
             assert!(T::min_value() < T::zero());
             Err(SignedOverflow)
         }
+    }
+
+    fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs == rhs))
+    }
+
+    fn expr_ne(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs != rhs))
+    }
+
+    fn expr_lq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs < rhs))
+    }
+
+    fn expr_le(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs <= rhs))
+    }
+
+    fn expr_ge(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs >= rhs))
+    }
+
+    fn expr_gt(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs > rhs))
     }
 }
 

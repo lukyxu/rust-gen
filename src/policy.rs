@@ -4,6 +4,7 @@ use crate::ast::op::BinaryOp;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use crate::distribution::Distribution;
+use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,9 +37,7 @@ pub struct Policy {
     pub max_struct_depth: usize,
     pub max_expr_depth_in_struct: usize,
 
-    pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
-    pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
-    // TODO: See if we can make this distribution generalized
+    pub binary_op_dist: Vec<(BinaryOp, f64)>,
     pub otherwise_if_stmt_prob: f64,
     pub bool_true_prob: f64,
     pub mutability_prob: f64,
@@ -79,6 +78,7 @@ impl Policy {
             Policy::array_debug(),
             Policy::array_index_debug(),
             Policy::default(),
+            Policy::debug(),
         ]
     }
 
@@ -94,6 +94,16 @@ impl Policy {
             .iter()
             .find(|p| p.name == name)
             .cloned()
+    }
+
+    pub fn parse_policy_args_or_random(policy: &Option<String>) -> Policy {
+        match policy {
+            None => Policy::get_policies()
+                .choose(&mut rand::thread_rng())
+                .cloned()
+                .unwrap(),
+            Some(policy) => Policy::parse_policy_args(Some(policy.clone())),
+        }
     }
 
     pub fn parse_policy_args(policy: Option<String>) -> Policy {
@@ -144,6 +154,25 @@ impl Policy {
         policy.name = "tuple_field_debug";
         policy.expr_dist.push((ExprKind::Field, 0.5));
         policy
+    }
+
+    pub fn debug() -> Self {
+        Policy {
+            name: "debug",
+            binary_op_dist: vec![
+                (BinaryOp::Eq, 1.0),
+                (BinaryOp::Ne, 1.0),
+                (BinaryOp::Lq, 1.0),
+                (BinaryOp::Le, 1.0),
+                (BinaryOp::Ge, 1.0),
+                (BinaryOp::Gt, 1.0),
+            ],
+            num_item_dist: Distribution::Uniform(0, 0),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 2),
+            max_if_else_depth: 1,
+            max_block_depth: 1,
+            ..Policy::simple_debug()
+        }
     }
 
     pub fn simple_debug() -> Self {
@@ -294,19 +323,20 @@ impl Policy {
             max_struct_depth: 5,
             max_expr_depth_in_struct: 5,
 
-            binary_int_op_dist: vec![
+            binary_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
                 (BinaryOp::Mul, 1.0),
                 (BinaryOp::Div, 1.0),
                 (BinaryOp::Rem, 1.0),
-            ],
-
-            binary_bool_op_dist: vec![
                 (BinaryOp::And, 1.0),
                 (BinaryOp::Or, 1.0),
                 (BinaryOp::Eq, 1.0),
                 (BinaryOp::Ne, 1.0),
+                (BinaryOp::Lq, 1.0),
+                (BinaryOp::Le, 1.0),
+                (BinaryOp::Ge, 1.0),
+                (BinaryOp::Gt, 1.0),
             ],
 
             otherwise_if_stmt_prob: 0.5,

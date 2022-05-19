@@ -1,5 +1,6 @@
 use crate::ast::item::{FunctionItem, Item};
 use crate::context::Context;
+use std::cmp::max;
 
 /// Rust file. The current root node of a program.
 pub struct RustFile {
@@ -23,7 +24,7 @@ impl RustFile {
     /// Attempts a single attempt to generate a valid Rust file.
     pub fn generate_file(ctx: &mut Context) -> Option<RustFile> {
         let mut items = vec![];
-        for _ in 0..ctx.choose_num_items() - 1 {
+        for _ in 0..max(ctx.choose_num_items(), 1) - 1 {
             items.push(Item::generate_item(ctx)?);
         }
         items.push(Item::Function(FunctionItem::generate_main(ctx)?));
