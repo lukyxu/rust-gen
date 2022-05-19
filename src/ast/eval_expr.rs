@@ -9,7 +9,10 @@ use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 #[cfg(test)]
 use crate::ast::ty::{IntTy, UIntTy};
 use crate::ast::ty::{PrimTy, Ty};
-use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
+use crate::wrapping::{WrappingDiv, WrappingRem};
+use num_traits::{
+    AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingSub,
+};
 use std::mem::swap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -321,7 +324,11 @@ impl BinaryOp {
     apply_int!(apply_le, expr_le);
     apply_int!(apply_ge, expr_ge);
     apply_int!(apply_gt, expr_gt);
-
+    apply_int!(apply_wrapping_add, expr_wrapping_add);
+    apply_int!(apply_wrapping_sub, expr_wrapping_sub);
+    apply_int!(apply_wrapping_mul, expr_wrapping_mul);
+    apply_int!(apply_wrapping_div, expr_wrapping_div);
+    apply_int!(apply_wrapping_rem, expr_wrapping_rem);
 
     fn apply_int(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
         if lhs.ty != rhs.ty {
@@ -339,6 +346,11 @@ impl BinaryOp {
             BinaryOp::Le => self.apply_le(lhs, rhs),
             BinaryOp::Ge => self.apply_ge(lhs, rhs),
             BinaryOp::Gt => self.apply_gt(lhs, rhs),
+            BinaryOp::WrappingAdd => self.apply_wrapping_add(lhs, rhs),
+            BinaryOp::WrappingSub => self.apply_wrapping_sub(lhs, rhs),
+            BinaryOp::WrappingMul => self.apply_wrapping_mul(lhs, rhs),
+            BinaryOp::WrappingDiv => self.apply_wrapping_div(lhs, rhs),
+            BinaryOp::WrappingRem => self.apply_wrapping_rem(lhs, rhs),
 
             _ => panic!("Undefined operation on ints"),
         }
@@ -375,6 +387,11 @@ trait Literal<
     fn expr_le(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_ge(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_gt(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
 
 trait ByLitIntTy<T> {
@@ -396,6 +413,10 @@ impl<
             + Copy
             + AsPrimitive<u128>
             + WrappingAdd<Output = T>
+            + WrappingSub<Output = T>
+            + WrappingMul<Output = T>
+            + WrappingDiv<Output = T>
+            + WrappingRem<Output = T>
             + ByLitIntTy<T>
             + CheckedRem<Output = T>,
     > Literal<T> for T
@@ -477,6 +498,22 @@ impl<
 
     fn expr_gt(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         Ok(LitExpr::Bool(lhs > rhs))
+    }
+
+    fn expr_wrapping_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_add(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_sub(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_mul(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_div(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_rem(&rhs).as_(), T::by_lit_expr_type()).into())
     }
 }
 

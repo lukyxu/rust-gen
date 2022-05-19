@@ -1,6 +1,6 @@
 use crate::ast::ty::{PrimTy, Ty};
-use serde::{Deserialize, Serialize};
 use crate::context::Context;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -24,6 +24,12 @@ pub enum BinaryOp {
     Ne,
     Ge,
     Gt,
+
+    WrappingAdd,
+    WrappingSub,
+    WrappingMul,
+    WrappingDiv,
+    WrappingRem,
 }
 
 impl ToString for BinaryOp {
@@ -42,17 +48,40 @@ impl ToString for BinaryOp {
             BinaryOp::Ne => "!=",
             BinaryOp::Ge => ">=",
             BinaryOp::Gt => ">",
+            BinaryOp::WrappingAdd => "wrapping_add",
+            BinaryOp::WrappingSub => "wrapping_sub",
+            BinaryOp::WrappingMul => "wrapping_mul",
+            BinaryOp::WrappingDiv => "wrapping_div",
+            BinaryOp::WrappingRem => "wrapping_rem",
         }
         .to_owned()
     }
 }
 
 impl BinaryOp {
+    pub fn is_function_call(&self) -> bool {
+        match self {
+            BinaryOp::WrappingAdd
+            | BinaryOp::WrappingSub
+            | BinaryOp::WrappingMul
+            | BinaryOp::WrappingDiv
+            | BinaryOp::WrappingRem => true,
+            _ => false,
+        }
+    }
+
     pub fn get_compatible_return_types(&self, ctx: &Context) -> Vec<Ty> {
         match self {
-            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
-                PrimTy::int_types(ctx).into_iter().map(From::from).collect()
-            }
+            BinaryOp::Add
+            | BinaryOp::Sub
+            | BinaryOp::Mul
+            | BinaryOp::Div
+            | BinaryOp::Rem
+            | BinaryOp::WrappingAdd
+            | BinaryOp::WrappingSub
+            | BinaryOp::WrappingMul
+            | BinaryOp::WrappingDiv
+            | BinaryOp::WrappingRem => PrimTy::int_types(ctx).into_iter().map(From::from).collect(),
             BinaryOp::And
             | BinaryOp::Or
             | BinaryOp::Eq
@@ -70,7 +99,16 @@ impl BinaryOp {
     /// Both arguments in binary operation must be of the same type.
     pub fn get_compatible_arg_types(&self, res_type: &Ty, ctx: &Context) -> Vec<Ty> {
         match self {
-            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
+            BinaryOp::Add
+            | BinaryOp::Sub
+            | BinaryOp::Mul
+            | BinaryOp::Div
+            | BinaryOp::Rem
+            | BinaryOp::WrappingAdd
+            | BinaryOp::WrappingSub
+            | BinaryOp::WrappingMul
+            | BinaryOp::WrappingDiv
+            | BinaryOp::WrappingRem => {
                 vec![res_type.clone()]
             }
             BinaryOp::And | BinaryOp::Or => {
