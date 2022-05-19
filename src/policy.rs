@@ -216,7 +216,7 @@ impl Policy {
     pub fn array_index_debug() -> Self {
         let mut policy = Policy::array_debug();
         policy.name = "array_index_debug";
-        policy.expr_dist.push((ExprKind::Index, 1.0));
+        policy.expr_dist.push((ExprKind::Index, 0.5));
         policy
     }
 }
