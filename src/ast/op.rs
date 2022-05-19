@@ -1,5 +1,6 @@
 use crate::ast::ty::{PrimTy, Ty};
 use serde::{Deserialize, Serialize};
+use crate::context::Context;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -18,11 +19,11 @@ pub enum BinaryOp {
     // Shl,
     // Shr,
     Eq,
-    // Lq,
-    // Le,
+    Lq,
+    Le,
     Ne,
-    // Ge,
-    // Gt
+    Ge,
+    Gt,
 }
 
 impl ToString for BinaryOp {
@@ -36,19 +37,30 @@ impl ToString for BinaryOp {
             BinaryOp::And => "&&",
             BinaryOp::Or => "||",
             BinaryOp::Eq => "==",
+            BinaryOp::Lq => "<",
+            BinaryOp::Le => "<=",
             BinaryOp::Ne => "!=",
+            BinaryOp::Ge => ">=",
+            BinaryOp::Gt => ">",
         }
         .to_owned()
     }
 }
 
 impl BinaryOp {
-    pub fn get_compatible_return_types(&self) -> Vec<Ty> {
+    pub fn get_compatible_return_types(&self, ctx: &Context) -> Vec<Ty> {
         match self {
             BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
-                PrimTy::int_types().into_iter().map(From::from).collect()
+                PrimTy::int_types(ctx).into_iter().map(From::from).collect()
             }
-            BinaryOp::And | BinaryOp::Or | BinaryOp::Eq | BinaryOp::Ne => {
+            BinaryOp::And
+            | BinaryOp::Or
+            | BinaryOp::Eq
+            | BinaryOp::Ne
+            | BinaryOp::Le
+            | BinaryOp::Lq
+            | BinaryOp::Ge
+            | BinaryOp::Gt => {
                 vec![PrimTy::Bool.into()]
             }
         }
@@ -56,7 +68,7 @@ impl BinaryOp {
 
     /// Returns compatible argument types of a binary operation for a given operation.
     /// Both arguments in binary operation must be of the same type.
-    pub fn get_compatible_arg_types(&self, res_type: &Ty) -> Vec<Ty> {
+    pub fn get_compatible_arg_types(&self, res_type: &Ty, ctx: &Context) -> Vec<Ty> {
         match self {
             BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Div | BinaryOp::Rem => {
                 vec![res_type.clone()]
@@ -64,11 +76,14 @@ impl BinaryOp {
             BinaryOp::And | BinaryOp::Or => {
                 vec![PrimTy::Bool.into()]
             }
-            BinaryOp::Eq | BinaryOp::Ne => PrimTy::int_types()
+            BinaryOp::Eq | BinaryOp::Ne => PrimTy::int_types(ctx)
                 .into_iter()
                 .map(From::from)
                 .chain(std::iter::once(Ty::Prim(PrimTy::Bool)))
                 .collect(),
+            BinaryOp::Le | BinaryOp::Lq | BinaryOp::Ge | BinaryOp::Gt => {
+                PrimTy::int_types(ctx).into_iter().map(From::from).collect()
+            }
         }
     }
 }

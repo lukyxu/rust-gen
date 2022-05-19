@@ -3,7 +3,6 @@ use clap::Parser;
 use std::fmt::Debug;
 
 use indicatif::{ProgressBar, ProgressStyle};
-use rand::prelude::SliceRandom;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::Runner;
@@ -84,7 +83,7 @@ pub fn main() {
     };
 
     for i in 0..num_rums {
-        runner.policy = get_policy(&args.policy);
+        runner.policy = Policy::parse_policy_args_or_random(&args.policy);
         let output = runner.run(Some(i));
         if let Err(err) = &output {
             eprintln!("Failed seed {}", i);
@@ -98,20 +97,11 @@ pub fn main() {
             args.include_binaries,
         );
         if args.policy.is_none() {
+            fs::create_dir_all(&output_path).expect("Unable to create directory");
             let file = File::create(output_path.as_path().join("policy.txt"))
                 .expect("Unable to create file");
             write_as_ron(file, &runner.policy)
         }
         progress_bar.inc(1);
-    }
-}
-
-fn get_policy(policy: &Option<String>) -> Policy {
-    match policy {
-        None => Policy::get_policies()
-            .choose(&mut rand::thread_rng())
-            .cloned()
-            .unwrap(),
-        Some(policy) => Policy::parse_policy_args(Some(policy.clone())),
     }
 }

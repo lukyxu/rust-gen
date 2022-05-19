@@ -150,7 +150,13 @@ impl Context {
     }
 
     pub fn choose_binary_op(&mut self, res_type: &Ty) -> Option<BinaryOp> {
-        let filtered_binary_ops: Vec<(BinaryOp, f64)> = self.policy.binary_op_dist.iter().filter(|x|x.0.get_compatible_return_types().contains(res_type)).cloned().collect();
+        let filtered_binary_ops: Vec<(BinaryOp, f64)> = self
+            .policy
+            .binary_op_dist
+            .iter()
+            .filter(|x| x.0.get_compatible_return_types(self).contains(res_type))
+            .cloned()
+            .collect();
         choose(&filtered_binary_ops, &mut self.rng)
     }
 

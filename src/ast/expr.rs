@@ -222,7 +222,7 @@ impl BinaryExpr {
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
         let op = ctx.choose_binary_op(res_type)?;
         let args_type = op
-            .get_compatible_arg_types(res_type)
+            .get_compatible_arg_types(res_type, ctx)
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
