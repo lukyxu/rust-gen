@@ -337,6 +337,11 @@ impl Policy {
                 (BinaryOp::Le, 1.0),
                 (BinaryOp::Ge, 1.0),
                 (BinaryOp::Gt, 1.0),
+                (BinaryOp::WrappingAdd, 1.0),
+                (BinaryOp::WrappingSub, 1.0),
+                (BinaryOp::WrappingMul, 1.0),
+                (BinaryOp::WrappingDiv, 1.0),
+                (BinaryOp::WrappingRem, 1.0),
             ],
 
             otherwise_if_stmt_prob: 0.5,

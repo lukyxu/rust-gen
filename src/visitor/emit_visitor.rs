@@ -166,11 +166,21 @@ impl Visitor for EmitVisitor {
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         self.output.push('(');
-        self.visit_expr(&mut expr.lhs);
-        self.output.push(' ');
-        self.visit_binary_op(&mut expr.op);
-        self.output.push(' ');
-        self.visit_expr(&mut expr.rhs);
+        if expr.op.is_function_call() {
+            self.output.push('(');
+            self.visit_expr(&mut expr.lhs);
+            self.output.push_str(").");
+            self.visit_binary_op(&mut expr.op);
+            self.output.push('(');
+            self.visit_expr(&mut expr.rhs);
+            self.output.push(')');
+        } else {
+            self.visit_expr(&mut expr.lhs);
+            self.output.push(' ');
+            self.visit_binary_op(&mut expr.op);
+            self.output.push(' ');
+            self.visit_expr(&mut expr.rhs);
+        }
         self.output.push(')');
     }
 
