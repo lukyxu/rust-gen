@@ -227,7 +227,7 @@ impl BinaryExpr {
                     BinaryOp::Div
                 }
             }
-            BinaryOp::Div | BinaryOp::Rem => {
+            BinaryOp::Div | BinaryOp::Rem | BinaryOp::WrappingDiv | BinaryOp::WrappingRem => {
                 if let EvalExprError::ZeroDiv = error {
                     BinaryOp::Mul
                 } else {
@@ -510,9 +510,15 @@ impl<
         Ok(LitIntExpr::new(lhs.wrapping_mul(&rhs).as_(), T::by_lit_expr_type()).into())
     }
     fn expr_wrapping_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if rhs.is_zero() {
+            return Err(ZeroDiv)
+        }
         Ok(LitIntExpr::new(lhs.wrapping_div(&rhs).as_(), T::by_lit_expr_type()).into())
     }
     fn expr_wrapping_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if rhs.is_zero() {
+            return Err(ZeroDiv)
+        }
         Ok(LitIntExpr::new(lhs.wrapping_rem(&rhs).as_(), T::by_lit_expr_type()).into())
     }
 }
