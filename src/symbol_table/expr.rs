@@ -23,6 +23,10 @@ impl ExprSymbolTable {
         Some(self.expr_mapping.get(name)?.clone())
     }
 
+    pub fn get_expr_ref_by_name(&mut self, name: &str) -> Option<&mut EvalExpr> {
+        self.expr_mapping.get_mut(name)
+    }
+
     pub fn get_ty_by_name(&self, name: &str) -> Option<Ty> {
         Some(self.ty_mapping.get(name)?.clone())
     }

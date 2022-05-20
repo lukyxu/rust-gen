@@ -149,6 +149,18 @@ impl Context {
         choose(&self.policy.expr_dist, &mut self.rng).unwrap()
     }
 
+    pub fn choose_place_expr_kind(&mut self) -> ExprKind {
+        let place_exprs = [ExprKind::Ident, ExprKind::Field, ExprKind::Index];
+        let place_exprs_dist: Vec<(ExprKind, f64)> = self
+            .policy
+            .expr_dist
+            .iter()
+            .filter(|x| place_exprs.contains(&x.0))
+            .cloned()
+            .collect();
+        choose(&place_exprs_dist, &mut self.rng).unwrap()
+    }
+
     pub fn choose_binary_op(&mut self, res_type: &Ty) -> Option<BinaryOp> {
         let filtered_binary_ops: Vec<(BinaryOp, f64)> = self
             .policy

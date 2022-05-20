@@ -2,7 +2,9 @@ use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
-use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy};
+use crate::ast::expr::{
+    BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member,
+};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
@@ -10,9 +12,7 @@ use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 use crate::ast::ty::{IntTy, UIntTy};
 use crate::ast::ty::{PrimTy, Ty};
 use crate::wrapping::{WrappingDiv, WrappingRem};
-use num_traits::{
-    AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingSub,
-};
+use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingSub};
 use std::mem::swap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -157,6 +157,10 @@ impl From<EvalFieldStructExpr> for EvalStructExpr {
 impl EvalFieldStructExpr {
     pub fn get_field_by_name(&self, name: &str) -> Option<EvalField> {
         self.fields.iter().find(|field| field.name == name).cloned()
+    }
+
+    pub fn get_mut_field_by_name(&mut self, name: &str) -> Option<&mut EvalField> {
+        self.fields.iter_mut().find(|field| field.name == name)
     }
 }
 
@@ -511,15 +515,31 @@ impl<
     }
     fn expr_wrapping_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if rhs.is_zero() {
-            return Err(ZeroDiv)
+            return Err(ZeroDiv);
         }
         Ok(LitIntExpr::new(lhs.wrapping_div(&rhs).as_(), T::by_lit_expr_type()).into())
     }
     fn expr_wrapping_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if rhs.is_zero() {
-            return Err(ZeroDiv)
+            return Err(ZeroDiv);
         }
         Ok(LitIntExpr::new(lhs.wrapping_rem(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+}
+
+pub enum EvalPlaceExpr {
+    Ident(String),
+    Field(Box<EvalPlaceExpr>, Member),
+    Index(Box<EvalPlaceExpr>, usize),
+}
+
+impl EvalPlaceExpr {
+    pub fn name(&self) -> String {
+        match self {
+            EvalPlaceExpr::Ident(name) => name.clone(),
+            EvalPlaceExpr::Field(expr, _) => expr.name(),
+            EvalPlaceExpr::Index(expr, _) => expr.name(),
+        }
     }
 }
 

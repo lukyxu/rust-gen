@@ -1,7 +1,7 @@
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, StructExpr, TupleExpr,
-    TupleStructExpr, UnaryExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr, StructExpr,
+    TupleExpr, TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 
@@ -245,8 +245,12 @@ fn walk_tuple_expr<V: Visitor>(visitor: &mut V, TupleExpr { tuple }: &mut TupleE
     }
 }
 
-fn walk_assign_expr<V: Visitor>(visitor: &mut V, AssignExpr { name, rhs }: &mut AssignExpr) {
-    visitor.visit_name(name);
+fn walk_assign_expr<V: Visitor>(visitor: &mut V, AssignExpr { place, rhs }: &mut AssignExpr) {
+    match place {
+        PlaceExpr::Field(expr) => visitor.visit_field_expr(expr),
+        PlaceExpr::Index(expr) => visitor.visit_index_expr(expr),
+        PlaceExpr::Ident(expr) => visitor.visit_ident_expr(expr),
+    };
     visitor.visit_expr(rhs);
 }
 
