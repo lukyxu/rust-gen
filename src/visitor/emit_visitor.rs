@@ -1,6 +1,6 @@
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, TupleExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, TupleExpr,
     TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
@@ -251,7 +251,11 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
-        self.visit_name(&expr.name);
+        match &mut expr.place {
+            PlaceExpr::Field(expr) => self.visit_field_expr(expr),
+            PlaceExpr::Index(expr) => self.visit_index_expr(expr),
+            PlaceExpr::Ident(expr) => self.visit_ident_expr(expr),
+        }
         self.output.push_str(" = ");
         self.visit_expr(&mut expr.rhs);
     }

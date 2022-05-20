@@ -267,7 +267,7 @@ impl Policy {
             num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             stmt_dist: vec![
                 (StmtKind::Local, 5.0),
-                (StmtKind::Semi, 1.0),
+                (StmtKind::Semi, 3.0),
                 // (StmtKind::Expr, 0.0): Must be 0
             ],
             expr_dist: vec![
@@ -278,14 +278,15 @@ impl Policy {
                 (ExprKind::Block, 0.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
-                (ExprKind::Index, 1.0),
-                (ExprKind::Field, 1.0),
+                (ExprKind::Assign, 5.0),
+                (ExprKind::Index, 0.2),
+                (ExprKind::Field, 0.2),
             ],
             type_dist: vec![
                 (TyKind::Unit, 1.0),
                 (TyKind::Prim, 2.0),
-                (TyKind::Array, 0.2),
-                (TyKind::Tuple, 0.2),
+                (TyKind::Array, 0.5),
+                (TyKind::Tuple, 0.5),
                 (TyKind::Struct, 0.5),
             ],
 
@@ -315,13 +316,13 @@ impl Policy {
             default_tuple_type_dist: vec![],
             tuple_length_dist: Distribution::new_uniform_inclusive(2, 3),
             max_tuple_depth: 2,
-            max_expr_depth_in_tuple: 5,
+            max_expr_depth_in_tuple: 2,
 
             field_struct_prob: 0.5,
             default_struct_type_dist: vec![],
             struct_length_dist: Distribution::new_uniform_inclusive(2, 3),
-            max_struct_depth: 5,
-            max_expr_depth_in_struct: 5,
+            max_struct_depth: 3,
+            max_expr_depth_in_struct: 2,
 
             binary_op_dist: vec![
                 (BinaryOp::Add, 1.0),
@@ -346,9 +347,9 @@ impl Policy {
 
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
-            mutability_prob: 0.5,
+            mutability_prob: 1.0,
 
-            max_expr_depth: 100,
+            max_expr_depth: 10,
             max_if_else_depth: 2,
             max_block_depth: 2,
             max_arith_depth: 5,
@@ -356,8 +357,8 @@ impl Policy {
             max_file_attempts: 1,
             max_main_fn_attempts: 1,
             max_item_attempts: 1,
-            max_stmt_attempts: 20,
-            max_expr_attempts: 100,
+            max_stmt_attempts: 5,
+            max_expr_attempts: 5,
             max_ty_attempts: 5,
         }
     }

@@ -13,7 +13,7 @@ use std::fmt::{Display, Formatter};
 pub struct GeneratorOutput {
     pub program: String,
     pub statistics: FullStatistics,
-    pub expected_checksum: u128,
+    pub expected_checksum: Option<u128>,
 }
 
 #[derive(Debug)]
@@ -33,13 +33,14 @@ impl Display for GeneratorError {
 pub fn run_generator(
     seed: Option<u64>,
     policy: &Policy,
+    add_checksum: bool,
 ) -> Result<GeneratorOutput, GeneratorError> {
-    let add_checksum = true;
     let mut ctx = Context::with_policy(seed, policy);
     let mut file = RustFile::generate_file(&mut ctx).ok_or(GeneratorError {
         statistics: Box::new(ctx.statistics.clone().into()),
         error_message: "Unable to generate rust file".to_string(),
     })?;
+    // _print_program(&mut file);
     let mut expr_visitor = ExprVisitor::default();
     expr_visitor.visit_file(&mut file);
     // Make program compilable
@@ -49,10 +50,15 @@ pub fn run_generator(
     checksum_eval_visitor.visit_file(&mut file);
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_file(&mut file);
+
     Ok(GeneratorOutput {
         program: emit_visitor.output(),
         statistics: std::mem::take(&mut ctx.statistics.into()),
-        expected_checksum: checksum_eval_visitor.res.unwrap(),
+        expected_checksum: if add_checksum {
+            Some(checksum_eval_visitor.res.unwrap())
+        } else {
+            None
+        },
     })
 }
 
@@ -65,6 +71,6 @@ fn _print_program(file: &mut RustFile) {
 #[test]
 fn generator_bench() {
     for i in 0..10 {
-        run_generator(Some(i), &Policy::default()).unwrap();
+        run_generator(Some(i), &Policy::default(), true).unwrap();
     }
 }

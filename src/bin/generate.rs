@@ -18,6 +18,8 @@ struct GeneratorArgs {
     policy: Option<String>,
     #[clap(long, help = "Output statistics instead of program.")]
     statistics: bool,
+    #[clap(long, help = "Removes checksum.")]
+    no_checksum: bool,
 }
 
 pub fn main() {
@@ -27,7 +29,7 @@ pub fn main() {
         program,
         statistics,
         ..
-    } = run_generator(args.seed, &policy).unwrap();
+    } = run_generator(args.seed, &policy, !args.no_checksum).unwrap();
     if args.statistics {
         write_as_ron(std::io::stdout(), statistics);
     } else {
