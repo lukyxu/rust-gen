@@ -1,5 +1,5 @@
 use crate::ast::expr::BlockExpr;
-use crate::ast::ty::Ty;
+use crate::ast::ty::{FieldDef, Ty};
 use crate::context::Context;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -28,6 +28,15 @@ impl Function {
         ctx.statistics.main_fn_stmts = block.stmts.len();
         Some(Function {
             name: String::from("main"),
+            block,
+        })
+    }
+
+    pub fn generate_fn(ctx: &mut Context) -> Option<Function> {
+        let block = BlockExpr::generate_expr(ctx, &Ty::unit_type())?;
+        ctx.statistics.main_fn_stmts = block.stmts.len();
+        Some(Function {
+            name: ctx.create_function_name(),
             block,
         })
     }

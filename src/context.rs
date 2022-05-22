@@ -192,6 +192,10 @@ impl Context {
         NameHandler::create_field_name(index)
     }
 
+    pub fn create_function_name(&mut self) -> String {
+        self.name_handler.create_function_name()
+    }
+
     pub fn choose_new_array_type(&mut self) -> bool {
         self.gen_new_array_types && self.rng.gen_bool(self.policy.new_array_prob)
     }
@@ -222,6 +226,7 @@ impl Context {
 pub struct NameHandler {
     var_counter: i32,
     struct_counter: i32,
+    function_counter: i32,
 }
 
 impl NameHandler {
@@ -237,5 +242,10 @@ impl NameHandler {
 
     fn create_field_name(index: usize) -> String {
         format!("field_{}", index)
+    }
+
+    fn create_function_name(&mut self) -> String {
+        self.function_counter += 1;
+        format!("function_{}", self.function_counter)
     }
 }

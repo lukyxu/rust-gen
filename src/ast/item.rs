@@ -61,8 +61,10 @@ impl FunctionItem {
             function: Function::fuzz_main_fn(ctx)?,
         })
     }
-    fn generate_item(_ctx: &mut Context) -> Option<FunctionItem> {
-        todo!()
+    fn generate_item(ctx: &mut Context) -> Option<FunctionItem> {
+        Some(FunctionItem {
+            function: Function::generate_fn(ctx)?,
+        })
     }
 }
 

@@ -362,6 +362,18 @@ impl From<TupleTy> for Ty {
     }
 }
 
+impl TupleTy {
+    /// Returns the depth of a tuple.
+    pub fn tuple_depth(&self) -> usize {
+        1 + self
+            .tuple
+            .iter()
+            .map(Ty::tuple_depth)
+            .max()
+            .unwrap_or_default()
+    }
+}
+
 impl<'a> IntoIterator for &'a TupleTy {
     type Item = &'a Ty;
     type IntoIter = std::slice::Iter<'a, Ty>;

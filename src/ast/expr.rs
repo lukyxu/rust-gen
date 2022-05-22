@@ -607,13 +607,20 @@ impl FieldExpr {
         if ctx.choose_field_struct() {
             FieldExpr::generate_struct_field_expr(ctx, res_type)
         } else {
+            // Bottleneck is here
             FieldExpr::generate_tuple_field_expr(ctx, res_type)
         }
     }
 
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
-
+        // println!("{}", tuple.tuple_depth());
+        // if tuple.tuple_depth() > 2 {
+        //     println!("here")
+        // }
+        if tuple.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+            return None;
+        }
         let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
