@@ -41,6 +41,9 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_function(&mut self, function: &mut Function) {
+        if function.name != "main" {
+            return;
+        }
         function.block.stmts.insert(
             0,
             Stmt::Local(LocalStmt::Init(InitLocalStmt {
@@ -86,7 +89,11 @@ impl Visitor for ChecksumGenVisitor {
             for cast_expr in cast_exprs {
                 let stmt = Stmt::Semi(SemiStmt {
                     expr: Expr::Assign(AssignExpr {
-                        name: self.checksum_name.to_owned(),
+                        place: IdentExpr {
+                            name: self.checksum_name.to_owned(),
+                            ty: UIntTy::U128.into(),
+                        }
+                        .into(),
                         rhs: Box::new(Expr::Binary(BinaryExpr {
                             lhs: Box::new(Expr::Ident(IdentExpr {
                                 name: self.checksum_name.to_owned(),

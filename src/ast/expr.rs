@@ -1,18 +1,19 @@
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::{
-    ArrayTy, FieldDef, FieldStructTy, FloatTy, IntTy, PrimTy, StructTy, TupleStructTy, TupleTy, Ty,
-    UIntTy,
+    ArrayTy, FieldDef, FieldStructTy, FloatTy, IntTy, PrimTy, ReferenceTy, StructTy, TupleStructTy,
+    TupleTy, Ty, UIntTy,
 };
 use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::utils::{
-    limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, track_expr,
+    apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct,
+    apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth,
+    limit_if_else_depth, track_expr,
 };
 use crate::context::Context;
-use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::cmp::{max, min};
+use std::cmp::max;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -45,7 +46,8 @@ pub enum Expr {
     Field(FieldExpr),
     /// Struct literal expression such as `S { field1: value1, field2: value2 }` and `S(5_u32, "hello")`.
     Struct(StructExpr),
-    // TODO: Path, Box
+    /// Reference expression such as `&a` or `&mut a`.
+    Reference(ReferenceExpr), // TODO: Path, Box
 }
 
 impl Expr {
@@ -120,7 +122,7 @@ pub enum LitExpr {
 }
 
 impl From<LitExpr> for Expr {
-    fn from(expr: LitExpr) -> Self {
+    fn from(expr: LitExpr) -> Expr {
         Expr::Literal(expr)
     }
 }
@@ -146,6 +148,9 @@ impl LitExpr {
             Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
             Ty::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
             Ty::Struct(struct_ty) => StructExpr::generate_expr(ctx, struct_ty).map(From::from),
+            Ty::Reference(reference_ty) => {
+                ReferenceExpr::generate_expr(ctx, reference_ty).map(From::from)
+            }
             _ => panic!(
                 "Literal type for {} not supported yet",
                 res_type.to_string()
@@ -220,13 +225,9 @@ impl BinaryExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
-        let op = match res_type {
-            Ty::Prim(PrimTy::Bool) => ctx.choose_binary_bool_op(),
-            Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => ctx.choose_binary_int_op(),
-            _ => return None,
-        };
+        let op = ctx.choose_binary_op(res_type)?;
         let args_type = op
-            .get_compatible_arg_type(res_type)
+            .get_compatible_arg_types(res_type, ctx)
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
@@ -238,7 +239,7 @@ impl BinaryExpr {
 }
 
 impl From<BinaryExpr> for Expr {
-    fn from(expr: BinaryExpr) -> Self {
+    fn from(expr: BinaryExpr) -> Expr {
         Expr::Binary(expr)
     }
 }
@@ -250,7 +251,7 @@ pub struct UnaryExpr {
 }
 
 impl From<UnaryExpr> for Expr {
-    fn from(expr: UnaryExpr) -> Self {
+    fn from(expr: UnaryExpr) -> Expr {
         Expr::Unary(expr)
     }
 }
@@ -266,12 +267,13 @@ impl UnaryExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<UnaryExpr> {
-        let op = match res_type {
-            Ty::Prim(PrimTy::Bool) => UnaryOp::Not,
-            Ty::Prim(PrimTy::Int(_)) => UnaryOp::Neg,
-            _ => return None,
-        };
-        let expr = Box::new(Expr::fuzz_expr(ctx, res_type)?);
+        let op = ctx.choose_unary_op(res_type)?;
+        let args_type = op
+            .get_compatible_arg_types(res_type)
+            .choose(&mut ctx.rng)
+            .cloned()
+            .unwrap();
+        let expr = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
         *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
@@ -284,7 +286,7 @@ pub struct CastExpr {
 }
 
 impl From<CastExpr> for Expr {
-    fn from(expr: CastExpr) -> Self {
+    fn from(expr: CastExpr) -> Expr {
         Expr::Cast(expr)
     }
 }
@@ -320,7 +322,7 @@ pub struct IfExpr {
 }
 
 impl From<IfExpr> for Expr {
-    fn from(expr: IfExpr) -> Self {
+    fn from(expr: IfExpr) -> Expr {
         Expr::If(expr)
     }
 }
@@ -374,7 +376,7 @@ pub struct BlockExpr {
 }
 
 impl From<BlockExpr> for Expr {
-    fn from(expr: BlockExpr) -> Self {
+    fn from(expr: BlockExpr) -> Expr {
         Expr::Block(expr)
     }
 }
@@ -413,13 +415,18 @@ impl BlockExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
-    // TODO: check if type is necessary.
     pub ty: Ty,
 }
 
 impl From<IdentExpr> for Expr {
-    fn from(expr: IdentExpr) -> Self {
+    fn from(expr: IdentExpr) -> Expr {
         Expr::Ident(expr)
+    }
+}
+
+impl From<IdentExpr> for PlaceExpr {
+    fn from(expr: IdentExpr) -> PlaceExpr {
+        PlaceExpr::Ident(expr)
     }
 }
 
@@ -431,6 +438,18 @@ impl IdentExpr {
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
         ctx.choose_ident_expr_by_type(res_type)
     }
+
+    pub fn generate_place_expr(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
+        track_expr(
+            ExprKind::Ident,
+            Box::new(IdentExpr::generate_place_expr_internal),
+        )(ctx, res_type)
+    }
+
+    fn generate_place_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
+        let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(res_type);
+        mut_ident_exprs.choose(&mut ctx.rng).cloned()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -439,7 +458,7 @@ pub struct TupleExpr {
 }
 
 impl From<TupleExpr> for Expr {
-    fn from(expr: TupleExpr) -> Self {
+    fn from(expr: TupleExpr) -> Expr {
         Expr::Tuple(expr)
     }
 }
@@ -452,27 +471,49 @@ impl TupleExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &TupleTy) -> Option<TupleExpr> {
         let mut res = vec![];
         for ty in &res_type.tuple {
-            let prev_max_expr_depth = ctx.policy.max_expr_depth;
-            ctx.policy.max_expr_depth = min(
-                ctx.policy.max_expr_depth,
-                ctx.expr_depth + ctx.policy.max_expr_depth_in_tuple,
-            );
-            let expr = Expr::fuzz_expr(ctx, ty);
-            ctx.policy.max_expr_depth = prev_max_expr_depth;
-            res.push(expr?);
+            res.push(apply_limit_expr_depth_in_tuple(Expr::fuzz_expr, ctx, ty)?);
         }
         Some(TupleExpr { tuple: res })
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum PlaceExpr {
+    Field(FieldExpr),
+    Index(IndexExpr),
+    Ident(IdentExpr),
+}
+
+impl From<PlaceExpr> for Expr {
+    fn from(place: PlaceExpr) -> Expr {
+        match place {
+            PlaceExpr::Field(expr) => expr.into(),
+            PlaceExpr::Index(expr) => expr.into(),
+            PlaceExpr::Ident(expr) => expr.into(),
+        }
+    }
+}
+
+impl PlaceExpr {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<PlaceExpr> {
+        let expr_kind = ctx.choose_place_expr_kind();
+        match expr_kind {
+            ExprKind::Ident => IdentExpr::generate_place_expr(ctx, res_type).map(From::from),
+            ExprKind::Index => IndexExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::Field => FieldExpr::generate_expr(ctx, res_type).map(From::from),
+            _ => panic!("Invalid expr_kind ({:?}) for PlaceExpr ", expr_kind),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct AssignExpr {
-    pub name: String,
+    pub place: PlaceExpr,
     pub rhs: Box<Expr>,
 }
 
 impl From<AssignExpr> for Expr {
-    fn from(expr: AssignExpr) -> Self {
+    fn from(expr: AssignExpr) -> Expr {
         Expr::Assign(expr)
     }
 }
@@ -490,12 +531,12 @@ impl AssignExpr {
             return None;
         };
         let ty = Ty::generate_type(ctx)?;
-        let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(&ty);
-        let ident_expr = mut_ident_exprs.choose(&mut ctx.rng)?.clone();
+
+        let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
 
         Some(AssignExpr {
-            name: ident_expr.name,
-            rhs: Box::new(Expr::fuzz_expr(ctx, &ident_expr.ty)?),
+            place,
+            rhs: Box::new(Expr::fuzz_expr(ctx, &ty)?),
         })
     }
 }
@@ -506,7 +547,7 @@ pub struct ArrayExpr {
 }
 
 impl From<ArrayExpr> for Expr {
-    fn from(expr: ArrayExpr) -> Self {
+    fn from(expr: ArrayExpr) -> Expr {
         Expr::Array(expr)
     }
 }
@@ -515,14 +556,7 @@ impl ArrayExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &ArrayTy) -> Option<ArrayExpr> {
         let mut res = vec![];
         for ty in res_type.iter() {
-            let prev_max_expr_depth = ctx.policy.max_expr_depth;
-            ctx.policy.max_expr_depth = min(
-                ctx.policy.max_expr_depth,
-                ctx.expr_depth + ctx.policy.max_expr_depth_in_array,
-            );
-            let expr = Expr::fuzz_expr(ctx, &ty);
-            ctx.policy.max_expr_depth = prev_max_expr_depth;
-            res.push(expr?);
+            res.push(apply_limit_expr_depth_in_array(Expr::fuzz_expr, ctx, &ty)?);
         }
         Some(ArrayExpr { array: res })
     }
@@ -541,8 +575,14 @@ pub struct FieldExpr {
 }
 
 impl From<FieldExpr> for Expr {
-    fn from(expr: FieldExpr) -> Self {
+    fn from(expr: FieldExpr) -> Expr {
         Expr::Field(expr)
+    }
+}
+
+impl From<FieldExpr> for PlaceExpr {
+    fn from(expr: FieldExpr) -> PlaceExpr {
+        PlaceExpr::Field(expr)
     }
 }
 
@@ -557,10 +597,10 @@ impl FieldExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
-        if ctx.rng.gen_bool(0.5) {
-            FieldExpr::generate_tuple_field_expr(ctx, res_type)
-        } else {
+        if ctx.choose_field_struct() {
             FieldExpr::generate_struct_field_expr(ctx, res_type)
+        } else {
+            FieldExpr::generate_tuple_field_expr(ctx, res_type)
         }
     }
 
@@ -614,8 +654,14 @@ pub struct IndexExpr {
 }
 
 impl From<IndexExpr> for Expr {
-    fn from(expr: IndexExpr) -> Self {
+    fn from(expr: IndexExpr) -> Expr {
         Expr::Index(expr)
+    }
+}
+
+impl From<IndexExpr> for PlaceExpr {
+    fn from(expr: IndexExpr) -> PlaceExpr {
+        PlaceExpr::Index(expr)
     }
 }
 
@@ -630,6 +676,10 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
+        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
+            return None;
+        }
+
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
@@ -662,21 +712,18 @@ impl From<StructExpr> for Expr {
 
 impl StructExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
-        let prev_max_expr_depth = ctx.policy.max_expr_depth;
-        ctx.policy.max_expr_depth = min(
-            ctx.policy.max_expr_depth,
-            ctx.expr_depth + ctx.policy.max_expr_depth_in_struct,
-        );
-        let res = match res_type {
+        apply_limit_expr_depth_in_struct(StructExpr::generate_expr_internal, ctx, res_type)
+    }
+
+    fn generate_expr_internal(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
+        match res_type {
             StructTy::Field(res_type) => {
                 FieldStructExpr::generate_expr(ctx, res_type).map(From::from)
             }
             StructTy::Tuple(res_type) => {
                 TupleStructExpr::generate_expr(ctx, res_type).map(From::from)
             }
-        };
-        ctx.policy.max_expr_depth = prev_max_expr_depth;
-        res
+        }
     }
 }
 
@@ -687,7 +734,7 @@ pub struct TupleStructExpr {
 }
 
 impl From<TupleStructExpr> for StructExpr {
-    fn from(expr: TupleStructExpr) -> Self {
+    fn from(expr: TupleStructExpr) -> StructExpr {
         StructExpr::Tuple(expr)
     }
 }
@@ -708,7 +755,7 @@ pub struct FieldStructExpr {
 }
 
 impl From<FieldStructExpr> for StructExpr {
-    fn from(expr: FieldStructExpr) -> Self {
+    fn from(expr: FieldStructExpr) -> StructExpr {
         StructExpr::Field(expr)
     }
 }
@@ -741,6 +788,27 @@ impl Field {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReferenceExpr {
+    pub mutability: bool,
+    pub expr: Box<Expr>,
+}
+
+impl From<ReferenceExpr> for Expr {
+    fn from(expr: ReferenceExpr) -> Expr {
+        Expr::Reference(expr)
+    }
+}
+
+impl ReferenceExpr {
+    pub fn generate_expr(ctx: &mut Context, res_type: &ReferenceTy) -> Option<ReferenceExpr> {
+        Some(ReferenceExpr {
+            mutability: res_type.mutability,
+            expr: Box::new(Expr::fuzz_expr(ctx, &res_type.elem)?),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ExprKind {
@@ -754,5 +822,6 @@ pub enum ExprKind {
     Assign,
     Index,
     Field,
+    Reference,
     __Nonexhaustive,
 }

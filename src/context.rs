@@ -1,13 +1,15 @@
 use crate::ast::expr::{ExprKind, IdentExpr};
 use crate::ast::item::ItemKind;
-use crate::ast::op::BinaryOp;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{ArrayTy, PrimTy, StructTy, TupleTy, Ty, TyKind};
+use crate::ast::ty::{ArrayTy, Lifetime, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
-use rand::prelude::{Distribution, SliceRandom, StdRng};
+use num_traits::AsPrimitive;
+use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
+use std::collections::BTreeSet;
 
 pub struct Context {
     pub policy: Policy,
@@ -22,6 +24,8 @@ pub struct Context {
     pub if_else_depth: usize,
     pub block_depth: usize,
     pub arith_depth: usize,
+
+    pub struct_ctx: Option<StructContext>,
 
     pub array_type_dist: Vec<(ArrayTy, f64)>,
     pub tuple_type_dist: Vec<(TupleTy, f64)>,
@@ -53,6 +57,8 @@ impl Context {
             block_depth: 0,
             arith_depth: 0,
 
+            struct_ctx: None,
+
             array_type_dist: policy.default_array_type_dist.clone(),
             tuple_type_dist: policy.default_tuple_type_dist.clone(),
             struct_type_dist: policy.default_struct_type_dist.clone(),
@@ -60,8 +66,7 @@ impl Context {
     }
 }
 
-// TODO: Check where this is used
-fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> Option<T> {
+pub fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> Option<T> {
     if dist.is_empty() {
         return None;
     };
@@ -82,7 +87,7 @@ impl Context {
     }
 
     pub fn choose_array_type(&mut self, elem_ty: &Option<Ty>) -> Option<ArrayTy> {
-        let dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.array_type_dist
                 .iter()
                 .filter(|(array_ty, _)| &*array_ty.base_ty == elem_ty)
@@ -91,6 +96,7 @@ impl Context {
         } else {
             self.array_type_dist.clone()
         };
+        dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
         choose(&dist, &mut self.rng)
     }
 
@@ -99,7 +105,7 @@ impl Context {
     }
 
     pub fn choose_tuple_type(&mut self, elem_ty: &Option<Ty>) -> Option<TupleTy> {
-        let dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.tuple_type_dist
                 .iter()
                 .filter(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty))
@@ -108,6 +114,7 @@ impl Context {
         } else {
             self.tuple_type_dist.clone()
         };
+        dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
         choose(&dist, &mut self.rng)
     }
 
@@ -116,7 +123,7 @@ impl Context {
     }
 
     pub fn choose_struct_type(&mut self, elem_ty: &Option<Ty>) -> Option<StructTy> {
-        let dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.struct_type_dist
                 .iter()
                 .filter(|(struct_ty, _)| match struct_ty {
@@ -131,6 +138,7 @@ impl Context {
         } else {
             self.struct_type_dist.clone()
         };
+        dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
         choose(&dist, &mut self.rng)
     }
 
@@ -150,12 +158,38 @@ impl Context {
         choose(&self.policy.expr_dist, &mut self.rng).unwrap()
     }
 
-    pub fn choose_binary_int_op(&mut self) -> BinaryOp {
-        choose(&self.policy.binary_int_op_dist, &mut self.rng).unwrap()
+    pub fn choose_place_expr_kind(&mut self) -> ExprKind {
+        let place_exprs = [ExprKind::Ident, ExprKind::Field, ExprKind::Index];
+        let place_exprs_dist: Vec<(ExprKind, f64)> = self
+            .policy
+            .expr_dist
+            .iter()
+            .filter(|x| place_exprs.contains(&x.0))
+            .cloned()
+            .collect();
+        choose(&place_exprs_dist, &mut self.rng).unwrap()
     }
 
-    pub fn choose_binary_bool_op(&mut self) -> BinaryOp {
-        choose(&self.policy.binary_bool_op_dist, &mut self.rng).unwrap()
+    pub fn choose_binary_op(&mut self, res_type: &Ty) -> Option<BinaryOp> {
+        let filtered_binary_ops: Vec<(BinaryOp, f64)> = self
+            .policy
+            .binary_op_dist
+            .iter()
+            .filter(|x| x.0.get_compatible_return_types(self).contains(res_type))
+            .cloned()
+            .collect();
+        choose(&filtered_binary_ops, &mut self.rng)
+    }
+
+    pub fn choose_unary_op(&mut self, res_type: &Ty) -> Option<UnaryOp> {
+        let filtered_unary_ops: Vec<(UnaryOp, f64)> = self
+            .policy
+            .unary_op_dist
+            .iter()
+            .filter(|x| x.0.get_compatible_return_types(self).contains(res_type))
+            .cloned()
+            .collect();
+        choose(&filtered_unary_ops, &mut self.rng)
     }
 
     pub fn choose_num_items(&mut self) -> usize {
@@ -178,6 +212,17 @@ impl Context {
         NameHandler::create_field_name(index)
     }
 
+    pub fn create_function_name(&mut self) -> String {
+        self.name_handler.create_function_name()
+    }
+
+    pub fn create_lifetime_name(&mut self) -> Option<String> {
+        Some(
+            self.name_handler
+                .create_lifetime_name(self.struct_ctx.as_ref()?.lifetimes.len()),
+        )
+    }
+
     pub fn choose_new_array_type(&mut self) -> bool {
         self.gen_new_array_types && self.rng.gen_bool(self.policy.new_array_prob)
     }
@@ -198,6 +243,10 @@ impl Context {
         self.rng.gen_bool(self.policy.mutability_prob)
     }
 
+    pub fn choose_new_lifetime(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.new_lifetime_prob)
+    }
+
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
         let ident_exprs = self.type_symbol_table.get_ident_exprs_by_type(ty);
         ident_exprs.choose(&mut self.rng).cloned()
@@ -208,6 +257,7 @@ impl Context {
 pub struct NameHandler {
     var_counter: i32,
     struct_counter: i32,
+    function_counter: i32,
 }
 
 impl NameHandler {
@@ -224,4 +274,20 @@ impl NameHandler {
     fn create_field_name(index: usize) -> String {
         format!("field_{}", index)
     }
+
+    fn create_function_name(&mut self) -> String {
+        self.function_counter += 1;
+        format!("function_{}", self.function_counter)
+    }
+
+    fn create_lifetime_name(&mut self, index: usize) -> String {
+        let possible_values = b'a'..=b'z';
+        let possible_value_len = possible_values.len();
+        (possible_values.collect::<Vec<u8>>()[index % possible_value_len] as char).to_string()
+    }
+}
+
+#[derive(Default)]
+pub struct StructContext {
+    pub lifetimes: BTreeSet<Lifetime>,
 }

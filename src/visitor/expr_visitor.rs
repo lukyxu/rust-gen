@@ -1,14 +1,18 @@
 use crate::ast::eval_expr::{
-    EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalStructExpr, EvalTupleExpr,
-    EvalTupleStructExpr,
+    EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
+    EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
 };
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, TupleExpr,
-    TupleStructExpr, UnaryExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
+use crate::ast::file::RustFile;
+use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
+use crate::ast::op::{BinaryOp, UnaryOp};
 
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
@@ -52,6 +56,10 @@ impl ExprVisitor {
         &self.symbol_table
     }
 
+    fn mut_symbol_table(&mut self) -> &mut ExprSymbolTable {
+        &mut self.symbol_table
+    }
+
     fn visit_block_internal(&mut self, block_expr: &mut BlockExpr) -> ExprSymbolTable {
         self.enter_scope();
         for stmt in &mut block_expr.stmts {
@@ -64,6 +72,68 @@ impl ExprVisitor {
 
     fn update_symbol_table(&mut self, new_symbol_table: &ExprSymbolTable) {
         self.symbol_table.update_symbol_table(new_symbol_table);
+    }
+
+    fn eval_place_expr(&mut self, expr: &mut Expr) -> Option<EvalPlaceExpr> {
+        match expr {
+            Expr::Field(expr) => Some(EvalPlaceExpr::Field(
+                Box::new(self.eval_place_expr(&mut expr.base)?),
+                expr.member.clone(),
+            )),
+            Expr::Index(expr) => {
+                let place = self.eval_place_expr(&mut expr.base);
+                let eval_expr = self.safe_expr_visit(&mut expr.index);
+                let value = if let EvalExpr::Literal(LitExpr::Int(LitIntExpr {
+                    value,
+                    ty: LitIntTy::Unsigned(UIntTy::USize),
+                })) = eval_expr
+                {
+                    value
+                } else {
+                    panic!("Unexpected index type")
+                };
+                let place = if let Some(place) = place {
+                    Box::new(place)
+                } else {
+                    return None;
+                };
+                Some(EvalPlaceExpr::Index(place, value as usize))
+            }
+            Expr::Ident(expr) => Some(EvalPlaceExpr::Ident(expr.name.clone())),
+            _ => {
+                self.visit_expr(expr);
+                return None;
+            }
+        }
+    }
+
+    fn helper<'a>(prev_expr: &'a mut EvalExpr, place_expr: &EvalPlaceExpr) -> &'a mut EvalExpr {
+        match place_expr {
+            EvalPlaceExpr::Ident(_) => prev_expr,
+            EvalPlaceExpr::Field(place_expr, member) => {
+                let prev_expr: &mut EvalExpr = ExprVisitor::helper(prev_expr, &place_expr);
+                match (prev_expr, member) {
+                    (EvalExpr::Tuple(tuple_expr), Member::Unnamed(index)) => {
+                        &mut tuple_expr.tuple[*index]
+                    }
+                    (
+                        EvalExpr::Struct(EvalStructExpr::Tuple(tuple_expr)),
+                        Member::Unnamed(index),
+                    ) => &mut tuple_expr.expr.tuple[*index],
+                    (EvalExpr::Struct(EvalStructExpr::Field(field_expr)), Member::Named(name)) => {
+                        &mut field_expr.get_mut_field_by_name(name).unwrap().expr
+                    }
+                    _ => panic!(),
+                }
+            }
+            EvalPlaceExpr::Index(place_expr, index) => {
+                let prev_expr = ExprVisitor::helper(prev_expr, &place_expr);
+                match prev_expr {
+                    EvalExpr::Array(array_expr) => &mut array_expr.array[*index],
+                    _ => panic!(),
+                }
+            }
+        }
     }
 }
 
@@ -207,11 +277,63 @@ impl Visitor for ExprVisitor {
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         let res_expr = self.safe_expr_visit(&mut expr.rhs);
-        self.add_expr(
-            &expr.name,
-            &res_expr,
-            &self.symbol_table().get_ty_by_name(&expr.name).unwrap(),
-        );
+        // let mut block_expr =
+        //     BlockExpr {
+        //         stmts: vec![Stmt::Expr(ExprStmt {
+        //             expr: expr.place.into()
+        //         })]
+        //     };
+        // let sym_table = self.visit_block_internal(&mut block_expr);
+        //
+        // expr.place = match block_expr.stmts[0].clone() {
+        //     Stmt::Expr(ExprStmt {expr: Expr::Ident(expr)}) => PlaceExpr::Ident(expr),
+        //     Stmt::Expr(ExprStmt {expr: Expr::Field(expr)}) => PlaceExpr::Field(expr),
+        //     Stmt::Expr(ExprStmt {expr: Expr::Index(expr)}) => PlaceExpr::Index(expr),
+        //     _ => panic!()
+        // };
+
+        let mut place_expr: Expr = expr.place.clone().into();
+        let eval_expr = self.eval_place_expr(&mut place_expr);
+
+        expr.place = match place_expr {
+            Expr::Ident(expr) => PlaceExpr::Ident(expr),
+            Expr::Index(expr) => PlaceExpr::Index(expr),
+            Expr::Field(expr) => PlaceExpr::Field(expr),
+            _ => panic!("Invalid place expression type"),
+        };
+
+        if let Some(eval_expr) = eval_expr {
+            // (var2.1)[1] = 5
+            // ver2 = ((),[1,2])
+            // eval_expr Index(Field(Ident))
+            // prev_expr Tuple([Tuple([]), Array([1,2]))
+            let name = eval_expr.name();
+            let prev_expr = self.mut_symbol_table().get_expr_ref_by_name(&name).unwrap();
+            let prev_expr = ExprVisitor::helper(prev_expr, &eval_expr);
+            *prev_expr = res_expr;
+            // self.update_place_expr(prev_expr, eval_expr, res_expr)
+            // let prev_expr = prev_expr.unwrap();
+
+            // self.add_expr(&name, &new_expr, &self.symbol_table().get_ty_by_name(&name).unwrap())
+            // match eval_expr {
+            //     EvalPlaceExpr::Ident(name) => {
+            //         // If eval place is ident expression then add
+            //         // otherwise get expression and
+            //         self.add_expr(
+            //             &name,
+            //             &res_expr,
+            //             &self.symbol_table().get_ty_by_name(&name).unwrap(),
+            //         );
+            //     }
+            //
+            //     EvalPlaceExpr::Field(eval_expr, member) => {
+            //         let mut visitor = EmitVisitor::default();
+            //         visitor.visit_assign_expr(expr);
+            //         println!("{}", visitor.output())
+            //     },
+            //     EvalPlaceExpr::Index(expr, index) => println!("haha"),
+            // }
+        }
 
         self.expr = Some(EvalExpr::unit_expr());
     }
@@ -293,6 +415,11 @@ impl Visitor for ExprVisitor {
         } else {
             panic!()
         }
+    }
+
+    fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
+        let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
+        self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }))
     }
 }
 
@@ -442,7 +569,7 @@ mod tests {
                         expr: Expr::Block(BlockExpr {
                             stmts: vec![Stmt::Semi(SemiStmt {
                                 expr: Expr::Assign(AssignExpr {
-                                    name: "var_0".to_owned(),
+                                    place: "var_0".to_owned(),
                                     rhs: Box::new(Expr::i8(127)),
                                 }),
                             })],
@@ -450,7 +577,7 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            name: "var_0".to_owned(),
+                            place: "var_0".to_owned(),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
@@ -499,7 +626,7 @@ mod tests {
                             then: Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        name: "var_0".to_owned(),
+                                        place: "var_0".to_owned(),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
                                 })],
@@ -507,7 +634,7 @@ mod tests {
                             otherwise: Some(Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        name: "var_0".to_owned(),
+                                        place: "var_0".to_owned(),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
                                 })],
@@ -516,7 +643,7 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            name: "var_0".to_owned(),
+                            place: "var_0".to_owned(),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
@@ -565,7 +692,7 @@ mod tests {
                             then: Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        name: "var_0".to_owned(),
+                                        place: "var_0".to_owned(),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
                                 })],
@@ -573,7 +700,7 @@ mod tests {
                             otherwise: Some(Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        name: "var_0".to_owned(),
+                                        place: "var_0".to_owned(),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
                                 })],
@@ -582,7 +709,7 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            name: "var_0".to_owned(),
+                            place: "var_0".to_owned(),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),

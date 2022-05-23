@@ -1,16 +1,18 @@
 use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
-use crate::ast::op::BinaryOp;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
-use rand::distributions::Uniform;
+use crate::distribution::Distribution;
+use rand::prelude::SliceRandom;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Policy {
     pub name: &'static str,
-    pub num_item_dist: Uniform<usize>,
+    pub num_item_dist: Distribution,
     pub item_dist: Vec<(ItemKind, f64)>,
-    pub num_stmt_dist: Uniform<usize>,
+    pub num_stmt_dist: Distribution,
     pub stmt_dist: Vec<(StmtKind, f64)>,
     pub expr_dist: Vec<(ExprKind, f64)>,
     pub type_dist: Vec<(TyKind, f64)>,
@@ -21,26 +23,26 @@ pub struct Policy {
     pub default_struct_type_dist: Vec<(StructTy, f64)>,
 
     pub new_array_prob: f64,
-    pub array_length_dist: Uniform<usize>,
+    pub array_length_dist: Distribution,
     pub max_array_depth: usize,
     pub max_expr_depth_in_array: usize,
 
     pub new_tuple_prob: f64,
-    pub tuple_length_dist: Uniform<usize>,
+    pub tuple_length_dist: Distribution,
     pub max_tuple_depth: usize,
     pub max_expr_depth_in_tuple: usize,
 
     pub field_struct_prob: f64,
-    pub struct_length_dist: Uniform<usize>,
+    pub struct_length_dist: Distribution,
     pub max_struct_depth: usize,
     pub max_expr_depth_in_struct: usize,
 
-    pub binary_int_op_dist: Vec<(BinaryOp, f64)>,
-    pub binary_bool_op_dist: Vec<(BinaryOp, f64)>,
-    // TODO: See if we can make this distribution generalized
+    pub binary_op_dist: Vec<(BinaryOp, f64)>,
+    pub unary_op_dist: Vec<(UnaryOp, f64)>,
     pub otherwise_if_stmt_prob: f64,
     pub bool_true_prob: f64,
     pub mutability_prob: f64,
+    pub new_lifetime_prob: f64,
 
     pub max_if_else_depth: usize,
     pub max_block_depth: usize,
@@ -75,9 +77,12 @@ impl Policy {
             Policy::tuple_field_debug(),
             Policy::simple_debug(),
             Policy::simple_debug_with_assignments(),
+            Policy::simple_debug_with_reference(),
             Policy::array_debug(),
             Policy::array_index_debug(),
             Policy::default(),
+            Policy::debug(),
+            Policy::fields_stress_test(),
         ]
     }
 
@@ -93,6 +98,16 @@ impl Policy {
             .iter()
             .find(|p| p.name == name)
             .cloned()
+    }
+
+    pub fn parse_policy_args_or_random(policy: &Option<String>) -> Policy {
+        match policy {
+            None => Policy::get_policies()
+                .choose(&mut rand::thread_rng())
+                .cloned()
+                .unwrap(),
+            Some(policy) => Policy::parse_policy_args(Some(policy.clone())),
+        }
     }
 
     pub fn parse_policy_args(policy: Option<String>) -> Policy {
@@ -121,7 +136,7 @@ impl Policy {
                 },
                 1.0,
             )],
-            tuple_length_dist: Uniform::new_inclusive(3, 4),
+            tuple_length_dist: Distribution::new_uniform_inclusive(3, 4),
             max_tuple_depth: 1,
             expr_dist: vec![
                 (ExprKind::Literal, 5.0),
@@ -145,6 +160,25 @@ impl Policy {
         policy
     }
 
+    pub fn debug() -> Self {
+        Policy {
+            name: "debug",
+            binary_op_dist: vec![
+                (BinaryOp::Eq, 1.0),
+                (BinaryOp::Ne, 1.0),
+                (BinaryOp::Lq, 1.0),
+                (BinaryOp::Le, 1.0),
+                (BinaryOp::Ge, 1.0),
+                (BinaryOp::Gt, 1.0),
+            ],
+            num_item_dist: Distribution::Uniform(0, 0),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 2),
+            max_if_else_depth: 1,
+            max_block_depth: 1,
+            ..Policy::simple_debug()
+        }
+    }
+
     pub fn simple_debug() -> Self {
         let policy = Policy::default_with_name("simple_debug");
         Policy {
@@ -153,16 +187,17 @@ impl Policy {
             mutability_prob: 0.2,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
-                (ExprKind::If, 2.0),
+                // (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
                 (ExprKind::Ident, 2.0),
+                (ExprKind::Unary, 2.0),
             ],
 
             max_if_else_depth: 2,
             max_block_depth: 3,
             max_arith_depth: 1,
 
-            num_stmt_dist: Uniform::new_inclusive(2, 3),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 3),
             ..policy
         }
     }
@@ -174,7 +209,15 @@ impl Policy {
         policy.mutability_prob = 1.0;
         policy.max_if_else_depth = 3;
         policy.max_arith_depth = 3;
-        policy.num_stmt_dist = Uniform::new_inclusive(2, 5);
+        policy.num_stmt_dist = Distribution::new_uniform_inclusive(2, 5);
+        policy
+    }
+
+    pub fn simple_debug_with_reference() -> Self {
+        let mut policy = Policy::simple_debug();
+        policy.name = "simple_debug_with_reference";
+        policy.type_dist.push((TyKind::Reference, 3.0));
+        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 8);
         policy
     }
 
@@ -191,7 +234,7 @@ impl Policy {
                 },
                 0.5,
             )],
-            array_length_dist: Uniform::new_inclusive(3, 4),
+            array_length_dist: Distribution::new_uniform_inclusive(3, 4),
             max_array_depth: 3,
 
             mutability_prob: 0.2,
@@ -207,7 +250,7 @@ impl Policy {
             max_block_depth: 3,
             max_arith_depth: 1,
 
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             ..policy
         }
     }
@@ -215,8 +258,23 @@ impl Policy {
     pub fn array_index_debug() -> Self {
         let mut policy = Policy::array_debug();
         policy.name = "array_index_debug";
-        policy.expr_dist.push((ExprKind::Index, 1.0));
+        policy.expr_dist.push((ExprKind::Index, 0.5));
         policy
+    }
+
+    pub fn fields_stress_test() -> Self {
+        Policy {
+            expr_dist: vec![
+                (ExprKind::Literal, 5.0),
+                (ExprKind::If, 1.0),
+                (ExprKind::Ident, 2.0),
+                (ExprKind::Binary, 1.0),
+                (ExprKind::Assign, 5.0),
+                (ExprKind::Index, 1.0),
+                (ExprKind::Field, 1.0),
+            ],
+            ..Policy::default_with_name("fields_stress_test")
+        }
     }
 }
 
@@ -231,13 +289,13 @@ impl Policy {
     fn default_with_name(name: &'static str) -> Self {
         Policy {
             name,
-            num_item_dist: Uniform::new_inclusive(2, 10),
-            item_dist: vec![(ItemKind::Struct, 1.0)],
+            num_item_dist: Distribution::new_uniform_inclusive(2, 10),
+            item_dist: vec![(ItemKind::Struct, 1.0), (ItemKind::Function, 1.0)],
 
-            num_stmt_dist: Uniform::new_inclusive(2, 10),
+            num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             stmt_dist: vec![
                 (StmtKind::Local, 5.0),
-                (StmtKind::Semi, 1.0),
+                (StmtKind::Semi, 3.0),
                 // (StmtKind::Expr, 0.0): Must be 0
             ],
             expr_dist: vec![
@@ -248,14 +306,15 @@ impl Policy {
                 (ExprKind::Block, 0.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
-                (ExprKind::Index, 1.0),
-                (ExprKind::Field, 1.0),
+                (ExprKind::Assign, 1.0),
+                (ExprKind::Index, 0.5),
+                (ExprKind::Field, 0.5),
             ],
             type_dist: vec![
                 (TyKind::Unit, 1.0),
                 (TyKind::Prim, 2.0),
-                (TyKind::Array, 0.2),
-                (TyKind::Tuple, 0.2),
+                (TyKind::Array, 0.5),
+                (TyKind::Tuple, 0.5),
                 (TyKind::Struct, 0.5),
             ],
 
@@ -277,42 +336,55 @@ impl Policy {
 
             new_array_prob: 0.5,
             default_array_type_dist: vec![],
-            array_length_dist: Uniform::new_inclusive(2, 3),
+            array_length_dist: Distribution::new_uniform_inclusive(2, 3),
             max_array_depth: 2,
-            max_expr_depth_in_array: 5,
+            max_expr_depth_in_array: 2,
 
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
-            tuple_length_dist: Uniform::new_inclusive(2, 3),
+            tuple_length_dist: Distribution::new_uniform_inclusive(2, 3),
             max_tuple_depth: 2,
-            max_expr_depth_in_tuple: 5,
+            max_expr_depth_in_tuple: 2,
 
             field_struct_prob: 0.5,
             default_struct_type_dist: vec![],
-            struct_length_dist: Uniform::new_inclusive(2, 3),
-            max_struct_depth: 5,
-            max_expr_depth_in_struct: 5,
+            struct_length_dist: Distribution::new_uniform_inclusive(2, 3),
+            max_struct_depth: 2,
+            max_expr_depth_in_struct: 2,
 
-            binary_int_op_dist: vec![
+            binary_op_dist: vec![
                 (BinaryOp::Add, 1.0),
                 (BinaryOp::Sub, 1.0),
                 (BinaryOp::Mul, 1.0),
                 (BinaryOp::Div, 1.0),
                 (BinaryOp::Rem, 1.0),
-            ],
-
-            binary_bool_op_dist: vec![
                 (BinaryOp::And, 1.0),
                 (BinaryOp::Or, 1.0),
                 (BinaryOp::Eq, 1.0),
                 (BinaryOp::Ne, 1.0),
+                (BinaryOp::Lq, 1.0),
+                (BinaryOp::Le, 1.0),
+                (BinaryOp::Ge, 1.0),
+                (BinaryOp::Gt, 1.0),
+                (BinaryOp::WrappingAdd, 1.0),
+                (BinaryOp::WrappingSub, 1.0),
+                (BinaryOp::WrappingMul, 1.0),
+                (BinaryOp::WrappingDiv, 1.0),
+                (BinaryOp::WrappingRem, 1.0),
+            ],
+
+            unary_op_dist: vec![
+                (UnaryOp::Deref, 1.0),
+                (UnaryOp::Not, 1.0),
+                (UnaryOp::Neg, 1.0),
             ],
 
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
-            mutability_prob: 0.5,
+            mutability_prob: 1.0,
+            new_lifetime_prob: 0.5,
 
-            max_expr_depth: 100,
+            max_expr_depth: 10,
             max_if_else_depth: 2,
             max_block_depth: 2,
             max_arith_depth: 5,
@@ -320,8 +392,8 @@ impl Policy {
             max_file_attempts: 1,
             max_main_fn_attempts: 1,
             max_item_attempts: 1,
-            max_stmt_attempts: 20,
-            max_expr_attempts: 100,
+            max_stmt_attempts: 30,
+            max_expr_attempts: 5,
             max_ty_attempts: 5,
         }
     }

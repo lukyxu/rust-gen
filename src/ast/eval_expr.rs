@@ -2,15 +2,17 @@ use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
-use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy};
+use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 #[cfg(test)]
 use crate::ast::ty::{IntTy, UIntTy};
 use crate::ast::ty::{PrimTy, Ty};
-use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd};
+use crate::wrapping::{WrappingDiv, WrappingRem};
+use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingSub};
 use std::mem::swap;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq)]
 /// Evaluated Rust expression
@@ -23,6 +25,8 @@ pub enum EvalExpr {
     Array(EvalArrayExpr),
     /// Evaluated struct such as `S { field1: value1, field2: value2 }` and `S(5_u32, "hello")`
     Struct(EvalStructExpr),
+    /// Reference
+    Reference(EvalReferenceExpr),
     /// Unknown evaluation (Not currently used but can be used to indicate that a value is unknown)
     Unknown,
 }
@@ -155,6 +159,21 @@ impl EvalFieldStructExpr {
     pub fn get_field_by_name(&self, name: &str) -> Option<EvalField> {
         self.fields.iter().find(|field| field.name == name).cloned()
     }
+
+    pub fn get_mut_field_by_name(&mut self, name: &str) -> Option<&mut EvalField> {
+        self.fields.iter_mut().find(|field| field.name == name)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalReferenceExpr {
+    pub expr: Box<EvalExpr>,
+}
+
+impl From<EvalReferenceExpr> for EvalExpr {
+    fn from(expr: EvalReferenceExpr) -> EvalExpr {
+        EvalExpr::Reference(expr)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -165,6 +184,7 @@ pub struct EvalField {
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum EvalExprError {
+    // TODO: Add TypeError
     SignedOverflow,
     UnsignedOverflow,
     MinMulOverflow,
@@ -223,7 +243,7 @@ impl BinaryExpr {
                     BinaryOp::Div
                 }
             }
-            BinaryOp::Div | BinaryOp::Rem => {
+            BinaryOp::Div | BinaryOp::Rem | BinaryOp::WrappingDiv | BinaryOp::WrappingRem => {
                 if let EvalExprError::ZeroDiv = error {
                     BinaryOp::Mul
                 } else {
@@ -314,16 +334,40 @@ impl BinaryOp {
     apply_int!(apply_mul, expr_mul);
     apply_int!(apply_div, expr_div);
     apply_int!(apply_rem, expr_rem);
+    apply_int!(apply_eq, expr_eq);
+    apply_int!(apply_ne, expr_ne);
+    apply_int!(apply_lq, expr_lq);
+    apply_int!(apply_le, expr_le);
+    apply_int!(apply_ge, expr_ge);
+    apply_int!(apply_gt, expr_gt);
+    apply_int!(apply_wrapping_add, expr_wrapping_add);
+    apply_int!(apply_wrapping_sub, expr_wrapping_sub);
+    apply_int!(apply_wrapping_mul, expr_wrapping_mul);
+    apply_int!(apply_wrapping_div, expr_wrapping_div);
+    apply_int!(apply_wrapping_rem, expr_wrapping_rem);
 
     fn apply_int(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
+        if lhs.ty != rhs.ty {
+            panic!("Incompatible types");
+        }
         match self {
             BinaryOp::Add => self.apply_add(lhs, rhs),
             BinaryOp::Sub => self.apply_sub(lhs, rhs),
             BinaryOp::Mul => self.apply_mul(lhs, rhs),
             BinaryOp::Div => self.apply_div(lhs, rhs),
             BinaryOp::Rem => self.apply_rem(lhs, rhs),
-            BinaryOp::Eq => Ok(LitExpr::Bool(lhs.value == rhs.value)),
-            BinaryOp::Ne => Ok(LitExpr::Bool(lhs.value != rhs.value)),
+            BinaryOp::Eq => self.apply_eq(lhs, rhs),
+            BinaryOp::Ne => self.apply_ne(lhs, rhs),
+            BinaryOp::Lq => self.apply_lq(lhs, rhs),
+            BinaryOp::Le => self.apply_le(lhs, rhs),
+            BinaryOp::Ge => self.apply_ge(lhs, rhs),
+            BinaryOp::Gt => self.apply_gt(lhs, rhs),
+            BinaryOp::WrappingAdd => self.apply_wrapping_add(lhs, rhs),
+            BinaryOp::WrappingSub => self.apply_wrapping_sub(lhs, rhs),
+            BinaryOp::WrappingMul => self.apply_wrapping_mul(lhs, rhs),
+            BinaryOp::WrappingDiv => self.apply_wrapping_div(lhs, rhs),
+            BinaryOp::WrappingRem => self.apply_wrapping_rem(lhs, rhs),
+
             _ => panic!("Undefined operation on ints"),
         }
     }
@@ -353,6 +397,17 @@ trait Literal<
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_ne(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_lq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_le(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_ge(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_gt(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_wrapping_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
 }
 
 trait ByLitIntTy<T> {
@@ -374,6 +429,10 @@ impl<
             + Copy
             + AsPrimitive<u128>
             + WrappingAdd<Output = T>
+            + WrappingSub<Output = T>
+            + WrappingMul<Output = T>
+            + WrappingDiv<Output = T>
+            + WrappingRem<Output = T>
             + ByLitIntTy<T>
             + CheckedRem<Output = T>,
     > Literal<T> for T
@@ -432,6 +491,68 @@ impl<
             Err(SignedOverflow)
         }
     }
+
+    fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs == rhs))
+    }
+
+    fn expr_ne(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs != rhs))
+    }
+
+    fn expr_lq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs < rhs))
+    }
+
+    fn expr_le(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs <= rhs))
+    }
+
+    fn expr_ge(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs >= rhs))
+    }
+
+    fn expr_gt(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitExpr::Bool(lhs > rhs))
+    }
+
+    fn expr_wrapping_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_add(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_sub(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_sub(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.wrapping_mul(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if rhs.is_zero() {
+            return Err(ZeroDiv);
+        }
+        Ok(LitIntExpr::new(lhs.wrapping_div(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+    fn expr_wrapping_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        if rhs.is_zero() {
+            return Err(ZeroDiv);
+        }
+        Ok(LitIntExpr::new(lhs.wrapping_rem(&rhs).as_(), T::by_lit_expr_type()).into())
+    }
+}
+
+pub enum EvalPlaceExpr {
+    Ident(String),
+    Field(Box<EvalPlaceExpr>, Member),
+    Index(Box<EvalPlaceExpr>, usize),
+}
+
+impl EvalPlaceExpr {
+    pub fn name(&self) -> String {
+        match self {
+            EvalPlaceExpr::Ident(name) => name.clone(),
+            EvalPlaceExpr::Field(expr, _) => expr.name(),
+            EvalPlaceExpr::Index(expr, _) => expr.name(),
+        }
+    }
 }
 
 by_lit_expr_ty_impl!(i8, Signed(I8));
@@ -450,7 +571,13 @@ by_lit_expr_ty_impl!(usize, Unsigned(USize));
 impl UnaryOp {
     pub fn apply(self, expr: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
         match self {
-            UnaryOp::Deref => todo!(),
+            UnaryOp::Deref => {
+                if let EvalExpr::Reference(reference_expr) = expr {
+                    Ok(*reference_expr.expr.clone())
+                } else {
+                    panic!()
+                }
+            }
             UnaryOp::Not => {
                 if let EvalExpr::Literal(LitExpr::Bool(bool)) = *expr {
                     Ok(EvalExpr::Literal(LitExpr::Bool(!bool)))

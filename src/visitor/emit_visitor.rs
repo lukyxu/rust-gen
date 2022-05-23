@@ -1,14 +1,14 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, TupleExpr,
-    TupleStructExpr, UnaryExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
-use crate::ast::item::StructItem;
+use crate::ast::item::{FunctionItem, Item, StructItem};
 use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
-use crate::ast::ty::{IntTy, StructTy, Ty, UIntTy};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::ast::ty::{IntTy, Lifetime, StructTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 
 /// Visitor used to print a given ast.
@@ -72,10 +72,18 @@ impl Visitor for EmitVisitor {
     fn visit_struct_item(&mut self, item: &mut StructItem) {
         // TODO: Remove this
         self.output.push_str("#[derive(Clone, Copy, PartialEq)]\n");
+        let lifetimes = (!item.struct_ty.lifetimes().is_empty()).then(|| item.struct_ty.lifetimes()
+            .iter()
+            .map(Lifetime::to_string)
+            .collect::<Vec<String>>()
+            .join(", "))
+            .map(|lifetimes|format!("<{}>", lifetimes))
+            .unwrap_or_default();
         match &item.struct_ty {
             StructTy::Field(field_struct) => self.output.push_str(&format!(
-                "struct {} {{\n{}\n}} ",
+                "struct {}{} {{\n{}\n}} ",
                 field_struct.name,
+                lifetimes,
                 field_struct
                     .fields
                     .iter()
@@ -89,8 +97,9 @@ impl Visitor for EmitVisitor {
             )),
             StructTy::Tuple(tuple_struct) => {
                 self.output.push_str(&format!(
-                    "struct {}{};",
+                    "struct {}{}{};",
                     tuple_struct.name,
+                    lifetimes,
                     tuple_struct.fields.to_string()
                 ));
             }
@@ -166,11 +175,21 @@ impl Visitor for EmitVisitor {
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         self.output.push('(');
-        self.visit_expr(&mut expr.lhs);
-        self.output.push(' ');
-        self.visit_binary_op(&mut expr.op);
-        self.output.push(' ');
-        self.visit_expr(&mut expr.rhs);
+        if expr.op.is_function_call() {
+            self.output.push('(');
+            self.visit_expr(&mut expr.lhs);
+            self.output.push_str(").");
+            self.visit_binary_op(&mut expr.op);
+            self.output.push('(');
+            self.visit_expr(&mut expr.rhs);
+            self.output.push(')');
+        } else {
+            self.visit_expr(&mut expr.lhs);
+            self.output.push(' ');
+            self.visit_binary_op(&mut expr.op);
+            self.output.push(' ');
+            self.visit_expr(&mut expr.rhs);
+        }
         self.output.push(')');
     }
 
@@ -241,7 +260,11 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
-        self.visit_name(&expr.name);
+        match &mut expr.place {
+            PlaceExpr::Field(expr) => self.visit_field_expr(expr),
+            PlaceExpr::Index(expr) => self.visit_index_expr(expr),
+            PlaceExpr::Ident(expr) => self.visit_ident_expr(expr),
+        }
         self.output.push_str(" = ");
         self.visit_expr(&mut expr.rhs);
     }
@@ -296,6 +319,15 @@ impl Visitor for EmitVisitor {
     fn visit_field(&mut self, field: &mut Field) {
         self.output.push_str(&format!("{}: ", &field.name));
         self.visit_expr(&mut field.expr);
+    }
+
+    fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
+        self.output.push_str(&format!(
+            "&{} (",
+            expr.mutability.then(|| "mut").unwrap_or_default()
+        ));
+        self.visit_expr(&mut expr.expr);
+        self.output.push(')');
     }
 
     fn visit_unary_op(&mut self, op: &mut UnaryOp) {
