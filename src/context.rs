@@ -81,7 +81,7 @@ impl Context {
     }
 
     pub fn choose_array_type(&mut self, elem_ty: &Option<Ty>) -> Option<ArrayTy> {
-        let dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.array_type_dist
                 .iter()
                 .filter(|(array_ty, _)| &*array_ty.base_ty == elem_ty)
@@ -90,6 +90,7 @@ impl Context {
         } else {
             self.array_type_dist.clone()
         };
+        dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
         choose(&dist, &mut self.rng)
     }
 
@@ -98,7 +99,7 @@ impl Context {
     }
 
     pub fn choose_tuple_type(&mut self, elem_ty: &Option<Ty>) -> Option<TupleTy> {
-        let dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.tuple_type_dist
                 .iter()
                 .filter(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty))
@@ -107,6 +108,7 @@ impl Context {
         } else {
             self.tuple_type_dist.clone()
         };
+        dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
         choose(&dist, &mut self.rng)
     }
 

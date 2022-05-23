@@ -613,14 +613,11 @@ impl FieldExpr {
     }
 
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
-        let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
-        // println!("{}", tuple.tuple_depth());
-        // if tuple.tuple_depth() > 2 {
-        //     println!("here")
-        // }
-        if tuple.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+        if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
             return None;
         }
+        let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
+
         let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
             .into_iter()

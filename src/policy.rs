@@ -325,13 +325,13 @@ impl Policy {
             new_array_prob: 0.5,
             default_array_type_dist: vec![],
             array_length_dist: Distribution::new_uniform_inclusive(2, 3),
-            max_array_depth: 1,
+            max_array_depth: 3,
             max_expr_depth_in_array: 5,
 
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
             tuple_length_dist: Distribution::new_uniform_inclusive(2, 3),
-            max_tuple_depth: 1,
+            max_tuple_depth: 3,
             max_expr_depth_in_tuple: 2,
 
             field_struct_prob: 0.5,
@@ -375,7 +375,7 @@ impl Policy {
             max_item_attempts: 1,
             max_stmt_attempts: 10,
             max_expr_attempts: 100,
-            max_ty_attempts: 5,
+            max_ty_attempts: 100,
         }
     }
 }
