@@ -8,7 +8,7 @@ use crate::ast::function::Function;
 use crate::ast::item::{FunctionItem, Item, StructItem};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{IntTy, StructTy, Ty, UIntTy};
+use crate::ast::ty::{IntTy, Lifetime, StructTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 
 /// Visitor used to print a given ast.
@@ -72,10 +72,18 @@ impl Visitor for EmitVisitor {
     fn visit_struct_item(&mut self, item: &mut StructItem) {
         // TODO: Remove this
         self.output.push_str("#[derive(Clone, Copy, PartialEq)]\n");
+        let lifetimes = (!item.struct_ty.lifetimes().is_empty()).then(|| item.struct_ty.lifetimes()
+            .iter()
+            .map(Lifetime::to_string)
+            .collect::<Vec<String>>()
+            .join(", "))
+            .map(|lifetimes|format!("<{}>", lifetimes))
+            .unwrap_or_default();
         match &item.struct_ty {
             StructTy::Field(field_struct) => self.output.push_str(&format!(
-                "struct {} {{\n{}\n}} ",
+                "struct {}{} {{\n{}\n}} ",
                 field_struct.name,
+                lifetimes,
                 field_struct
                     .fields
                     .iter()
@@ -89,8 +97,9 @@ impl Visitor for EmitVisitor {
             )),
             StructTy::Tuple(tuple_struct) => {
                 self.output.push_str(&format!(
-                    "struct {}{};",
+                    "struct {}{}{};",
                     tuple_struct.name,
+                    lifetimes,
                     tuple_struct.fields.to_string()
                 ));
             }

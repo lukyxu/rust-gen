@@ -9,6 +9,7 @@ use crate::symbol_table::ty::TypeSymbolTable;
 use num_traits::AsPrimitive;
 use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
+use std::collections::BTreeSet;
 
 pub struct Context {
     pub policy: Policy,
@@ -284,5 +285,5 @@ impl NameHandler {
 
 #[derive(Default)]
 pub struct StructContext {
-    pub lifetimes: Vec<Lifetime>,
+    pub lifetimes: BTreeSet<Lifetime>,
 }

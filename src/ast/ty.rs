@@ -6,6 +6,7 @@ use crate::context::{Context, StructContext};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
+use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Ty {
@@ -577,12 +578,20 @@ impl StructTy {
                 .unwrap_or_default(),
         }
     }
+
+    pub fn lifetimes(&self) -> &BTreeSet<Lifetime> {
+        match self {
+            StructTy::Field(struct_ty) => &struct_ty.lifetimes,
+            StructTy::Tuple(struct_ty) => &struct_ty.lifetimes,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FieldStructTy {
     pub name: String,
     pub fields: Vec<FieldDef>,
+    pub lifetimes: BTreeSet<Lifetime>,
 }
 
 impl ToString for FieldStructTy {
@@ -621,6 +630,11 @@ impl FieldStructTy {
         let struct_ty = FieldStructTy {
             name: ctx.create_struct_name(),
             fields,
+            lifetimes: ctx
+                .struct_ctx
+                .as_ref()
+                .map(|x| x.lifetimes.clone())
+                .unwrap(),
         };
         let weight = 1.0;
         ctx.struct_type_dist
@@ -656,6 +670,7 @@ impl FieldDef {
 pub struct TupleStructTy {
     pub name: String,
     pub fields: TupleTy,
+    pub lifetimes: BTreeSet<Lifetime>,
 }
 
 impl ToString for TupleStructTy {
@@ -686,6 +701,11 @@ impl TupleStructTy {
         let struct_ty = TupleStructTy {
             name: ctx.create_struct_name(),
             fields,
+            lifetimes: ctx
+                .struct_ctx
+                .as_ref()
+                .map(|x| x.lifetimes.clone())
+                .unwrap(),
         };
         let weight = 1.0;
         ctx.struct_type_dist
@@ -694,7 +714,7 @@ impl TupleStructTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Lifetime(pub String);
 
 impl Lifetime {
@@ -702,11 +722,17 @@ impl Lifetime {
         let lifetime = ctx.create_lifetime_name().map(Lifetime);
         match (&lifetime, &mut ctx.struct_ctx) {
             (Some(lifetime), Some(struct_ctx)) => {
-                struct_ctx.lifetimes.push(lifetime.clone());
-            },
+                struct_ctx.lifetimes.insert(lifetime.clone());
+            }
             _ => {}
         };
         lifetime
+    }
+}
+
+impl ToString for Lifetime {
+    fn to_string(&self) -> String {
+        format!("'{}", self.0)
     }
 }
 
