@@ -12,6 +12,7 @@ use crate::ast::ty::{PrimTy, Ty};
 use crate::wrapping::{WrappingDiv, WrappingRem};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingSub};
 use std::mem::swap;
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq)]
 /// Evaluated Rust expression
@@ -24,6 +25,8 @@ pub enum EvalExpr {
     Array(EvalArrayExpr),
     /// Evaluated struct such as `S { field1: value1, field2: value2 }` and `S(5_u32, "hello")`
     Struct(EvalStructExpr),
+    /// Reference
+    Reference(EvalReferenceExpr),
     /// Unknown evaluation (Not currently used but can be used to indicate that a value is unknown)
     Unknown,
 }
@@ -159,6 +162,17 @@ impl EvalFieldStructExpr {
 
     pub fn get_mut_field_by_name(&mut self, name: &str) -> Option<&mut EvalField> {
         self.fields.iter_mut().find(|field| field.name == name)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EvalReferenceExpr {
+    pub expr: Box<EvalExpr>
+}
+
+impl From<EvalReferenceExpr> for EvalExpr {
+    fn from(expr: EvalReferenceExpr) -> EvalExpr {
+        EvalExpr::Reference(expr)
     }
 }
 
@@ -557,7 +571,13 @@ by_lit_expr_ty_impl!(usize, Unsigned(USize));
 impl UnaryOp {
     pub fn apply(self, expr: &EvalExpr) -> Result<EvalExpr, EvalExprError> {
         match self {
-            UnaryOp::Deref => todo!(),
+            UnaryOp::Deref => {
+                if let EvalExpr::Reference(reference_expr) = expr {
+                    Ok(*reference_expr.expr.clone())
+                } else {
+                    panic!()
+                }
+            }
             UnaryOp::Not => {
                 if let EvalExpr::Literal(LitExpr::Bool(bool)) = *expr {
                     Ok(EvalExpr::Literal(LitExpr::Bool(!bool)))

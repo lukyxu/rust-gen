@@ -1,13 +1,13 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, TupleExpr,
-    TupleStructExpr, UnaryExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
-use crate::ast::item::StructItem;
+use crate::ast::item::{FunctionItem, Item, StructItem};
 use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{IntTy, StructTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 
@@ -310,6 +310,14 @@ impl Visitor for EmitVisitor {
     fn visit_field(&mut self, field: &mut Field) {
         self.output.push_str(&format!("{}: ", &field.name));
         self.visit_expr(&mut field.expr);
+    }
+
+    fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
+        self.output.push_str(&format!(
+            "&{} ",
+            expr.mutability.then(|| "mut").unwrap_or_default()
+        ));
+        self.visit_expr(&mut expr.expr);
     }
 
     fn visit_unary_op(&mut self, op: &mut UnaryOp) {

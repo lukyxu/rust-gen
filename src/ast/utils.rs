@@ -3,7 +3,7 @@ use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{Ty, TyKind};
 use crate::context::Context;
-use std::cmp::{min};
+use std::cmp::min;
 use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -35,9 +35,9 @@ macro_rules! apply_limit_composite_ty_function {
     ($function_name: ident, $max_depth: ident, $curr_depth: ident, $max_depth_delta: ident) => {
         /// Wrapper function that controls various depths.
         pub fn $function_name<T: 'static, S: 'static>(
-            f: fn (&mut Context, &S) -> Option<T>,
+            f: fn(&mut Context, &S) -> Option<T>,
             ctx: &mut Context,
-            res_type: &S
+            res_type: &S,
         ) -> Option<T> {
             let prev_depth = ctx.policy.$max_depth;
             ctx.policy.$max_depth = min(
@@ -51,17 +51,32 @@ macro_rules! apply_limit_composite_ty_function {
     };
 }
 
-apply_limit_composite_ty_function!(apply_limit_expr_depth_in_tuple, max_expr_depth, expr_depth, max_expr_depth_in_tuple);
-apply_limit_composite_ty_function!(apply_limit_expr_depth_in_array, max_expr_depth, expr_depth, max_expr_depth_in_array);
-apply_limit_composite_ty_function!(apply_limit_expr_depth_in_struct, max_expr_depth, expr_depth, max_expr_depth_in_struct);
+apply_limit_composite_ty_function!(
+    apply_limit_expr_depth_in_tuple,
+    max_expr_depth,
+    expr_depth,
+    max_expr_depth_in_tuple
+);
+apply_limit_composite_ty_function!(
+    apply_limit_expr_depth_in_array,
+    max_expr_depth,
+    expr_depth,
+    max_expr_depth_in_array
+);
+apply_limit_composite_ty_function!(
+    apply_limit_expr_depth_in_struct,
+    max_expr_depth,
+    expr_depth,
+    max_expr_depth_in_struct
+);
 
 macro_rules! apply_limit_ty_depth_function {
     ($function_name: ident, $max_depth: ident, $gen_new_ty: ident) => {
         /// Wrapper function that controls various depths.
         pub fn $function_name<T: 'static, S: 'static>(
-            f: fn (&mut Context, &S) -> Option<T>,
+            f: fn(&mut Context, &S) -> Option<T>,
             ctx: &mut Context,
-            res_type: &S
+            res_type: &S,
         ) -> Option<T> {
             let prev_max_depth = ctx.policy.$max_depth;
             let prev_gen_new_ty = ctx.$gen_new_ty;
@@ -77,7 +92,6 @@ macro_rules! apply_limit_ty_depth_function {
 
 apply_limit_ty_depth_function!(apply_limit_tuple_ty, max_tuple_depth, gen_new_tuple_types);
 apply_limit_ty_depth_function!(apply_limit_array_ty, max_array_depth, gen_new_array_types);
-
 
 /// Increments statistic counters.
 pub fn increment_counter<T, K: Eq + Hash, S: ::std::hash::BuildHasher>(
