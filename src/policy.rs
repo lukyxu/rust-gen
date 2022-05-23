@@ -216,7 +216,7 @@ impl Policy {
         let mut policy = Policy::simple_debug();
         policy.name = "simple_debug_with_reference";
         policy.type_dist.push((TyKind::Reference, 3.0));
-        policy.num_item_dist = Distribution::new_uniform_inclusive(0, 0);
+        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 8);
         policy
     }
 

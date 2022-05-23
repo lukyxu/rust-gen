@@ -2,7 +2,7 @@ use crate::ast::expr::LitIntTy;
 use crate::ast::utils::{
     apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type,
 };
-use crate::context::Context;
+use crate::context::{Context, StructContext};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
@@ -601,7 +601,9 @@ impl FieldStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
         let prev_max_struct_depth = ctx.policy.max_struct_depth;
         ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
+        ctx.struct_ctx = Some(StructContext::default());
         let res = FieldStructTy::generate_new_type_internal(ctx, ty);
+        ctx.struct_ctx = None;
         ctx.policy.max_struct_depth = prev_max_struct_depth;
         res
     }
@@ -670,6 +672,16 @@ impl From<TupleStructTy> for StructTy {
 
 impl TupleStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
+        let prev_max_struct_depth = ctx.policy.max_struct_depth;
+        ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
+        ctx.struct_ctx = Some(StructContext::default());
+        let res = TupleStructTy::generate_new_type_internal(ctx, ty);
+        ctx.struct_ctx = None;
+        ctx.policy.max_struct_depth = prev_max_struct_depth;
+        res
+    }
+
+    fn generate_new_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
         let fields = TupleTy::generate_type(ctx, ty)?;
         let struct_ty = TupleStructTy {
             name: ctx.create_struct_name(),
@@ -683,15 +695,36 @@ impl TupleStructTy {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct Lifetime(pub String);
+
+impl Lifetime {
+    fn generate_lifetime(ctx: &mut Context) -> Option<Lifetime> {
+        let lifetime = ctx.create_lifetime_name().map(Lifetime);
+        match (&lifetime, &mut ctx.struct_ctx) {
+            (Some(lifetime), Some(struct_ctx)) => {
+                struct_ctx.lifetimes.push(lifetime.clone());
+            },
+            _ => {}
+        };
+        lifetime
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ReferenceTy {
     pub mutability: bool,
+    pub lifetime: Option<Lifetime>,
     pub elem: Box<Ty>,
 }
 
 impl ToString for ReferenceTy {
     fn to_string(&self) -> String {
         format!(
-            "&{} {}",
+            "&{}{} {}",
+            self.lifetime
+                .as_ref()
+                .map(|x| format!("'{} ", x.0))
+                .unwrap_or_default(),
             self.mutability.then(|| "mut").unwrap_or_default(),
             self.elem.to_string()
         )
@@ -719,6 +752,7 @@ impl ReferenceTy {
     pub fn generate_type_internal(ctx: &mut Context) -> Option<ReferenceTy> {
         Some(ReferenceTy {
             mutability: true,
+            lifetime: Lifetime::generate_lifetime(ctx),
             elem: Box::new(Ty::fuzz_type(ctx)?),
         })
     }

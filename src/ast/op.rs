@@ -168,10 +168,12 @@ impl UnaryOp {
             UnaryOp::Deref => vec![
                 Ty::Reference(ReferenceTy {
                     mutability: true,
+                    lifetime: None,
                     elem: Box::new(res_type.clone()),
                 }),
                 Ty::Reference(ReferenceTy {
                     mutability: false,
+                    lifetime: None,
                     elem: Box::new(res_type.clone()),
                 }),
             ],

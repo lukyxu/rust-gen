@@ -167,7 +167,7 @@ impl EvalFieldStructExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalReferenceExpr {
-    pub expr: Box<EvalExpr>
+    pub expr: Box<EvalExpr>,
 }
 
 impl From<EvalReferenceExpr> for EvalExpr {
