@@ -1,14 +1,11 @@
-use crate::ast::eval_expr::{
-    EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalStructExpr,
-    EvalTupleExpr, EvalTupleStructExpr,
-};
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, TupleExpr,
-    TupleStructExpr, UnaryExpr,
-};
+use crate::ast::eval_expr::{EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr, EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::file::RustFile;
+use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
+use crate::ast::op::{BinaryOp, UnaryOp};
 
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
@@ -411,6 +408,13 @@ impl Visitor for ExprVisitor {
         } else {
             panic!()
         }
+    }
+
+    fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
+        let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
+        self.expr = Some(EvalExpr::Reference(EvalReferenceExpr {
+            expr
+        }))
     }
 }
 
