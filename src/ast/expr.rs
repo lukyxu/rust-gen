@@ -9,7 +9,7 @@ use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::utils::{apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct, apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, track_expr};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
-use std::cmp::{max, min};
+use std::cmp::{max};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -597,7 +597,7 @@ impl FieldExpr {
 
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
-            return None;
+            return None
         }
 
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
@@ -671,6 +671,10 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
+        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
+            return None;
+        }
+
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
