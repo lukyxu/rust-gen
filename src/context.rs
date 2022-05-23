@@ -81,7 +81,7 @@ impl Context {
     }
 
     pub fn choose_array_type(&mut self, elem_ty: &Option<Ty>) -> Option<ArrayTy> {
-        let dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.array_type_dist
                 .iter()
                 .filter(|(array_ty, _)| &*array_ty.base_ty == elem_ty)
@@ -90,6 +90,7 @@ impl Context {
         } else {
             self.array_type_dist.clone()
         };
+        dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
         choose(&dist, &mut self.rng)
     }
 
@@ -98,7 +99,7 @@ impl Context {
     }
 
     pub fn choose_tuple_type(&mut self, elem_ty: &Option<Ty>) -> Option<TupleTy> {
-        let dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.tuple_type_dist
                 .iter()
                 .filter(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty))
@@ -107,6 +108,7 @@ impl Context {
         } else {
             self.tuple_type_dist.clone()
         };
+        dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
         choose(&dist, &mut self.rng)
     }
 
@@ -115,7 +117,7 @@ impl Context {
     }
 
     pub fn choose_struct_type(&mut self, elem_ty: &Option<Ty>) -> Option<StructTy> {
-        let dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.struct_type_dist
                 .iter()
                 .filter(|(struct_ty, _)| match struct_ty {
@@ -130,6 +132,7 @@ impl Context {
         } else {
             self.struct_type_dist.clone()
         };
+        dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
         choose(&dist, &mut self.rng)
     }
 
@@ -192,6 +195,10 @@ impl Context {
         NameHandler::create_field_name(index)
     }
 
+    pub fn create_function_name(&mut self) -> String {
+        self.name_handler.create_function_name()
+    }
+
     pub fn choose_new_array_type(&mut self) -> bool {
         self.gen_new_array_types && self.rng.gen_bool(self.policy.new_array_prob)
     }
@@ -222,6 +229,7 @@ impl Context {
 pub struct NameHandler {
     var_counter: i32,
     struct_counter: i32,
+    function_counter: i32,
 }
 
 impl NameHandler {
@@ -237,5 +245,10 @@ impl NameHandler {
 
     fn create_field_name(index: usize) -> String {
         format!("field_{}", index)
+    }
+
+    fn create_function_name(&mut self) -> String {
+        self.function_counter += 1;
+        format!("function_{}", self.function_counter)
     }
 }

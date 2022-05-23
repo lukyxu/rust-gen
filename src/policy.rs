@@ -79,6 +79,7 @@ impl Policy {
             Policy::array_index_debug(),
             Policy::default(),
             Policy::debug(),
+            Policy::fields_stress_test(),
         ]
     }
 
@@ -248,6 +249,21 @@ impl Policy {
         policy.expr_dist.push((ExprKind::Index, 0.5));
         policy
     }
+
+    pub fn fields_stress_test() -> Self {
+        Policy {
+            expr_dist: vec![
+                (ExprKind::Literal, 5.0),
+                (ExprKind::If, 1.0),
+                (ExprKind::Ident, 2.0),
+                (ExprKind::Binary, 1.0),
+                (ExprKind::Assign, 5.0),
+                (ExprKind::Index, 1.0),
+                (ExprKind::Field, 1.0),
+            ],
+            ..Policy::default_with_name("fields_stress_test")
+        }
+    }
 }
 
 impl Default for Policy {
@@ -262,7 +278,7 @@ impl Policy {
         Policy {
             name,
             num_item_dist: Distribution::new_uniform_inclusive(2, 10),
-            item_dist: vec![(ItemKind::Struct, 1.0)],
+            item_dist: vec![(ItemKind::Struct, 1.0), (ItemKind::Function, 1.0)],
 
             num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             stmt_dist: vec![
@@ -279,8 +295,8 @@ impl Policy {
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
                 (ExprKind::Assign, 5.0),
-                (ExprKind::Index, 0.2),
-                (ExprKind::Field, 0.2),
+                (ExprKind::Index, 0.5),
+                (ExprKind::Field, 0.5),
             ],
             type_dist: vec![
                 (TyKind::Unit, 1.0),
@@ -310,7 +326,7 @@ impl Policy {
             default_array_type_dist: vec![],
             array_length_dist: Distribution::new_uniform_inclusive(2, 3),
             max_array_depth: 2,
-            max_expr_depth_in_array: 5,
+            max_expr_depth_in_array: 2,
 
             new_tuple_prob: 0.5,
             default_tuple_type_dist: vec![],
@@ -321,7 +337,7 @@ impl Policy {
             field_struct_prob: 0.5,
             default_struct_type_dist: vec![],
             struct_length_dist: Distribution::new_uniform_inclusive(2, 3),
-            max_struct_depth: 3,
+            max_struct_depth: 2,
             max_expr_depth_in_struct: 2,
 
             binary_op_dist: vec![
@@ -357,9 +373,9 @@ impl Policy {
             max_file_attempts: 1,
             max_main_fn_attempts: 1,
             max_item_attempts: 1,
-            max_stmt_attempts: 5,
-            max_expr_attempts: 5,
-            max_ty_attempts: 5,
+            max_stmt_attempts: 10,
+            max_expr_attempts: 100,
+            max_ty_attempts: 100,
         }
     }
 }

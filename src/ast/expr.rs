@@ -6,12 +6,10 @@ use crate::ast::ty::{
 use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::utils::{
-    limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, track_expr,
-};
+use crate::ast::utils::{apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct, apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, track_expr};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
-use std::cmp::{max, min};
+use std::cmp::{max};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -464,14 +462,7 @@ impl TupleExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &TupleTy) -> Option<TupleExpr> {
         let mut res = vec![];
         for ty in &res_type.tuple {
-            let prev_max_expr_depth = ctx.policy.max_expr_depth;
-            ctx.policy.max_expr_depth = min(
-                ctx.policy.max_expr_depth,
-                ctx.expr_depth + ctx.policy.max_expr_depth_in_tuple,
-            );
-            let expr = Expr::fuzz_expr(ctx, ty);
-            ctx.policy.max_expr_depth = prev_max_expr_depth;
-            res.push(expr?);
+            res.push(apply_limit_expr_depth_in_tuple(Expr::fuzz_expr, ctx, ty)?);
         }
         Some(TupleExpr { tuple: res })
     }
@@ -556,14 +547,7 @@ impl ArrayExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &ArrayTy) -> Option<ArrayExpr> {
         let mut res = vec![];
         for ty in res_type.iter() {
-            let prev_max_expr_depth = ctx.policy.max_expr_depth;
-            ctx.policy.max_expr_depth = min(
-                ctx.policy.max_expr_depth,
-                ctx.expr_depth + ctx.policy.max_expr_depth_in_array,
-            );
-            let expr = Expr::fuzz_expr(ctx, &ty);
-            ctx.policy.max_expr_depth = prev_max_expr_depth;
-            res.push(expr?);
+            res.push(apply_limit_expr_depth_in_array(Expr::fuzz_expr, ctx, &ty)?);
         }
         Some(ArrayExpr { array: res })
     }
@@ -683,6 +667,10 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
+        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
+            return None;
+        }
+
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
@@ -715,21 +703,18 @@ impl From<StructExpr> for Expr {
 
 impl StructExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
-        let prev_max_expr_depth = ctx.policy.max_expr_depth;
-        ctx.policy.max_expr_depth = min(
-            ctx.policy.max_expr_depth,
-            ctx.expr_depth + ctx.policy.max_expr_depth_in_struct,
-        );
-        let res = match res_type {
+        apply_limit_expr_depth_in_struct(StructExpr::generate_expr_internal, ctx, res_type)
+    }
+
+    fn generate_expr_internal(ctx: &mut Context, res_type: &StructTy) -> Option<StructExpr> {
+        match res_type {
             StructTy::Field(res_type) => {
                 FieldStructExpr::generate_expr(ctx, res_type).map(From::from)
             }
             StructTy::Tuple(res_type) => {
                 TupleStructExpr::generate_expr(ctx, res_type).map(From::from)
             }
-        };
-        ctx.policy.max_expr_depth = prev_max_expr_depth;
-        res
+        }
     }
 }
 

@@ -2,9 +2,7 @@ use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
-use crate::ast::expr::{
-    BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member,
-};
+use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};

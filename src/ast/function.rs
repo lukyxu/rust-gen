@@ -31,4 +31,13 @@ impl Function {
             block,
         })
     }
+
+    pub fn generate_fn(ctx: &mut Context) -> Option<Function> {
+        let block = BlockExpr::generate_expr(ctx, &Ty::unit_type())?;
+        ctx.statistics.main_fn_stmts = block.stmts.len();
+        Some(Function {
+            name: ctx.create_function_name(),
+            block,
+        })
+    }
 }
