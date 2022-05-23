@@ -323,10 +323,11 @@ impl Visitor for EmitVisitor {
 
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         self.output.push_str(&format!(
-            "&{} ",
+            "&{} (",
             expr.mutability.then(|| "mut").unwrap_or_default()
         ));
         self.visit_expr(&mut expr.expr);
+        self.output.push(')');
     }
 
     fn visit_unary_op(&mut self, op: &mut UnaryOp) {

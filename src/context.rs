@@ -243,6 +243,10 @@ impl Context {
         self.rng.gen_bool(self.policy.mutability_prob)
     }
 
+    pub fn choose_new_lifetime(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.new_lifetime_prob)
+    }
+
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
         let ident_exprs = self.type_symbol_table.get_ident_exprs_by_type(ty);
         ident_exprs.choose(&mut self.rng).cloned()

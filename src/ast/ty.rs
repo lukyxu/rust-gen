@@ -7,6 +7,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::BTreeSet;
+use rand::prelude::IteratorRandom;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Ty {
@@ -719,13 +720,17 @@ pub struct Lifetime(pub String);
 
 impl Lifetime {
     fn generate_lifetime(ctx: &mut Context) -> Option<Lifetime> {
-        let lifetime = ctx.create_lifetime_name().map(Lifetime);
-        match (&lifetime, &mut ctx.struct_ctx) {
-            (Some(lifetime), Some(struct_ctx)) => {
-                struct_ctx.lifetimes.insert(lifetime.clone());
-            }
-            _ => {}
-        };
+        if ctx.struct_ctx.is_none() {
+            return None;
+        }
+        let mut lifetime: Option<Lifetime> = None;
+        if !ctx.choose_new_lifetime() {
+            lifetime = ctx.struct_ctx.as_ref().unwrap().lifetimes.iter().choose(&mut ctx.rng).cloned()
+        }
+        if lifetime.is_none() {
+            lifetime = ctx.create_lifetime_name().map(Lifetime);
+            ctx.struct_ctx.as_mut().unwrap().lifetimes.insert(lifetime.clone().unwrap());
+        }
         lifetime
     }
 }
