@@ -1,5 +1,7 @@
 use crate::ast::expr::LitIntTy;
-use crate::ast::utils::{apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type};
+use crate::ast::utils::{
+    apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type,
+};
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -12,6 +14,7 @@ pub enum Ty {
     Tuple(TupleTy), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
     Array(ArrayTy),
     Struct(StructTy),
+    Reference(ReferenceTy),
 }
 
 impl Ty {
@@ -38,6 +41,7 @@ impl Ty {
             TyKind::Tuple => TupleTy::generate_type(ctx, &None).map(From::from),
             TyKind::Array => ArrayTy::generate_type(ctx, &None).map(From::from),
             TyKind::Struct => StructTy::generate_type(ctx, &None).map(From::from),
+            TyKind::Reference => ReferenceTy::generate_type(ctx).map(From::from),
         }
     }
 
@@ -104,6 +108,7 @@ impl ToString for Ty {
             Ty::Tuple(tuple) => tuple.to_string(),
             Ty::Array(array) => array.to_string(),
             Ty::Struct(struct_ty) => struct_ty.to_string(),
+            Ty::Reference(reference) => reference.to_string(),
         }
     }
 }
@@ -677,6 +682,48 @@ impl TupleStructTy {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ReferenceTy {
+    pub mutability: bool,
+    pub elem: Box<Ty>,
+}
+
+impl ToString for ReferenceTy {
+    fn to_string(&self) -> String {
+        format!(
+            "&{} {}",
+            self.mutability.then(|| "mut").unwrap_or_default(),
+            self.elem.to_string()
+        )
+    }
+}
+
+impl From<ReferenceTy> for Ty {
+    fn from(ty: ReferenceTy) -> Ty {
+        Ty::Reference(ty)
+    }
+}
+
+impl ReferenceTy {
+    pub fn generate_type(ctx: &mut Context) -> Option<ReferenceTy> {
+        let res = ReferenceTy::generate_type_internal(ctx);
+        increment_counter(
+            &res,
+            TyKind::Reference,
+            &mut ctx.statistics.successful_ty_counter,
+            &mut ctx.statistics.failed_ty_counter,
+        );
+        res
+    }
+
+    pub fn generate_type_internal(ctx: &mut Context) -> Option<ReferenceTy> {
+        Some(ReferenceTy {
+            mutability: true,
+            elem: Box::new(Ty::fuzz_type(ctx)?),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TyKind {
     Unit,
@@ -684,4 +731,5 @@ pub enum TyKind {
     Tuple,
     Array,
     Struct,
+    Reference,
 }

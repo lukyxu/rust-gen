@@ -1,6 +1,6 @@
 use crate::ast::expr::{ExprKind, IdentExpr};
 use crate::ast::item::ItemKind;
-use crate::ast::op::BinaryOp;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
@@ -173,6 +173,17 @@ impl Context {
             .cloned()
             .collect();
         choose(&filtered_binary_ops, &mut self.rng)
+    }
+
+    pub fn choose_unary_op(&mut self, res_type: &Ty) -> Option<UnaryOp> {
+        let filtered_unary_ops: Vec<(UnaryOp, f64)> = self
+            .policy
+            .unary_op_dist
+            .iter()
+            .filter(|x| x.0.get_compatible_return_types(self).contains(res_type))
+            .cloned()
+            .collect();
+        choose(&filtered_unary_ops, &mut self.rng)
     }
 
     pub fn choose_num_items(&mut self) -> usize {

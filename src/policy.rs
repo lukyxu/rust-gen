@@ -1,6 +1,6 @@
 use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
-use crate::ast::op::BinaryOp;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use crate::distribution::Distribution;
@@ -38,6 +38,7 @@ pub struct Policy {
     pub max_expr_depth_in_struct: usize,
 
     pub binary_op_dist: Vec<(BinaryOp, f64)>,
+    pub unary_op_dist: Vec<(UnaryOp, f64)>,
     pub otherwise_if_stmt_prob: f64,
     pub bool_true_prob: f64,
     pub mutability_prob: f64,
@@ -75,6 +76,7 @@ impl Policy {
             Policy::tuple_field_debug(),
             Policy::simple_debug(),
             Policy::simple_debug_with_assignments(),
+            Policy::simple_debug_with_reference(),
             Policy::array_debug(),
             Policy::array_index_debug(),
             Policy::default(),
@@ -184,9 +186,10 @@ impl Policy {
             mutability_prob: 0.2,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
-                (ExprKind::If, 2.0),
+                // (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
                 (ExprKind::Ident, 2.0),
+                (ExprKind::Unary, 2.0),
             ],
 
             max_if_else_depth: 2,
@@ -206,6 +209,14 @@ impl Policy {
         policy.max_if_else_depth = 3;
         policy.max_arith_depth = 3;
         policy.num_stmt_dist = Distribution::new_uniform_inclusive(2, 5);
+        policy
+    }
+
+    pub fn simple_debug_with_reference() -> Self {
+        let mut policy = Policy::simple_debug();
+        policy.name = "simple_debug_with_reference";
+        policy.type_dist.push((TyKind::Reference, 3.0));
+        policy.num_item_dist = Distribution::new_uniform_inclusive(0, 0);
         policy
     }
 
@@ -294,7 +305,7 @@ impl Policy {
                 (ExprKind::Block, 0.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
-                (ExprKind::Assign, 5.0),
+                (ExprKind::Assign, 1.0),
                 (ExprKind::Index, 0.5),
                 (ExprKind::Field, 0.5),
             ],
@@ -361,6 +372,12 @@ impl Policy {
                 (BinaryOp::WrappingRem, 1.0),
             ],
 
+            unary_op_dist: vec![
+                (UnaryOp::Deref, 1.0),
+                (UnaryOp::Not, 1.0),
+                (UnaryOp::Neg, 1.0),
+            ],
+
             otherwise_if_stmt_prob: 0.5,
             bool_true_prob: 0.5,
             mutability_prob: 1.0,
@@ -373,9 +390,9 @@ impl Policy {
             max_file_attempts: 1,
             max_main_fn_attempts: 1,
             max_item_attempts: 1,
-            max_stmt_attempts: 10,
-            max_expr_attempts: 100,
-            max_ty_attempts: 100,
+            max_stmt_attempts: 30,
+            max_expr_attempts: 5,
+            max_ty_attempts: 5,
         }
     }
 }

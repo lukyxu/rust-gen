@@ -1,15 +1,19 @@
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::{
-    ArrayTy, FieldDef, FieldStructTy, FloatTy, IntTy, PrimTy, StructTy, TupleStructTy, TupleTy, Ty,
-    UIntTy,
+    ArrayTy, FieldDef, FieldStructTy, FloatTy, IntTy, PrimTy, ReferenceTy, StructTy, TupleStructTy,
+    TupleTy, Ty, UIntTy,
 };
 use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::utils::{apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct, apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, track_expr};
+use crate::ast::utils::{
+    apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct,
+    apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth,
+    limit_if_else_depth, track_expr,
+};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
-use std::cmp::{max};
+use std::cmp::max;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -42,7 +46,8 @@ pub enum Expr {
     Field(FieldExpr),
     /// Struct literal expression such as `S { field1: value1, field2: value2 }` and `S(5_u32, "hello")`.
     Struct(StructExpr),
-    // TODO: Path, Box
+    /// Reference expression such as `&a` or `&mut a`.
+    Reference(ReferenceExpr), // TODO: Path, Box
 }
 
 impl Expr {
@@ -143,6 +148,9 @@ impl LitExpr {
             Ty::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
             Ty::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
             Ty::Struct(struct_ty) => StructExpr::generate_expr(ctx, struct_ty).map(From::from),
+            Ty::Reference(reference_ty) => {
+                ReferenceExpr::generate_expr(ctx, reference_ty).map(From::from)
+            }
             _ => panic!(
                 "Literal type for {} not supported yet",
                 res_type.to_string()
@@ -259,12 +267,13 @@ impl UnaryExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<UnaryExpr> {
-        let op = match res_type {
-            Ty::Prim(PrimTy::Bool) => UnaryOp::Not,
-            Ty::Prim(PrimTy::Int(_)) => UnaryOp::Neg,
-            _ => return None,
-        };
-        let expr = Box::new(Expr::fuzz_expr(ctx, res_type)?);
+        let op = ctx.choose_unary_op(res_type)?;
+        let args_type = op
+            .get_compatible_arg_types(res_type)
+            .choose(&mut ctx.rng)
+            .cloned()
+            .unwrap();
+        let expr = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
         *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
@@ -779,6 +788,27 @@ impl Field {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReferenceExpr {
+    pub mutability: bool,
+    pub expr: Box<Expr>,
+}
+
+impl From<ReferenceExpr> for Expr {
+    fn from(expr: ReferenceExpr) -> Expr {
+        Expr::Reference(expr)
+    }
+}
+
+impl ReferenceExpr {
+    pub fn generate_expr(ctx: &mut Context, res_type: &ReferenceTy) -> Option<ReferenceExpr> {
+        Some(ReferenceExpr {
+            mutability: res_type.mutability,
+            expr: Box::new(Expr::fuzz_expr(ctx, &res_type.elem)?),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ExprKind {
@@ -792,5 +822,6 @@ pub enum ExprKind {
     Assign,
     Index,
     Field,
+    Reference,
     __Nonexhaustive,
 }

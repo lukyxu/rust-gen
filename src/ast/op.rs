@@ -1,4 +1,4 @@
-use crate::ast::ty::{PrimTy, Ty};
+use crate::ast::ty::{PrimTy, ReferenceTy, Ty};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 
@@ -143,5 +143,40 @@ impl ToString for UnaryOp {
             UnaryOp::Neg => "-",
         }
         .to_owned()
+    }
+}
+
+impl UnaryOp {
+    pub fn get_compatible_return_types(&self, ctx: &Context) -> Vec<Ty> {
+        match self {
+            UnaryOp::Deref => PrimTy::int_types(ctx)
+                .into_iter()
+                .map(From::from)
+                .chain(std::iter::once(Ty::Prim(PrimTy::Bool)))
+                .collect(),
+            UnaryOp::Not => vec![PrimTy::Bool.into()],
+            UnaryOp::Neg => PrimTy::int_types(ctx)
+                .into_iter()
+                .filter(|x| matches!(x, PrimTy::Int(_)))
+                .map(From::from)
+                .collect(),
+        }
+    }
+
+    pub fn get_compatible_arg_types(&self, res_type: &Ty) -> Vec<Ty> {
+        match self {
+            UnaryOp::Deref => vec![
+                Ty::Reference(ReferenceTy {
+                    mutability: true,
+                    elem: Box::new(res_type.clone()),
+                }),
+                Ty::Reference(ReferenceTy {
+                    mutability: false,
+                    elem: Box::new(res_type.clone()),
+                }),
+            ],
+            UnaryOp::Not => vec![PrimTy::Bool.into()],
+            UnaryOp::Neg => vec![res_type.clone()],
+        }
     }
 }

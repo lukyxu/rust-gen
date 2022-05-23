@@ -1,7 +1,7 @@
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr, StructExpr,
-    TupleExpr, TupleStructExpr, UnaryExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr, ReferenceExpr,
+    StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 
@@ -106,6 +106,9 @@ pub trait Visitor: Sized {
     fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
         walk_tuple_struct_expr(self, expr);
     }
+    fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
+        walk_reference_expr(self, expr);
+    }
 
     fn visit_field(&mut self, field: &mut Field) {
         walk_field(self, field);
@@ -192,6 +195,7 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
         Expr::Field(field_expr) => visitor.visit_field_expr(field_expr),
         Expr::Index(index_expr) => visitor.visit_index_expr(index_expr),
         Expr::Struct(struct_expr) => visitor.visit_struct_expr(struct_expr),
+        Expr::Reference(reference_expr) => visitor.visit_reference_expr(reference_expr),
     }
 }
 
@@ -302,6 +306,13 @@ fn walk_tuple_struct_expr<V: Visitor>(
 ) {
     visitor.visit_name(struct_name);
     visitor.visit_tuple_expr(fields);
+}
+
+fn walk_reference_expr<V: Visitor>(
+    visitor: &mut V,
+    ReferenceExpr { expr, .. }: &mut ReferenceExpr,
+) {
+    visitor.visit_expr(expr);
 }
 
 fn walk_field<V: Visitor>(visitor: &mut V, Field { name, expr }: &mut Field) {
