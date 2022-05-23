@@ -98,21 +98,7 @@ impl Ty {
     pub fn struct_depth(&self) -> usize {
         match self {
             Ty::Struct(struct_ty) => {
-                1 + match struct_ty {
-                    StructTy::Field(field_struct) => field_struct
-                        .fields
-                        .iter()
-                        .map(|f| f.ty.struct_depth())
-                        .max()
-                        .unwrap_or_default(),
-                    StructTy::Tuple(tuple_struct) => tuple_struct
-                        .fields
-                        .tuple
-                        .iter()
-                        .map(Ty::struct_depth)
-                        .max()
-                        .unwrap_or_default(),
-                }
+                struct_ty.struct_depth()
             }
             _ => 0,
         }
@@ -562,6 +548,11 @@ impl StructTy {
     }
 
     fn generate_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<StructTy> {
+        if let Some(ty) = ty {
+            if ty.struct_depth() + 1 > ctx.policy.max_struct_depth {
+                return None;
+            }
+        };
         ctx.choose_struct_type(ty)
     }
 
@@ -570,6 +561,24 @@ impl StructTy {
             FieldStructTy::generate_new_type(ctx, &None).map(From::from)
         } else {
             TupleStructTy::generate_new_type(ctx, &None).map(From::from)
+        }
+    }
+
+    pub fn struct_depth(&self) -> usize {
+        1 + match self {
+            StructTy::Field(field_struct) => field_struct
+                .fields
+                .iter()
+                .map(|f| f.ty.struct_depth())
+                .max()
+                .unwrap_or_default(),
+            StructTy::Tuple(tuple_struct) => tuple_struct
+                .fields
+                .tuple
+                .iter()
+                .map(Ty::struct_depth)
+                .max()
+                .unwrap_or_default(),
         }
     }
 }
@@ -594,30 +603,31 @@ impl From<FieldStructTy> for StructTy {
 
 impl FieldStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
-        'outer: for _ in 0..10 {
-            let len = ctx.choose_struct_length();
-            let mut fields: Vec<FieldDef> = vec![];
-            for i in 0..len {
-                if let Some(field_def) = FieldDef::generate_field_def(ctx, i) {
-                    fields.push(field_def);
-                } else {
-                    continue 'outer;
-                }
-            }
-            if let Some(ty) = &ty {
-                let index = ctx.rng.gen_range(0..len);
-                fields[index].ty = Box::new(ty.clone());
-            }
-            let struct_ty = FieldStructTy {
-                name: ctx.create_struct_name(),
-                fields,
-            };
-            let weight = 1.0;
-            ctx.struct_type_dist
-                .push((struct_ty.clone().into(), weight));
-            return Some(struct_ty);
+        let prev_max_struct_depth = ctx.policy.max_struct_depth;
+        ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
+        let res = FieldStructTy::generate_new_type_internal(ctx, ty);
+        ctx.policy.max_struct_depth = prev_max_struct_depth;
+        res
+    }
+
+    pub fn generate_new_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
+        let len = ctx.choose_struct_length();
+        let mut fields: Vec<FieldDef> = vec![];
+        for i in 0..len {
+            fields.push(FieldDef::generate_field_def(ctx, i)?);
         }
-        None
+        if let Some(ty) = &ty {
+            let index = ctx.rng.gen_range(0..len);
+            fields[index].ty = Box::new(ty.clone());
+        }
+        let struct_ty = FieldStructTy {
+            name: ctx.create_struct_name(),
+            fields,
+        };
+        let weight = 1.0;
+        ctx.struct_type_dist
+            .push((struct_ty.clone().into(), weight));
+        return Some(struct_ty);
     }
 }
 
@@ -635,10 +645,7 @@ impl ToString for FieldDef {
 
 impl FieldDef {
     pub fn generate_field_def(ctx: &mut Context, i: usize) -> Option<FieldDef> {
-        let base_type = Ty::generate_type(ctx)?;
-        if base_type.struct_depth() + 1 > ctx.policy.max_struct_depth {
-            return None;
-        }
+        let base_type = Ty::fuzz_type(ctx)?;
         let name = ctx.create_field_name(i);
         Some(FieldDef {
             name,

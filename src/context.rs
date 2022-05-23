@@ -117,7 +117,7 @@ impl Context {
     }
 
     pub fn choose_struct_type(&mut self, elem_ty: &Option<Ty>) -> Option<StructTy> {
-        let dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
+        let mut dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
             self.struct_type_dist
                 .iter()
                 .filter(|(struct_ty, _)| match struct_ty {
@@ -132,6 +132,7 @@ impl Context {
         } else {
             self.struct_type_dist.clone()
         };
+        dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
         choose(&dist, &mut self.rng)
     }
 
