@@ -1,5 +1,5 @@
 use crate::ast::expr::LitIntTy;
-use crate::ast::utils::{increment_counter, track_type};
+use crate::ast::utils::{apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type};
 use crate::context::Context;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -425,30 +425,25 @@ impl TupleTy {
     }
 
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleTy> {
-        let prev_max_tuple_depth = ctx.policy.max_tuple_depth;
-        let prev_gen_new_tuple_types = ctx.gen_new_tuple_types;
-        ctx.policy.max_tuple_depth = ctx.policy.max_tuple_depth.saturating_sub(1);
-        ctx.gen_new_tuple_types = false;
-        let res: Option<TupleTy> = (|| {
-            let len = ctx.choose_tuple_length();
-            let mut types: Vec<Ty> = vec![];
-            for _ in 0..len {
-                types.push(Ty::fuzz_type(ctx)?)
-            }
-            if let Some(ty) = &ty {
-                let index = ctx.rng.gen_range(0..len);
-                types[index] = ty.clone();
-            }
-            let tuple_type = TupleTy { tuple: types };
-            if !ctx.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
-                let weight = 1.0;
-                ctx.tuple_type_dist.push((tuple_type.clone(), weight));
-            }
-            Some(tuple_type)
-        })();
-        ctx.policy.max_tuple_depth = prev_max_tuple_depth;
-        ctx.gen_new_tuple_types = prev_gen_new_tuple_types;
-        res
+        apply_limit_tuple_ty(TupleTy::generate_new_type_internal, ctx, ty)
+    }
+
+    fn generate_new_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleTy> {
+        let len = ctx.choose_tuple_length();
+        let mut types: Vec<Ty> = vec![];
+        for _ in 0..len {
+            types.push(Ty::fuzz_type(ctx)?)
+        }
+        if let Some(ty) = &ty {
+            let index = ctx.rng.gen_range(0..len);
+            types[index] = ty.clone();
+        }
+        let tuple_type = TupleTy { tuple: types };
+        if !ctx.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
+            let weight = 1.0;
+            ctx.tuple_type_dist.push((tuple_type.clone(), weight));
+        }
+        Some(tuple_type)
     }
 }
 
@@ -503,28 +498,21 @@ impl ArrayTy {
     }
 
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
-        let prev_max_array_depth = ctx.policy.max_array_depth;
-        let prev_gen_new_array_types = ctx.gen_new_array_types;
-        ctx.policy.max_array_depth = ctx.policy.max_array_depth.saturating_sub(1);
-        ctx.gen_new_array_types = false;
+        apply_limit_array_ty(ArrayTy::generate_new_type_internal, ctx, ty)
+    }
+
+    fn generate_new_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
         let len = ctx.choose_array_length();
-        let base_ty = ty.clone().or_else(|| Ty::fuzz_type(ctx));
-        let res = if let Some(base_ty) = base_ty {
-            let array_type = ArrayTy {
-                base_ty: Box::new(base_ty),
-                len,
-            };
-            if !ctx.array_type_dist.iter().any(|(t, _)| t == &array_type) {
-                let weight = 1.0;
-                ctx.array_type_dist.push((array_type.clone(), weight));
-            }
-            Some(array_type)
-        } else {
-            None
+        let base_ty = ty.clone().or_else(|| Ty::fuzz_type(ctx))?;
+        let array_type = ArrayTy {
+            base_ty: Box::new(base_ty),
+            len,
         };
-        ctx.policy.max_array_depth = prev_max_array_depth;
-        ctx.gen_new_array_types = prev_gen_new_array_types;
-        res
+        if !ctx.array_type_dist.iter().any(|(t, _)| t == &array_type) {
+            let weight = 1.0;
+            ctx.array_type_dist.push((array_type.clone(), weight));
+        }
+        Some(array_type)
     }
 
     pub fn array_depth(&self) -> usize {
