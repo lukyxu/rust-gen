@@ -510,7 +510,10 @@ impl ArrayTy {
         let len = ctx.choose_array_length();
         let base_ty = ty.clone().or_else(|| Ty::fuzz_type(ctx));
         let res = if let Some(base_ty) = base_ty {
-            let array_type = ArrayTy { base_ty: Box::new(base_ty), len };
+            let array_type = ArrayTy {
+                base_ty: Box::new(base_ty),
+                len,
+            };
             if !ctx.array_type_dist.iter().any(|(t, _)| t == &array_type) {
                 let weight = 1.0;
                 ctx.array_type_dist.push((array_type.clone(), weight));

@@ -24,7 +24,7 @@ impl RustFile {
     /// Attempts a single attempt to generate a valid Rust file.
     pub fn generate_file(ctx: &mut Context) -> Option<RustFile> {
         let mut items = vec![];
-        for i in 0..max(ctx.choose_num_items(), 1) - 1 {
+        for _ in 0..max(ctx.choose_num_items(), 1) - 1 {
             items.push(Item::fuzz_item(ctx)?);
         }
         items.push(Item::Function(FunctionItem::generate_main(ctx)?));

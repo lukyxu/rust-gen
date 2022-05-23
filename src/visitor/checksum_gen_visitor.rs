@@ -41,7 +41,7 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_function(&mut self, function: &mut Function) {
-        if function.name != "main"{
+        if function.name != "main" {
             return;
         }
         function.block.stmts.insert(
