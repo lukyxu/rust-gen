@@ -82,14 +82,7 @@ impl Ty {
     /// Returns the tuple depth of a type.
     pub fn tuple_depth(&self) -> usize {
         match self {
-            Ty::Tuple(tuple_ty) => {
-                1 + tuple_ty
-                    .tuple
-                    .iter()
-                    .map(Ty::tuple_depth)
-                    .max()
-                    .unwrap_or_default()
-            }
+            Ty::Tuple(tuple_ty) => tuple_ty.tuple_depth(),
             _ => 0,
         }
     }
@@ -97,9 +90,7 @@ impl Ty {
     /// Returns the struct depth of a type.
     pub fn struct_depth(&self) -> usize {
         match self {
-            Ty::Struct(struct_ty) => {
-                struct_ty.struct_depth()
-            }
+            Ty::Struct(struct_ty) => struct_ty.struct_depth(),
             _ => 0,
         }
     }
