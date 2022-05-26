@@ -338,7 +338,7 @@ impl IfExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IfExpr> {
-        let outer_symbol_table = ctx.type_symbol_table.clone();
+        // let outer_symbol_table = ctx.type_symbol_table.clone();
         let cond = Expr::fuzz_expr(ctx, &PrimTy::Bool.into());
         let if_expr = (|| match cond {
             None => None,
@@ -365,7 +365,7 @@ impl IfExpr {
                 })
             }
         })();
-        ctx.type_symbol_table = outer_symbol_table;
+        // ctx.type_symbol_table = outer_symbol_table;
         if_expr
     }
 }
@@ -407,7 +407,7 @@ impl BlockExpr {
             }
             Some(BlockExpr { stmts })
         })();
-        ctx.type_symbol_table = outer_symbol_table;
+        ctx.type_symbol_table = outer_symbol_table.merge(&ctx.type_symbol_table);
         block_expr
     }
 }
@@ -436,7 +436,9 @@ impl IdentExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
-        ctx.choose_ident_expr_by_type(res_type)
+        let ident = ctx.choose_ident_expr_by_type(res_type)?;
+        ctx.type_symbol_table.move_var(&ident.name);
+        Some(ident)
     }
 
     pub fn generate_place_expr(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {

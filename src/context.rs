@@ -106,7 +106,7 @@ impl Context {
             dist.retain(|(array_ty, _)|!array_ty.require_lifetime())
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(array_ty, _)|!array_ty.is_copy())
+            dist.retain(|(array_ty, _)|array_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }
@@ -125,7 +125,7 @@ impl Context {
             dist.retain(|(tuple_ty, _)|!tuple_ty.require_lifetime())
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(tuple_ty, _)|!tuple_ty.is_copy())
+            dist.retain(|(tuple_ty, _)|tuple_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }
@@ -150,7 +150,7 @@ impl Context {
             dist.retain(|(struct_ty, _)|!struct_ty.require_lifetime())
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(struct_ty, _)|!struct_ty.is_copy())
+            dist.retain(|(struct_ty, _)|struct_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }

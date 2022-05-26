@@ -316,7 +316,7 @@ impl Policy {
             (TyKind::Prim, 2.0),
             (TyKind::Array, 0.5),
             (TyKind::Tuple, 0.5),
-            // (TyKind::Struct, 0.5),
+            (TyKind::Struct, 0.5),
         ];
         // policy.binary_op_dist = vec![
         //     (BinaryOp::Add, 1.0),

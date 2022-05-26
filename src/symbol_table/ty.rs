@@ -1,3 +1,4 @@
+
 use crate::ast::expr::IdentExpr;
 use crate::ast::ty::Ty;
 use std::collections::btree_map::Iter;
@@ -6,6 +7,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone)]
 pub struct TypeMapping {
     pub ty: Ty,
+    pub moved: bool,
     mutable: bool,
 }
 
@@ -18,7 +20,15 @@ pub struct TypeSymbolTable {
 impl TypeSymbolTable {
     pub fn add_var(&mut self, key: String, ty: Ty, mutable: bool) {
         self.var_type_mapping
-            .insert(key, TypeMapping { ty, mutable });
+            .insert(key, TypeMapping { ty, moved: false, mutable });
+    }
+
+    pub fn move_var(&mut self, key: &str) {
+        let mapping = self.var_type_mapping.get_mut(key).unwrap();
+        assert!(!mapping.moved);
+        if !mapping.ty.is_copy() {
+            (*mapping).moved = true;
+        }
     }
 
     pub fn contains(&self, key: &String) -> bool {
@@ -36,7 +46,7 @@ impl TypeSymbolTable {
     pub fn get_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
         self.var_type_mapping
             .iter()
-            .filter(|&(_k, v)| v.ty == *ty)
+            .filter(|&(_k, v)| v.ty == *ty && !v.moved)
             .map(|(name, ty_mapping)| IdentExpr {
                 name: name.clone(),
                 ty: ty_mapping.ty.clone(),
@@ -47,12 +57,25 @@ impl TypeSymbolTable {
     pub fn get_mut_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
         self.var_type_mapping
             .iter()
-            .filter(|&(_k, v)| v.mutable && v.ty == *ty)
+            .filter(|&(_k, v)| v.mutable && v.ty == *ty && !v.moved)
             .map(|(name, ty_mapping)| IdentExpr {
                 name: name.clone(),
                 ty: ty_mapping.ty.clone(),
             })
             .collect()
+    }
+
+    pub fn merge_inplace(&mut self, other: &TypeSymbolTable) {
+        for (k, v) in self.var_type_mapping.iter_mut() {
+            v.moved = other.var_type_mapping.get(k).unwrap().moved;
+        };
+    }
+
+    pub fn merge(mut self, other: &TypeSymbolTable) -> TypeSymbolTable {
+        for (k, v) in self.var_type_mapping.iter_mut() {
+            v.moved = other.var_type_mapping.get(k).unwrap().moved;
+        };
+        self
     }
 }
 

@@ -1,10 +1,9 @@
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr,
-    LitIntTy, Member,
-};
+use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
+
 use crate::ast::function::Function;
-use crate::ast::op::BinaryOp;
+
+use crate::ast::op::{BinaryOp};
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{PrimTy, StructTy, Ty, UIntTy};
 use crate::symbol_table::ty::TypeSymbolTable;
@@ -15,6 +14,8 @@ pub struct ChecksumGenVisitor {
     add_checksum: bool,
     local_type_symbol_table: TypeSymbolTable,
     prev_local_type_symbol_tables: Vec<TypeSymbolTable>,
+    full_type_symbol_table: TypeSymbolTable,
+    prev_full_type_symbol_tables: Vec<TypeSymbolTable>,
     checksum_name: &'static str,
 }
 
@@ -24,6 +25,8 @@ impl ChecksumGenVisitor {
             add_checksum,
             local_type_symbol_table: TypeSymbolTable::default(),
             prev_local_type_symbol_tables: vec![],
+            full_type_symbol_table: TypeSymbolTable::default(),
+            prev_full_type_symbol_tables: vec![],
             checksum_name: "checksum",
         }
     }
@@ -34,10 +37,20 @@ impl Visitor for ChecksumGenVisitor {
         self.prev_local_type_symbol_tables
             .push(self.local_type_symbol_table.clone());
         self.local_type_symbol_table = TypeSymbolTable::default();
+        self.prev_full_type_symbol_tables.push(self.full_type_symbol_table.clone());
     }
 
     fn exit_scope(&mut self) {
         self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap();
+        self.local_type_symbol_table.merge_inplace(&self.full_type_symbol_table);
+        self.full_type_symbol_table = self.prev_full_type_symbol_tables.pop().unwrap().merge(&self.full_type_symbol_table);
+    }
+
+    fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
+        self.full_type_symbol_table.move_var(&expr.name);
+        if self.local_type_symbol_table.contains(&expr.name) {
+            self.local_type_symbol_table.move_var(&expr.name)
+        }
     }
 
     fn visit_function(&mut self, function: &mut Function) {
@@ -64,6 +77,8 @@ impl Visitor for ChecksumGenVisitor {
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         self.local_type_symbol_table
             .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
+        self.full_type_symbol_table
+            .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
         self.visit_expr(&mut stmt.rhs);
     }
 
@@ -73,7 +88,7 @@ impl Visitor for ChecksumGenVisitor {
             self.visit_stmt(stmt);
         }
         for (name, ty_mapping) in &self.local_type_symbol_table {
-            if name == self.checksum_name {
+            if name == self.checksum_name || ty_mapping.moved {
                 continue;
             }
             let exprs = exprs_from_ident(name, &ty_mapping.ty);
