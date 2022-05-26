@@ -249,6 +249,14 @@ impl Context {
         let ident_exprs = self.type_symbol_table.get_ident_exprs_by_type(ty);
         ident_exprs.choose(&mut self.rng).cloned()
     }
+
+    pub fn choose_copy_tuple_struct(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.tuple_struct_copy_prob)
+    }
+
+    pub fn choose_copy_field_struct(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.field_struct_copy_prob)
+    }
 }
 
 #[derive(Default)]

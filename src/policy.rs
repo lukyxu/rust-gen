@@ -57,6 +57,9 @@ pub struct Policy {
     pub max_stmt_attempts: usize,
     pub max_expr_attempts: usize,
     pub max_ty_attempts: usize,
+
+    pub tuple_struct_copy_prob: f64,
+    pub field_struct_copy_prob: f64,
 }
 
 // vec![
@@ -456,6 +459,9 @@ impl Policy {
             max_stmt_attempts: 30,
             max_expr_attempts: 5,
             max_ty_attempts: 10,
+
+            tuple_struct_copy_prob: 0.5,
+            field_struct_copy_prob: 0.5,
         }
     }
 }
