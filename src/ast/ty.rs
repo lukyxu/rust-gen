@@ -115,6 +115,32 @@ impl Ty {
             Ty::Reference(ty) => ty.require_lifetime(),
         }
     }
+
+    pub fn is_copy(&self) -> bool {
+        let is_copy = match self {
+            Ty::Unit => true,
+            Ty::Prim(ty) => ty.is_copy(),
+            Ty::Tuple(ty) => ty.is_copy(),
+            Ty::Array(ty) => ty.is_copy(),
+            Ty::Struct(ty) => ty.is_copy(),
+            Ty::Reference(ty) => ty.is_copy(),
+        };
+        if is_copy {
+            assert!(self.is_clone())
+        }
+        is_copy
+    }
+
+    pub fn is_clone(&self) -> bool {
+        match self {
+            Ty::Unit => true,
+            Ty::Prim(ty) => ty.is_clone(),
+            Ty::Tuple(ty) => ty.is_clone(),
+            Ty::Array(ty) => ty.is_clone(),
+            Ty::Struct(ty) => ty.is_clone(),
+            Ty::Reference(ty) => ty.is_clone(),
+        }
+    }
 }
 
 impl ToString for Ty {
@@ -210,6 +236,14 @@ impl PrimTy {
 
     pub fn require_lifetime(&self) -> bool {
         false
+    }
+
+    pub fn is_copy(&self) -> bool {
+        true
+    }
+
+    pub fn is_clone(&self) -> bool {
+        true
     }
 }
 
@@ -452,6 +486,14 @@ impl TupleTy {
         }
         Some(tuple_type)
     }
+
+    pub fn is_copy(&self) -> bool {
+        self.tuple.iter().all(Ty::is_copy)
+    }
+
+    pub fn is_clone(&self) -> bool {
+        self.tuple.iter().all(Ty::is_clone)
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -528,6 +570,14 @@ impl ArrayTy {
 
     pub fn require_lifetime(&self) -> bool {
         self.base_ty.require_lifetime()
+    }
+
+    pub fn is_copy(&self) -> bool {
+        self.base_ty.is_copy()
+    }
+
+    pub fn is_clone(&self) -> bool {
+        self.base_ty.is_clone()
     }
 }
 
@@ -620,11 +670,27 @@ impl StructTy {
             StructTy::Tuple(struct_ty) => &struct_ty.lifetimes,
         }
     }
+
+    pub fn is_copy(&self) -> bool {
+        match self {
+            StructTy::Field(struct_ty) => struct_ty.is_copy(),
+            StructTy::Tuple(struct_ty) => struct_ty.is_copy(),
+        }
+    }
+
+    pub fn is_clone(&self) -> bool {
+        match self {
+            StructTy::Field(struct_ty) => struct_ty.is_clone(),
+            StructTy::Tuple(struct_ty) => struct_ty.is_clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FieldStructTy {
     pub name: String,
+    is_copy: bool,
+    is_clone: bool,
     pub fields: Vec<FieldDef>,
     pub lifetimes: BTreeSet<Lifetime>,
 }
@@ -664,6 +730,8 @@ impl FieldStructTy {
         }
         let struct_ty = FieldStructTy {
             name: ctx.create_struct_name(),
+            is_copy: fields.iter().all(|f|f.ty.is_copy()),
+            is_clone: fields.iter().all(|f|f.ty.is_clone()),
             fields,
             lifetimes: ctx
                 .struct_ctx
@@ -675,6 +743,16 @@ impl FieldStructTy {
         ctx.struct_type_dist
             .push((struct_ty.clone().into(), weight));
         return Some(struct_ty);
+    }
+
+    pub fn is_copy(&self) -> bool {
+        assert!(!self.is_copy || self.fields.iter().all(|f|f.ty.is_copy()));
+        self.is_copy
+    }
+
+    pub fn is_clone(&self) -> bool {
+        assert!(!self.is_clone || self.fields.iter().all(|f|f.ty.is_clone()));
+        self.is_clone
     }
 }
 
@@ -704,6 +782,8 @@ impl FieldDef {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TupleStructTy {
     pub name: String,
+    is_copy: bool,
+    is_clone: bool,
     pub fields: TupleTy,
     pub lifetimes: BTreeSet<Lifetime>,
 }
@@ -735,6 +815,8 @@ impl TupleStructTy {
         let fields = TupleTy::generate_type(ctx, ty)?;
         let struct_ty = TupleStructTy {
             name: ctx.create_struct_name(),
+            is_copy: fields.is_copy(),
+            is_clone: fields.is_clone(),
             fields,
             lifetimes: ctx
                 .struct_ctx
@@ -746,6 +828,16 @@ impl TupleStructTy {
         ctx.struct_type_dist
             .push((struct_ty.clone().into(), weight));
         Some(struct_ty)
+    }
+
+    pub fn is_copy(&self) -> bool {
+        assert!(!self.is_copy || self.fields.is_copy());
+        self.is_copy
+    }
+
+    pub fn is_clone(&self) -> bool {
+        assert!(!self.is_clone || self.fields.is_clone());
+        self.is_clone
     }
 }
 
@@ -834,6 +926,14 @@ impl ReferenceTy {
     }
 
     pub fn require_lifetime(&self) -> bool {
+        true
+    }
+
+    pub fn is_copy(&self) -> bool {
+        !self.mutability
+    }
+
+    pub fn is_clone(&self) -> bool {
         true
     }
 }
