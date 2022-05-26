@@ -167,7 +167,7 @@ impl UnaryOp {
         match self {
             UnaryOp::Deref => vec![
                 Ty::Reference(ReferenceTy {
-                    mutability: true,
+                    mutability: false,
                     lifetime: None,
                     elem: Box::new(res_type.clone()),
                 }),

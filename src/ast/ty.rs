@@ -786,7 +786,7 @@ impl ReferenceTy {
 
     pub fn generate_type_internal(ctx: &mut Context) -> Option<ReferenceTy> {
         Some(ReferenceTy {
-            mutability: true,
+            mutability: false,
             lifetime: Lifetime::generate_lifetime(ctx),
             elem: Box::new(Ty::fuzz_type(ctx)?),
         })
