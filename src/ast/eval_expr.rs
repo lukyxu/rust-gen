@@ -12,7 +12,7 @@ use crate::ast::ty::{PrimTy, Ty};
 use crate::wrapping::{WrappingDiv, WrappingRem};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingSub};
 use std::mem::swap;
-use std::ops::{Deref, DerefMut};
+
 
 #[derive(Debug, Clone, PartialEq)]
 /// Evaluated Rust expression

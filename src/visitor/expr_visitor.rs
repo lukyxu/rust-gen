@@ -3,16 +3,16 @@ use crate::ast::eval_expr::{
     EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
 };
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr,
     FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+    PlaceExpr, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
-use crate::ast::file::RustFile;
-use crate::ast::function::Function;
-use crate::ast::item::{FunctionItem, Item, StructItem};
-use crate::ast::op::{BinaryOp, UnaryOp};
 
-use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+
+
+
+
+use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
