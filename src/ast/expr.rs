@@ -391,6 +391,10 @@ impl BlockExpr {
         )(ctx, res_type)
     }
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
+        // if !res_type.is_copy() {
+        //     dbg!(res_type.clone());
+        // }
+        // assert!(res_type.is_copy());
         let mut stmts: Vec<Stmt> = Vec::new();
         let outer_symbol_table = ctx.type_symbol_table.clone();
         let block_expr = (|| {
@@ -681,6 +685,15 @@ impl IndexExpr {
         if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
             return None;
         }
+        // [Struct1(5), Struct1(5), Struct1(5)][0] is invalid if Struct1 is not copy
+        // However [Struct1(5), Struct1(5), Struct1(5)][0].0 should work
+        if !res_type.is_copy() {
+            return None;
+        }
+        // TODO: See if we can make this work
+        // if !res_type.is_copy() {
+        //     return None;
+        // }
 
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
