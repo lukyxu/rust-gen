@@ -711,7 +711,7 @@ impl FieldStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
         let prev_max_struct_depth = ctx.policy.max_struct_depth;
         ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
-        ctx.struct_ctx = Some(StructContext::default());
+        ctx.struct_ctx = Some(StructContext::new(ctx.choose_copy_field_struct()));
         let res = FieldStructTy::generate_new_type_internal(ctx, ty);
         ctx.struct_ctx = None;
         ctx.policy.max_struct_depth = prev_max_struct_depth;
@@ -804,7 +804,7 @@ impl TupleStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
         let prev_max_struct_depth = ctx.policy.max_struct_depth;
         ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
-        ctx.struct_ctx = Some(StructContext::default());
+        ctx.struct_ctx = Some(StructContext::new(ctx.choose_copy_tuple_struct()));
         let res = TupleStructTy::generate_new_type_internal(ctx, ty);
         ctx.struct_ctx = None;
         ctx.policy.max_struct_depth = prev_max_struct_depth;
