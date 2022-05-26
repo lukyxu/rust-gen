@@ -71,7 +71,14 @@ impl Visitor for EmitVisitor {
 
     fn visit_struct_item(&mut self, item: &mut StructItem) {
         // TODO: Remove this
-        self.output.push_str("#[derive(Clone, Copy, PartialEq)]\n");
+        let mut derives = vec!["PartialEq"];
+        if item.struct_ty.is_copy() {
+            derives.push("Copy")
+        }
+        if item.struct_ty.is_clone() {
+            derives.push("Clone")
+        }
+        self.output.push_str(&format!("#[derive({})]\n", derives.join(", ")));
         let lifetimes = (!item.struct_ty.lifetimes().is_empty())
             .then(|| {
                 item.struct_ty
