@@ -1,4 +1,4 @@
-use std::any::Any;
+
 use crate::ast::expr::IdentExpr;
 use crate::ast::ty::Ty;
 use std::collections::btree_map::Iter;
@@ -24,8 +24,11 @@ impl TypeSymbolTable {
     }
 
     pub fn move_var(&mut self, key: &str) {
-        assert!(!self.var_type_mapping.get_mut(key).unwrap().moved);
-        (*self.var_type_mapping.get_mut(key).unwrap()).moved = true;
+        let mapping = self.var_type_mapping.get_mut(key).unwrap();
+        assert!(!mapping.moved);
+        if !mapping.ty.is_copy() {
+            (*mapping).moved = true;
+        }
     }
 
     pub fn contains(&self, key: &String) -> bool {
