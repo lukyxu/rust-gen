@@ -105,6 +105,9 @@ impl Context {
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(array_ty, _)|!array_ty.require_lifetime())
         }
+        if self.generate_only_copy_type() {
+            dist.retain(|(array_ty, _)|!array_ty.is_copy())
+        }
         choose(&dist, &mut self.rng)
     }
 
@@ -120,6 +123,9 @@ impl Context {
         dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(tuple_ty, _)|!tuple_ty.require_lifetime())
+        }
+        if self.generate_only_copy_type() {
+            dist.retain(|(tuple_ty, _)|!tuple_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }
@@ -142,6 +148,9 @@ impl Context {
         dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(struct_ty, _)|!struct_ty.require_lifetime())
+        }
+        if self.generate_only_copy_type() {
+            dist.retain(|(struct_ty, _)|!struct_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }

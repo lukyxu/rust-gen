@@ -730,7 +730,7 @@ impl FieldStructTy {
         }
         let struct_ty = FieldStructTy {
             name: ctx.create_struct_name(),
-            is_copy: fields.iter().all(|f|f.ty.is_copy()),
+            is_copy: ctx.struct_ctx.as_ref().unwrap().generate_copy_struct,
             is_clone: fields.iter().all(|f|f.ty.is_clone()),
             fields,
             lifetimes: ctx
