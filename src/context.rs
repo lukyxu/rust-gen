@@ -87,16 +87,14 @@ impl Context {
     }
 
     pub fn choose_array_type(&mut self, elem_ty: &Option<Ty>) -> Option<ArrayTy> {
-        let mut dist: Vec<(ArrayTy, f64)> = if let Some(elem_ty) = elem_ty {
-            self.array_type_dist
-                .iter()
-                .filter(|(array_ty, _)| &*array_ty.base_ty == elem_ty)
-                .cloned()
-                .collect()
-        } else {
-            self.array_type_dist.clone()
-        };
+        let mut dist: Vec<(ArrayTy, f64)> = self.array_type_dist.clone();
+        if let Some(elem_ty) = elem_ty {
+            dist.retain(|(array_ty, _)| &*array_ty.base_ty == elem_ty)
+        }
         dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
+        if self.policy.disable_lifetime && self.struct_ctx.is_some() {
+            dist.retain(|(array_ty, _)|!array_ty.require_lifetime())
+        }
         choose(&dist, &mut self.rng)
     }
 
@@ -105,16 +103,14 @@ impl Context {
     }
 
     pub fn choose_tuple_type(&mut self, elem_ty: &Option<Ty>) -> Option<TupleTy> {
-        let mut dist: Vec<(TupleTy, f64)> = if let Some(elem_ty) = elem_ty {
-            self.tuple_type_dist
-                .iter()
-                .filter(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty))
-                .cloned()
-                .collect()
-        } else {
-            self.tuple_type_dist.clone()
-        };
+        let mut dist: Vec<(TupleTy, f64)> = self.tuple_type_dist.clone();
+        if let Some(elem_ty) = elem_ty {
+            dist.retain(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty))
+        }
         dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
+        if self.policy.disable_lifetime && self.struct_ctx.is_some() {
+            dist.retain(|(tuple_ty, _)|!tuple_ty.require_lifetime())
+        }
         choose(&dist, &mut self.rng)
     }
 
@@ -123,22 +119,20 @@ impl Context {
     }
 
     pub fn choose_struct_type(&mut self, elem_ty: &Option<Ty>) -> Option<StructTy> {
-        let mut dist: Vec<(StructTy, f64)> = if let Some(elem_ty) = elem_ty {
-            self.struct_type_dist
-                .iter()
-                .filter(|(struct_ty, _)| match struct_ty {
-                    StructTy::Field(field) => field
-                        .fields
-                        .iter()
-                        .any(|field_def| &*field_def.ty == elem_ty),
-                    StructTy::Tuple(tuple) => (&tuple.fields).into_iter().any(|ty| ty == elem_ty),
-                })
-                .cloned()
-                .collect()
-        } else {
-            self.struct_type_dist.clone()
-        };
+        let mut dist: Vec<(StructTy, f64)> = self.struct_type_dist.clone();
+        if let Some(elem_ty) = elem_ty {
+            dist.retain(|(struct_ty, _)| match struct_ty {
+                StructTy::Field(field) => field
+                    .fields
+                    .iter()
+                    .any(|field_def| &*field_def.ty == elem_ty),
+                StructTy::Tuple(tuple) => (&tuple.fields).into_iter().any(|ty| ty == elem_ty),
+            })
+        }
         dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
+        if self.policy.disable_lifetime && self.struct_ctx.is_some() {
+            dist.retain(|(struct_ty, _)|!struct_ty.require_lifetime())
+        }
         choose(&dist, &mut self.rng)
     }
 
@@ -151,12 +145,10 @@ impl Context {
     }
 
     pub fn choose_ty_kind(&mut self) -> TyKind {
-        let dist = if self.policy.disable_lifetime && self.struct_ctx.is_some() {
-            // TODO: See if we can optimize this
-            self.policy.type_dist.iter().filter(|(ty_kind, _)| !matches!(ty_kind,TyKind::Reference)).cloned().collect()
-        } else {
-            self.policy.type_dist.clone()
-        };
+        let mut dist = self.policy.type_dist.clone();
+        if self.policy.disable_lifetime && self.struct_ctx.is_some() {
+            dist.retain(|(ty_kind, _)| !matches!(ty_kind, TyKind::Reference));
+        }
         choose(&dist, &mut self.rng).unwrap()
     }
 

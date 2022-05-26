@@ -3,11 +3,11 @@ use crate::ast::utils::{
     apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type,
 };
 use crate::context::{Context, StructContext};
+use rand::prelude::IteratorRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::BTreeSet;
-use rand::prelude::IteratorRandom;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Ty {
@@ -104,6 +104,17 @@ impl Ty {
             _ => 0,
         }
     }
+
+    pub fn require_lifetime(&self) -> bool {
+        match self {
+            Ty::Unit => false,
+            Ty::Prim(ty) => ty.require_lifetime(),
+            Ty::Tuple(ty) => ty.require_lifetime(),
+            Ty::Array(ty) => ty.require_lifetime(),
+            Ty::Struct(ty) => ty.require_lifetime(),
+            Ty::Reference(ty) => ty.require_lifetime(),
+        }
+    }
 }
 
 impl ToString for Ty {
@@ -195,6 +206,10 @@ impl PrimTy {
             ]);
         }
         return ints;
+    }
+
+    pub fn require_lifetime(&self) -> bool {
+        false
     }
 }
 
@@ -360,6 +375,10 @@ impl TupleTy {
             .max()
             .unwrap_or_default()
     }
+
+    pub fn require_lifetime(&self) -> bool {
+        self.tuple.iter().any(Ty::require_lifetime)
+    }
 }
 
 impl<'a> IntoIterator for &'a TupleTy {
@@ -506,6 +525,10 @@ impl ArrayTy {
     pub fn array_depth(&self) -> usize {
         return 1 + self.base_ty.array_depth();
     }
+
+    pub fn require_lifetime(&self) -> bool {
+        self.base_ty.require_lifetime()
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -581,6 +604,13 @@ impl StructTy {
                 .map(Ty::struct_depth)
                 .max()
                 .unwrap_or_default(),
+        }
+    }
+
+    pub fn require_lifetime(&self) -> bool {
+        match self {
+            StructTy::Field(struct_ty) => struct_ty.fields.iter().any(|x| x.ty.require_lifetime()),
+            StructTy::Tuple(struct_ty) => struct_ty.fields.require_lifetime(),
         }
     }
 
@@ -729,11 +759,22 @@ impl Lifetime {
         }
         let mut lifetime: Option<Lifetime> = None;
         if !ctx.choose_new_lifetime() {
-            lifetime = ctx.struct_ctx.as_ref().unwrap().lifetimes.iter().choose(&mut ctx.rng).cloned()
+            lifetime = ctx
+                .struct_ctx
+                .as_ref()
+                .unwrap()
+                .lifetimes
+                .iter()
+                .choose(&mut ctx.rng)
+                .cloned()
         }
         if lifetime.is_none() {
             lifetime = ctx.create_lifetime_name().map(Lifetime);
-            ctx.struct_ctx.as_mut().unwrap().lifetimes.insert(lifetime.clone().unwrap());
+            ctx.struct_ctx
+                .as_mut()
+                .unwrap()
+                .lifetimes
+                .insert(lifetime.clone().unwrap());
         }
         lifetime
     }
@@ -755,12 +796,12 @@ pub struct ReferenceTy {
 impl ToString for ReferenceTy {
     fn to_string(&self) -> String {
         format!(
-            "&{}{} {}",
+            "&{}{}{}",
             self.lifetime
                 .as_ref()
                 .map(|x| format!("'{} ", x.0))
                 .unwrap_or_default(),
-            self.mutability.then(|| "mut").unwrap_or_default(),
+            self.mutability.then(|| "mut ").unwrap_or_default(),
             self.elem.to_string()
         )
     }
@@ -790,6 +831,10 @@ impl ReferenceTy {
             lifetime: Lifetime::generate_lifetime(ctx),
             elem: Box::new(Ty::fuzz_type(ctx)?),
         })
+    }
+
+    pub fn require_lifetime(&self) -> bool {
+        true
     }
 }
 

@@ -72,12 +72,16 @@ impl Visitor for EmitVisitor {
     fn visit_struct_item(&mut self, item: &mut StructItem) {
         // TODO: Remove this
         self.output.push_str("#[derive(Clone, Copy, PartialEq)]\n");
-        let lifetimes = (!item.struct_ty.lifetimes().is_empty()).then(|| item.struct_ty.lifetimes()
-            .iter()
-            .map(Lifetime::to_string)
-            .collect::<Vec<String>>()
-            .join(", "))
-            .map(|lifetimes|format!("<{}>", lifetimes))
+        let lifetimes = (!item.struct_ty.lifetimes().is_empty())
+            .then(|| {
+                item.struct_ty
+                    .lifetimes()
+                    .iter()
+                    .map(Lifetime::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            })
+            .map(|lifetimes| format!("<{}>", lifetimes))
             .unwrap_or_default();
         match &item.struct_ty {
             StructTy::Field(field_struct) => self.output.push_str(&format!(
