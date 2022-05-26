@@ -34,9 +34,10 @@ impl Ty {
         }
         res
     }
+
     /// Attempts a single attempt to generate a valid type.
     pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
-        let ty_kind = ctx.choose_base_expr_kind();
+        let ty_kind = ctx.choose_ty_kind();
         match ty_kind {
             TyKind::Unit => track_type(TyKind::Unit, Box::new(Ty::generate_unit_internal))(ctx),
             TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
@@ -46,6 +47,9 @@ impl Ty {
             TyKind::Reference => ReferenceTy::generate_type(ctx).map(From::from),
         }
     }
+    // pub fn generate_copy_type(ctx: &mut Context) -> Option<Ty> {
+    //     ctx.
+    // }
 
     fn generate_unit_internal(_ctx: &mut Context) -> Option<Ty> {
         Some(Ty::Unit)

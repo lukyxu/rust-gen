@@ -150,8 +150,14 @@ impl Context {
         self.rng.gen_bool(self.policy.field_struct_prob)
     }
 
-    pub fn choose_base_expr_kind(&mut self) -> TyKind {
-        choose(&self.policy.type_dist, &mut self.rng).unwrap()
+    pub fn choose_ty_kind(&mut self) -> TyKind {
+        let dist = if self.policy.disable_lifetime && self.struct_ctx.is_some() {
+            // TODO: See if we can optimize this
+            self.policy.type_dist.iter().filter(|(ty_kind, _)| !matches!(ty_kind,TyKind::Reference)).cloned().collect()
+        } else {
+            self.policy.type_dist.clone()
+        };
+        choose(&dist, &mut self.rng).unwrap()
     }
 
     pub fn choose_expr_kind(&mut self) -> ExprKind {

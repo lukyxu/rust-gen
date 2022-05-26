@@ -42,7 +42,9 @@ pub struct Policy {
     pub otherwise_if_stmt_prob: f64,
     pub bool_true_prob: f64,
     pub mutability_prob: f64,
+
     pub new_lifetime_prob: f64,
+    pub disable_lifetime: bool,
 
     pub max_if_else_depth: usize,
     pub max_block_depth: usize,
@@ -383,6 +385,7 @@ impl Policy {
             bool_true_prob: 0.5,
             mutability_prob: 1.0,
             new_lifetime_prob: 0.5,
+            disable_lifetime: true,
 
             max_expr_depth: 10,
             max_if_else_depth: 2,
