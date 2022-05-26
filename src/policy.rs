@@ -77,6 +77,7 @@ impl Policy {
         vec![
             Policy::tuple_debug(),
             Policy::tuple_field_debug(),
+            Policy::my_debug(),
             Policy::simple_debug(),
             Policy::simple_debug_with_assignments(),
             Policy::simple_debug_with_reference(),
@@ -189,13 +190,13 @@ impl Policy {
             mutability_prob: 0.2,
             expr_dist: vec![
                 (ExprKind::Literal, 3.0),
-                // (ExprKind::If, 2.0),
+                (ExprKind::If, 2.0),
                 (ExprKind::Binary, 2.0),
                 (ExprKind::Ident, 2.0),
                 (ExprKind::Unary, 2.0),
             ],
 
-            max_if_else_depth: 2,
+            max_if_else_depth: 1,
             max_block_depth: 3,
             max_arith_depth: 1,
 
@@ -218,7 +219,31 @@ impl Policy {
     pub fn simple_debug_with_reference() -> Self {
         let mut policy = Policy::simple_debug();
         policy.name = "simple_debug_with_reference";
-        policy.type_dist.push((TyKind::Reference, 3.0));
+        policy.max_arith_depth = 1;
+        policy.type_dist = vec![
+            (TyKind::Unit, 1.0),
+            (TyKind::Prim, 2.0),
+            (TyKind::Array, 0.5),
+            (TyKind::Tuple, 0.5),
+            // (TyKind::Struct, 0.5),
+        ];
+        policy.binary_op_dist = vec![
+            (BinaryOp::Add, 1.0),
+            (BinaryOp::Sub, 1.0),
+            (BinaryOp::Mul, 1.0),
+            (BinaryOp::Div, 1.0),
+            (BinaryOp::Rem, 1.0),
+            (BinaryOp::And, 1.0),
+            (BinaryOp::Or, 1.0),
+            (BinaryOp::Eq, 1.0),
+            (BinaryOp::Ne, 1.0),
+            (BinaryOp::Lq, 1.0),
+            (BinaryOp::Le, 1.0),
+            (BinaryOp::Ge, 1.0),
+            (BinaryOp::Gt, 1.0),
+        ];
+        policy.item_dist = vec![(ItemKind::Struct,1.0)];
+        // policy.type_dist.push((TyKind::Reference, 3.0));
         policy.num_item_dist = Distribution::new_uniform_inclusive(2, 8);
         policy
     }
@@ -277,6 +302,39 @@ impl Policy {
             ],
             ..Policy::default_with_name("fields_stress_test")
         }
+    }
+
+    pub fn my_debug() -> Self {
+        let mut policy = Policy::simple_debug();
+        policy.name = "my_debug";
+        policy.max_arith_depth = 1;
+        policy.type_dist = vec![
+            (TyKind::Unit, 1.0),
+            (TyKind::Prim, 2.0),
+            (TyKind::Array, 0.5),
+            (TyKind::Tuple, 0.5),
+            // (TyKind::Struct, 0.5),
+        ];
+        policy.binary_op_dist = vec![
+            (BinaryOp::Add, 1.0),
+            (BinaryOp::Sub, 1.0),
+            (BinaryOp::Mul, 1.0),
+            (BinaryOp::Div, 1.0),
+            (BinaryOp::Rem, 1.0),
+            (BinaryOp::And, 1.0),
+            (BinaryOp::Or, 1.0),
+            (BinaryOp::Eq, 1.0),
+            (BinaryOp::Ne, 1.0),
+            (BinaryOp::Lq, 1.0),
+            (BinaryOp::Le, 1.0),
+            (BinaryOp::Ge, 1.0),
+            (BinaryOp::Gt, 1.0),
+        ];
+        policy.unary_op_dist = vec![(UnaryOp::Not, 1.0), (UnaryOp::Neg, 1.0)];
+        policy.item_dist = vec![(ItemKind::Struct,1.0)];
+        // policy.type_dist.push((TyKind::Reference, 3.0));
+        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 8);
+        policy
     }
 }
 
@@ -397,7 +455,7 @@ impl Policy {
             max_item_attempts: 1,
             max_stmt_attempts: 30,
             max_expr_attempts: 5,
-            max_ty_attempts: 5,
+            max_ty_attempts: 10,
         }
     }
 }
