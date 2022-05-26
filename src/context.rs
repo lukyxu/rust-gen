@@ -26,6 +26,7 @@ pub struct Context {
     pub arith_depth: usize,
 
     pub struct_ctx: Option<StructContext>,
+    pub gen_only_copy_type: bool,
 
     pub array_type_dist: Vec<(ArrayTy, f64)>,
     pub tuple_type_dist: Vec<(TupleTy, f64)>,
@@ -58,6 +59,7 @@ impl Context {
             arith_depth: 0,
 
             struct_ctx: None,
+            gen_only_copy_type: false,
 
             array_type_dist: policy.default_array_type_dist.clone(),
             tuple_type_dist: policy.default_tuple_type_dist.clone(),
@@ -74,6 +76,14 @@ pub fn choose<T: Clone>(dist: &Vec<(T, f64)>, rng: &mut StdRng) -> Option<T> {
 }
 
 impl Context {
+    pub fn generate_only_copy_type(&mut self) -> bool {
+        if let Some(struct_ctx) = &self.struct_ctx {
+            struct_ctx.generate_copy_struct
+        } else {
+            self.gen_only_copy_type
+        }
+    }
+
     pub fn choose_item_kind(&mut self) -> ItemKind {
         choose(&self.policy.item_dist, &mut self.rng).unwrap()
     }
@@ -293,7 +303,16 @@ impl NameHandler {
     }
 }
 
-#[derive(Default)]
 pub struct StructContext {
+    pub generate_copy_struct: bool,
     pub lifetimes: BTreeSet<Lifetime>,
+}
+
+impl StructContext {
+    pub fn new(generate_copy_struct: bool) -> StructContext {
+        StructContext {
+            generate_copy_struct,
+            lifetimes: BTreeSet::new()
+        }
+    }
 }
