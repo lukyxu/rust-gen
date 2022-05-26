@@ -2,12 +2,14 @@ use crate::ast::expr::{ExprKind, IdentExpr};
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{ArrayTy, PrimTy, StructTy, TupleTy, Ty, TyKind};
+use crate::ast::ty::{ArrayTy, Lifetime, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
+use num_traits::AsPrimitive;
 use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
+use std::collections::BTreeSet;
 
 pub struct Context {
     pub policy: Policy,
@@ -22,6 +24,8 @@ pub struct Context {
     pub if_else_depth: usize,
     pub block_depth: usize,
     pub arith_depth: usize,
+
+    pub struct_ctx: Option<StructContext>,
 
     pub array_type_dist: Vec<(ArrayTy, f64)>,
     pub tuple_type_dist: Vec<(TupleTy, f64)>,
@@ -52,6 +56,8 @@ impl Context {
             if_else_depth: 0,
             block_depth: 0,
             arith_depth: 0,
+
+            struct_ctx: None,
 
             array_type_dist: policy.default_array_type_dist.clone(),
             tuple_type_dist: policy.default_tuple_type_dist.clone(),
@@ -144,8 +150,14 @@ impl Context {
         self.rng.gen_bool(self.policy.field_struct_prob)
     }
 
-    pub fn choose_base_expr_kind(&mut self) -> TyKind {
-        choose(&self.policy.type_dist, &mut self.rng).unwrap()
+    pub fn choose_ty_kind(&mut self) -> TyKind {
+        let dist = if self.policy.disable_lifetime && self.struct_ctx.is_some() {
+            // TODO: See if we can optimize this
+            self.policy.type_dist.iter().filter(|(ty_kind, _)| !matches!(ty_kind,TyKind::Reference)).cloned().collect()
+        } else {
+            self.policy.type_dist.clone()
+        };
+        choose(&dist, &mut self.rng).unwrap()
     }
 
     pub fn choose_expr_kind(&mut self) -> ExprKind {
@@ -210,6 +222,13 @@ impl Context {
         self.name_handler.create_function_name()
     }
 
+    pub fn create_lifetime_name(&mut self) -> Option<String> {
+        Some(
+            self.name_handler
+                .create_lifetime_name(self.struct_ctx.as_ref()?.lifetimes.len()),
+        )
+    }
+
     pub fn choose_new_array_type(&mut self) -> bool {
         self.gen_new_array_types && self.rng.gen_bool(self.policy.new_array_prob)
     }
@@ -228,6 +247,10 @@ impl Context {
 
     pub fn choose_mutability(&mut self) -> bool {
         self.rng.gen_bool(self.policy.mutability_prob)
+    }
+
+    pub fn choose_new_lifetime(&mut self) -> bool {
+        self.rng.gen_bool(self.policy.new_lifetime_prob)
     }
 
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
@@ -262,4 +285,15 @@ impl NameHandler {
         self.function_counter += 1;
         format!("function_{}", self.function_counter)
     }
+
+    fn create_lifetime_name(&mut self, index: usize) -> String {
+        let possible_values = b'a'..=b'z';
+        let possible_value_len = possible_values.len();
+        (possible_values.collect::<Vec<u8>>()[index % possible_value_len] as char).to_string()
+    }
+}
+
+#[derive(Default)]
+pub struct StructContext {
+    pub lifetimes: BTreeSet<Lifetime>,
 }

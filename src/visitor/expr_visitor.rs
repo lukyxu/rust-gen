@@ -1,5 +1,12 @@
-use crate::ast::eval_expr::{EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr, EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr};
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::eval_expr::{
+    EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
+    EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
+};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
 use crate::ast::item::{FunctionItem, Item, StructItem};
@@ -412,9 +419,7 @@ impl Visitor for ExprVisitor {
 
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
-        self.expr = Some(EvalExpr::Reference(EvalReferenceExpr {
-            expr
-        }))
+        self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }))
     }
 }
 

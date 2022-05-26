@@ -2,10 +2,12 @@ use crate::ast::expr::LitIntTy;
 use crate::ast::utils::{
     apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type,
 };
-use crate::context::Context;
+use crate::context::{Context, StructContext};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
+use std::collections::BTreeSet;
+use rand::prelude::IteratorRandom;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Ty {
@@ -32,9 +34,10 @@ impl Ty {
         }
         res
     }
+
     /// Attempts a single attempt to generate a valid type.
     pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
-        let ty_kind = ctx.choose_base_expr_kind();
+        let ty_kind = ctx.choose_ty_kind();
         match ty_kind {
             TyKind::Unit => track_type(TyKind::Unit, Box::new(Ty::generate_unit_internal))(ctx),
             TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
@@ -44,6 +47,9 @@ impl Ty {
             TyKind::Reference => ReferenceTy::generate_type(ctx).map(From::from),
         }
     }
+    // pub fn generate_copy_type(ctx: &mut Context) -> Option<Ty> {
+    //     ctx.
+    // }
 
     fn generate_unit_internal(_ctx: &mut Context) -> Option<Ty> {
         Some(Ty::Unit)
@@ -577,12 +583,20 @@ impl StructTy {
                 .unwrap_or_default(),
         }
     }
+
+    pub fn lifetimes(&self) -> &BTreeSet<Lifetime> {
+        match self {
+            StructTy::Field(struct_ty) => &struct_ty.lifetimes,
+            StructTy::Tuple(struct_ty) => &struct_ty.lifetimes,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct FieldStructTy {
     pub name: String,
     pub fields: Vec<FieldDef>,
+    pub lifetimes: BTreeSet<Lifetime>,
 }
 
 impl ToString for FieldStructTy {
@@ -601,7 +615,9 @@ impl FieldStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
         let prev_max_struct_depth = ctx.policy.max_struct_depth;
         ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
+        ctx.struct_ctx = Some(StructContext::default());
         let res = FieldStructTy::generate_new_type_internal(ctx, ty);
+        ctx.struct_ctx = None;
         ctx.policy.max_struct_depth = prev_max_struct_depth;
         res
     }
@@ -619,6 +635,11 @@ impl FieldStructTy {
         let struct_ty = FieldStructTy {
             name: ctx.create_struct_name(),
             fields,
+            lifetimes: ctx
+                .struct_ctx
+                .as_ref()
+                .map(|x| x.lifetimes.clone())
+                .unwrap(),
         };
         let weight = 1.0;
         ctx.struct_type_dist
@@ -654,6 +675,7 @@ impl FieldDef {
 pub struct TupleStructTy {
     pub name: String,
     pub fields: TupleTy,
+    pub lifetimes: BTreeSet<Lifetime>,
 }
 
 impl ToString for TupleStructTy {
@@ -670,10 +692,25 @@ impl From<TupleStructTy> for StructTy {
 
 impl TupleStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
+        let prev_max_struct_depth = ctx.policy.max_struct_depth;
+        ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
+        ctx.struct_ctx = Some(StructContext::default());
+        let res = TupleStructTy::generate_new_type_internal(ctx, ty);
+        ctx.struct_ctx = None;
+        ctx.policy.max_struct_depth = prev_max_struct_depth;
+        res
+    }
+
+    fn generate_new_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
         let fields = TupleTy::generate_type(ctx, ty)?;
         let struct_ty = TupleStructTy {
             name: ctx.create_struct_name(),
             fields,
+            lifetimes: ctx
+                .struct_ctx
+                .as_ref()
+                .map(|x| x.lifetimes.clone())
+                .unwrap(),
         };
         let weight = 1.0;
         ctx.struct_type_dist
@@ -682,16 +719,47 @@ impl TupleStructTy {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub struct Lifetime(pub String);
+
+impl Lifetime {
+    fn generate_lifetime(ctx: &mut Context) -> Option<Lifetime> {
+        if ctx.struct_ctx.is_none() {
+            return None;
+        }
+        let mut lifetime: Option<Lifetime> = None;
+        if !ctx.choose_new_lifetime() {
+            lifetime = ctx.struct_ctx.as_ref().unwrap().lifetimes.iter().choose(&mut ctx.rng).cloned()
+        }
+        if lifetime.is_none() {
+            lifetime = ctx.create_lifetime_name().map(Lifetime);
+            ctx.struct_ctx.as_mut().unwrap().lifetimes.insert(lifetime.clone().unwrap());
+        }
+        lifetime
+    }
+}
+
+impl ToString for Lifetime {
+    fn to_string(&self) -> String {
+        format!("'{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ReferenceTy {
     pub mutability: bool,
+    pub lifetime: Option<Lifetime>,
     pub elem: Box<Ty>,
 }
 
 impl ToString for ReferenceTy {
     fn to_string(&self) -> String {
         format!(
-            "&{} {}",
+            "&{}{} {}",
+            self.lifetime
+                .as_ref()
+                .map(|x| format!("'{} ", x.0))
+                .unwrap_or_default(),
             self.mutability.then(|| "mut").unwrap_or_default(),
             self.elem.to_string()
         )
@@ -719,6 +787,7 @@ impl ReferenceTy {
     pub fn generate_type_internal(ctx: &mut Context) -> Option<ReferenceTy> {
         Some(ReferenceTy {
             mutability: true,
+            lifetime: Lifetime::generate_lifetime(ctx),
             elem: Box::new(Ty::fuzz_type(ctx)?),
         })
     }
