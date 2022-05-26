@@ -934,7 +934,7 @@ impl ReferenceTy {
     }
 
     pub fn is_clone(&self) -> bool {
-        true
+        !self.mutability
     }
 }
 
