@@ -315,21 +315,21 @@ impl Policy {
             (TyKind::Tuple, 0.5),
             // (TyKind::Struct, 0.5),
         ];
-        policy.binary_op_dist = vec![
-            (BinaryOp::Add, 1.0),
-            (BinaryOp::Sub, 1.0),
-            (BinaryOp::Mul, 1.0),
-            (BinaryOp::Div, 1.0),
-            (BinaryOp::Rem, 1.0),
-            (BinaryOp::And, 1.0),
-            (BinaryOp::Or, 1.0),
-            (BinaryOp::Eq, 1.0),
-            (BinaryOp::Ne, 1.0),
-            (BinaryOp::Lq, 1.0),
-            (BinaryOp::Le, 1.0),
-            (BinaryOp::Ge, 1.0),
-            (BinaryOp::Gt, 1.0),
-        ];
+        // policy.binary_op_dist = vec![
+        //     (BinaryOp::Add, 1.0),
+        //     (BinaryOp::Sub, 1.0),
+        //     (BinaryOp::Mul, 1.0),
+        //     (BinaryOp::Div, 1.0),
+        //     (BinaryOp::Rem, 1.0),
+        //     (BinaryOp::And, 1.0),
+        //     (BinaryOp::Or, 1.0),
+        //     (BinaryOp::Eq, 1.0),
+        //     (BinaryOp::Ne, 1.0),
+        //     (BinaryOp::Lq, 1.0),
+        //     (BinaryOp::Le, 1.0),
+        //     (BinaryOp::Ge, 1.0),
+        //     (BinaryOp::Gt, 1.0),
+        // ];
         policy.unary_op_dist = vec![(UnaryOp::Not, 1.0), (UnaryOp::Neg, 1.0)];
         policy.item_dist = vec![(ItemKind::Struct,1.0)];
         // policy.type_dist.push((TyKind::Reference, 3.0));
