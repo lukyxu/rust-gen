@@ -44,6 +44,7 @@ pub fn run_generator(
     let mut expr_visitor = ExprVisitor::default();
     expr_visitor.visit_file(&mut file);
     // Make program compilable
+    // _print_program(&mut file);
     let mut checksum_gen_visitor = ChecksumGenVisitor::new(add_checksum);
     checksum_gen_visitor.visit_file(&mut file);
     let mut checksum_eval_visitor = ChecksumEvalVisitor::default();

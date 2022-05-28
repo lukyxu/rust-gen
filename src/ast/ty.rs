@@ -47,9 +47,13 @@ impl Ty {
             TyKind::Reference => ReferenceTy::generate_type(ctx).map(From::from),
         }
     }
-    // pub fn generate_copy_type(ctx: &mut Context) -> Option<Ty> {
-    //     ctx.
-    // }
+    pub fn generate_copy_type(ctx: &mut Context) -> Option<Ty> {
+        let prev_gen_only_copy_type = ctx.gen_only_copy_type;
+        ctx.gen_only_copy_type = true;
+        let res_type = Ty::generate_type(ctx);
+        ctx.gen_only_copy_type = prev_gen_only_copy_type;
+        res_type
+    }
 
     fn generate_unit_internal(_ctx: &mut Context) -> Option<Ty> {
         Some(Ty::Unit)

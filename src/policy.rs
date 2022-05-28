@@ -310,7 +310,8 @@ impl Policy {
     pub fn my_debug() -> Self {
         let mut policy = Policy::simple_debug();
         policy.name = "my_debug";
-        policy.max_arith_depth = 1;
+        policy.max_arith_depth = 3;
+        policy.max_if_else_depth = 1;
         policy.type_dist = vec![
             (TyKind::Unit, 1.0),
             (TyKind::Prim, 2.0),
@@ -333,10 +334,20 @@ impl Policy {
         //     (BinaryOp::Ge, 1.0),
         //     (BinaryOp::Gt, 1.0),
         // ];
+        policy.expr_dist = vec![
+            (ExprKind::Literal, 3.0),
+            (ExprKind::If, 2.0),
+            (ExprKind::Binary, 2.0),
+            (ExprKind::Ident, 2.0),
+            (ExprKind::Unary, 2.0),
+            (ExprKind::Index, 1.0),
+        ];
         policy.unary_op_dist = vec![(UnaryOp::Not, 1.0), (UnaryOp::Neg, 1.0)];
         policy.item_dist = vec![(ItemKind::Struct,1.0)];
         // policy.type_dist.push((TyKind::Reference, 3.0));
         policy.num_item_dist = Distribution::new_uniform_inclusive(2, 8);
+        policy.field_struct_copy_prob = 0.0;
+        policy.tuple_struct_copy_prob = 0.0;
         policy
     }
 }
@@ -437,7 +448,7 @@ impl Policy {
             ],
 
             unary_op_dist: vec![
-                (UnaryOp::Deref, 1.0),
+                // (UnaryOp::Deref, 1.0),
                 (UnaryOp::Not, 1.0),
                 (UnaryOp::Neg, 1.0),
             ],
