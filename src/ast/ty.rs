@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use crate::ast::expr::LitIntTy;
 use crate::ast::utils::{
     apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type,
@@ -8,6 +9,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
 use std::collections::BTreeSet;
+use std::fmt::Debug;
 
 pub type Ty = GTy<()>;
 

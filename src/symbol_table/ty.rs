@@ -2,11 +2,11 @@ use crate::ast::expr::IdentExpr;
 use crate::ast::ty::Ty;
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
+use crate::symbol_table::tracked_ty::TrackedTy;
 
 #[derive(Debug, Clone)]
 pub struct TypeMapping {
-    pub ty: Ty,
-    pub moved: bool,
+    pub ty: TrackedTy,
     mutable: bool,
 }
 
@@ -15,26 +15,24 @@ pub struct TypeSymbolTable {
     var_type_mapping: BTreeMap<String, TypeMapping>,
 }
 
-// TODO: Change this to a bidirectional map
 impl TypeSymbolTable {
     pub fn add_var(&mut self, key: String, ty: Ty, mutable: bool) {
         self.var_type_mapping.insert(
             key,
             TypeMapping {
-                ty,
-                moved: false,
+                ty: ty.to_tracked(),
                 mutable,
             },
         );
     }
 
-    pub fn move_var(&mut self, key: &str) {
-        let mapping = self.var_type_mapping.get_mut(key).unwrap();
-        assert!(!mapping.moved);
-        if !mapping.ty.is_copy() {
-            (*mapping).moved = true;
-        }
-    }
+    // pub fn move_var(&mut self, key: &str) {
+    //     let mapping = self.var_type_mapping.get_mut(key).unwrap();
+    //     assert!(!mapping.ty.ownership_state());
+    //     if !mapping.ty.is_copy() {
+    //         (*mapping).moved = true;
+    //     }
+    // }
 
     pub fn contains(&self, key: &String) -> bool {
         self.var_type_mapping.contains_key(key)

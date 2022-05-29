@@ -9,6 +9,12 @@ pub enum OwnershipState {
     Moved,
 }
 
+impl OwnershipState {
+    pub fn moveable(self) -> bool {
+        matches!(self, OwnershipState::NotApplicable | OwnershipState::Owned)
+    }
+}
+
 macro_rules! ownership {
     ($value: ident) => {
         if $value.is_copy() {
@@ -19,7 +25,7 @@ macro_rules! ownership {
     }
 }
 
-type TrackedTy = GTy<OwnershipState>;
+pub type TrackedTy = GTy<OwnershipState>;
 
 impl TrackedTy {
     pub fn ownership_state(&self) -> OwnershipState {
@@ -51,6 +57,20 @@ impl Ty {
     }
 }
 
+impl From<&TrackedTy> for Ty {
+    fn from(ty: &TrackedTy) -> Ty {
+        match ty {
+            GTy::Unit => Ty::Unit,
+            GTy::Prim(ty) => Ty::Prim(ty.clone()),
+            GTy::Tuple(ty) => Ty::Tuple(ty.into()),
+            GTy::Array(ty) => Ty::Array(ty.into()),
+            GTy::Struct(ty) => Ty::Struct(ty.into()),
+            GTy::Reference(ty) => Ty::Reference(ty.into()),
+        }
+    }
+}
+
+
 type TrackedTupleTy = GTupleTy<OwnershipState>;
 
 impl TupleTy {
@@ -59,6 +79,12 @@ impl TupleTy {
             tuple: self.tuple.iter().map(Ty::to_tracked).collect(),
             assoc: ownership!(self)
         }
+    }
+}
+
+impl From<&TrackedTupleTy> for TupleTy {
+    fn from(ty: &TrackedTupleTy) -> TupleTy {
+        TupleTy::new(ty.tuple.iter().map(From::from).collect())
     }
 }
 
@@ -74,6 +100,12 @@ impl ArrayTy {
     }
 }
 
+impl From<&TrackedArrayTy> for ArrayTy {
+    fn from(ty: &TrackedArrayTy) -> ArrayTy {
+        ArrayTy::new((&*ty.base_ty).into(), ty.len)
+    }
+}
+
 type TrackedStructTy = GStructTy<OwnershipState>;
 
 impl StructTy {
@@ -81,6 +113,15 @@ impl StructTy {
         match self {
             StructTy::Field(ty) => GStructTy::Field(ty.to_tracked()),
             StructTy::Tuple(ty) => GStructTy::Tuple(ty.to_tracked()),
+        }
+    }
+}
+
+impl From<&TrackedStructTy> for StructTy {
+    fn from(ty: &TrackedStructTy) -> StructTy {
+        match ty {
+            TrackedStructTy::Field(ty) => StructTy::Field(ty.into()),
+            TrackedStructTy::Tuple(ty) => StructTy::Tuple(ty.into()),
         }
     }
 }
@@ -103,6 +144,22 @@ impl FieldStructTy {
     }
 }
 
+impl From<&TrackedFieldStructTy> for FieldStructTy {
+    fn from(ty: &TrackedFieldStructTy) -> FieldStructTy {
+        FieldStructTy {
+            name: ty.name.clone(),
+            is_copy: ty.is_copy,
+            is_clone: ty.is_clone,
+            fields: ty.fields.iter().map(|field| GFieldDef {
+                name: field.name.clone(),
+                ty: Box::new((&*field.ty).into()),
+            }).collect(),
+            lifetimes: ty.lifetimes.clone(),
+            assoc: ()
+        }
+    }
+}
+
 type TrackedTupleStructTy = GTupleStructTy<OwnershipState>;
 
 impl TupleStructTy {
@@ -118,6 +175,19 @@ impl TupleStructTy {
     }
 }
 
+impl From<&TrackedTupleStructTy> for TupleStructTy {
+    fn from(ty: &TrackedTupleStructTy) -> TupleStructTy {
+        TupleStructTy {
+            name: ty.name.clone(),
+            is_copy: ty.is_copy,
+            is_clone: ty.is_clone,
+            fields: (&ty.fields).into(),
+            lifetimes: ty.lifetimes.clone(),
+            assoc: ()
+        }
+    }
+}
+
 type TrackedReferenceTy = GReferenceTy<OwnershipState>;
 
 impl ReferenceTy {
@@ -127,6 +197,17 @@ impl ReferenceTy {
             mutability: self.mutability,
             lifetime: self.lifetime.clone(),
             assoc: ownership!(self)
+        }
+    }
+}
+
+impl From<&TrackedReferenceTy> for ReferenceTy {
+    fn from(ty: &TrackedReferenceTy) -> ReferenceTy {
+        ReferenceTy {
+            elem: Box::new((&*ty.elem).into()),
+            mutability: ty.mutability,
+            lifetime: ty.lifetime.clone(),
+            assoc: ()
         }
     }
 }
