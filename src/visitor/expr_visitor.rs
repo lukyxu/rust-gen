@@ -13,7 +13,7 @@ use crate::ast::expr::{
 
 
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
-use crate::ast::ty::{GTy, Ty, UIntTy};
+use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;

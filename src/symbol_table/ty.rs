@@ -1,6 +1,6 @@
 
 use crate::ast::expr::IdentExpr;
-use crate::ast::ty::{GTy, Ty};
+use crate::ast::ty::{Ty};
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
 

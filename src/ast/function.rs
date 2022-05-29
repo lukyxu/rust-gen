@@ -1,5 +1,5 @@
 use crate::ast::expr::BlockExpr;
-use crate::ast::ty::{GTy, Ty};
+use crate::ast::ty::{Ty};
 use crate::context::Context;
 
 #[derive(Debug, Clone, PartialEq)]

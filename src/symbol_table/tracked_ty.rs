@@ -1,4 +1,4 @@
-use crate::ast::ty::{GTupleTy, GTy, Ty};
+use crate::ast::ty::{GTy};
 
 pub enum BorrowState {
 
