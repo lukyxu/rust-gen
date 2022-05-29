@@ -492,10 +492,7 @@ impl TupleTy {
             let index = ctx.rng.gen_range(0..len);
             types[index] = ty.clone();
         }
-        let tuple_type = TupleTy {
-            tuple: types,
-            assoc: (),
-        };
+        let tuple_type = TupleTy::new(types);
         if !ctx.tuple_type_dist.iter().any(|(t, _)| t == &tuple_type) {
             let weight = 1.0;
             ctx.tuple_type_dist.push((tuple_type.clone(), weight));
@@ -580,11 +577,7 @@ impl ArrayTy {
     fn generate_new_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
         let len = ctx.choose_array_length();
         let base_ty = ty.clone().or_else(|| Ty::fuzz_type(ctx))?;
-        let array_type = ArrayTy {
-            base_ty: Box::new(base_ty),
-            len,
-            assoc: (),
-        };
+        let array_type = ArrayTy::new(base_ty, len);
         if !ctx.array_type_dist.iter().any(|(t, _)| t == &array_type) {
             let weight = 1.0;
             ctx.array_type_dist.push((array_type.clone(), weight));
