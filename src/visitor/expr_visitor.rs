@@ -565,7 +565,9 @@ mod tests {
                         expr: Expr::Block(BlockExpr {
                             stmts: vec![Stmt::Semi(SemiStmt {
                                 expr: Expr::Assign(AssignExpr {
-                                    place: "var_0".to_owned(),
+                                    place: PlaceExpr::Ident(IdentExpr {
+                                        name: "var_0".to_owned()
+                                    }),
                                     rhs: Box::new(Expr::i8(127)),
                                 }),
                             })],
@@ -573,7 +575,9 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            place: "var_0".to_owned(),
+                            place: PlaceExpr::Ident(IdentExpr {
+                                name: "var_0".to_owned()
+                            }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
@@ -621,7 +625,9 @@ mod tests {
                             then: Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned()
+                                        }),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
                                 })],
@@ -629,7 +635,9 @@ mod tests {
                             otherwise: Some(Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned()
+                                        }),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
                                 })],
@@ -638,7 +646,9 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            place: "var_0".to_owned(),
+                            place: PlaceExpr::Ident(IdentExpr {
+                                name: "var_0".to_owned()
+                            }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
@@ -686,7 +696,9 @@ mod tests {
                             then: Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned()
+                                        }),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
                                 })],
@@ -694,7 +706,9 @@ mod tests {
                             otherwise: Some(Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned()
+                                        }),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
                                 })],
@@ -703,7 +717,9 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            place: "var_0".to_owned(),
+                            place: PlaceExpr::Ident(IdentExpr {
+                                name: "var_0".to_owned()
+                            }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
