@@ -746,7 +746,7 @@ impl FieldStructTy {
         let struct_ty = FieldStructTy {
             name: ctx.create_struct_name(),
             is_copy: ctx.struct_ctx.as_ref().unwrap().generate_copy_struct,
-            is_clone: fields.iter().all(|f|f.ty.is_clone()),
+            is_clone: fields.iter().all(|f| f.ty.is_clone()),
             fields,
             lifetimes: ctx
                 .struct_ctx
@@ -761,12 +761,12 @@ impl FieldStructTy {
     }
 
     pub fn is_copy(&self) -> bool {
-        assert!(!self.is_copy || self.fields.iter().all(|f|f.ty.is_copy()));
+        assert!(!self.is_copy || self.fields.iter().all(|f| f.ty.is_copy()));
         self.is_copy
     }
 
     pub fn is_clone(&self) -> bool {
-        assert!(!self.is_clone || self.fields.iter().all(|f|f.ty.is_clone()));
+        assert!(!self.is_clone || self.fields.iter().all(|f| f.ty.is_clone()));
         self.is_clone
     }
 }

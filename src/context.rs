@@ -2,7 +2,7 @@ use crate::ast::expr::{ExprKind, IdentExpr};
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
-use crate::ast::ty::{ArrayTy, Lifetime, PrimTy, StructTy, TupleTy, TyKind, Ty};
+use crate::ast::ty::{ArrayTy, Lifetime, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
@@ -103,10 +103,10 @@ impl Context {
         }
         dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
-            dist.retain(|(array_ty, _)|!array_ty.require_lifetime())
+            dist.retain(|(array_ty, _)| !array_ty.require_lifetime())
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(array_ty, _)|array_ty.is_copy())
+            dist.retain(|(array_ty, _)| array_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }
@@ -122,10 +122,10 @@ impl Context {
         }
         dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
-            dist.retain(|(tuple_ty, _)|!tuple_ty.require_lifetime())
+            dist.retain(|(tuple_ty, _)| !tuple_ty.require_lifetime())
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(tuple_ty, _)|tuple_ty.is_copy())
+            dist.retain(|(tuple_ty, _)| tuple_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }
@@ -147,10 +147,10 @@ impl Context {
         }
         dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
-            dist.retain(|(struct_ty, _)|!struct_ty.require_lifetime())
+            dist.retain(|(struct_ty, _)| !struct_ty.require_lifetime())
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(struct_ty, _)|struct_ty.is_copy())
+            dist.retain(|(struct_ty, _)| struct_ty.is_copy())
         }
         choose(&dist, &mut self.rng)
     }
@@ -321,7 +321,7 @@ impl StructContext {
     pub fn new(generate_copy_struct: bool) -> StructContext {
         StructContext {
             generate_copy_struct,
-            lifetimes: BTreeSet::new()
+            lifetimes: BTreeSet::new(),
         }
     }
 }

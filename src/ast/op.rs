@@ -1,4 +1,4 @@
-use crate::ast::ty::{PrimTy, ReferenceTy, GTy, Ty};
+use crate::ast::ty::{GTy, PrimTy, ReferenceTy, Ty};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 

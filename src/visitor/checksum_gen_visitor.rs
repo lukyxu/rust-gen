@@ -1,13 +1,14 @@
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
-
+use crate::ast::expr::{
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr,
+    LitIntTy, Member,
+};
 
 use crate::ast::function::Function;
 
-
-use crate::ast::op::{BinaryOp};
+use crate::ast::op::BinaryOp;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{PrimTy, StructTy, GTy, UIntTy, Ty};
+use crate::ast::ty::{GTy, PrimTy, StructTy, Ty, UIntTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
 
@@ -39,13 +40,19 @@ impl Visitor for ChecksumGenVisitor {
         self.prev_local_type_symbol_tables
             .push(self.local_type_symbol_table.clone());
         self.local_type_symbol_table = TypeSymbolTable::default();
-        self.prev_full_type_symbol_tables.push(self.full_type_symbol_table.clone());
+        self.prev_full_type_symbol_tables
+            .push(self.full_type_symbol_table.clone());
     }
 
     fn exit_scope(&mut self) {
         self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap();
-        self.local_type_symbol_table.merge_inplace(&self.full_type_symbol_table);
-        self.full_type_symbol_table = self.prev_full_type_symbol_tables.pop().unwrap().merge(&self.full_type_symbol_table);
+        self.local_type_symbol_table
+            .merge_inplace(&self.full_type_symbol_table);
+        self.full_type_symbol_table = self
+            .prev_full_type_symbol_tables
+            .pop()
+            .unwrap()
+            .merge(&self.full_type_symbol_table);
     }
 
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
@@ -108,13 +115,11 @@ impl Visitor for ChecksumGenVisitor {
                     expr: Expr::Assign(AssignExpr {
                         place: IdentExpr {
                             name: self.checksum_name.to_owned(),
-                            ty: UIntTy::U128.into(),
                         }
                         .into(),
                         rhs: Box::new(Expr::Binary(BinaryExpr {
                             lhs: Box::new(Expr::Ident(IdentExpr {
                                 name: self.checksum_name.to_owned(),
-                                ty: UIntTy::U128.into(),
                             })),
                             rhs: Box::new(cast_expr),
                             op: BinaryOp::Add,
@@ -140,7 +145,6 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
         Ty(GTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_))) => {
             accumulator.push(Expr::Ident(IdentExpr {
                 name: name.to_owned(),
-                ty: ty.clone(),
             }));
         }
         Ty(GTy::Tuple(tuple_ty)) => {
@@ -148,7 +152,6 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
                         name: name.to_owned(),
-                        ty: ty.clone(),
                     })),
                     member: Member::Unnamed(i),
                 });
@@ -160,7 +163,6 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
                         name: name.to_owned(),
-                        ty: ty.clone(),
                     })),
                     index: Box::new(
                         LitIntExpr::new(i as u128, LitIntTy::Unsigned(UIntTy::USize)).into(),
@@ -175,7 +177,6 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(Expr::Ident(IdentExpr {
                             name: name.to_owned(),
-                            ty: ty.clone(),
                         })),
                         member: Member::Named(field.name.clone()),
                     });
@@ -187,7 +188,6 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(Expr::Ident(IdentExpr {
                             name: name.to_owned(),
-                            ty: ty.clone(),
                         })),
                         member: Member::Unnamed(i),
                     });

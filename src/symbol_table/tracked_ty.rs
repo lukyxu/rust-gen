@@ -1,18 +1,13 @@
-use crate::ast::ty::{GTy};
+use crate::ast::ty::GTy;
 
-pub enum BorrowState {
-
+pub enum OwnershipState {
+    Owned,
+    PartiallyOwned,
+    Unowned,
 }
 
+#[allow(dead_code)]
 struct TrackedTy {
     ty: GTy<TrackedTy>,
-    borrow_state: BorrowState,
+    ownership_state: OwnershipState,
 }
-// pub enum TrackedTy {
-//     Unit,
-//     Prim(TrackedPrimTy),
-//     Tuple(TupleTy),
-//     Array(TrackedPrimTy),
-//     Struct(TrackedPrimTy),
-//     Reference(TrackedPrimTy),
-// }

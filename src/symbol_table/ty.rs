@@ -1,6 +1,5 @@
-
 use crate::ast::expr::IdentExpr;
-use crate::ast::ty::{Ty};
+use crate::ast::ty::Ty;
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
 
@@ -19,8 +18,14 @@ pub struct TypeSymbolTable {
 // TODO: Change this to a bidirectional map
 impl TypeSymbolTable {
     pub fn add_var(&mut self, key: String, ty: Ty, mutable: bool) {
-        self.var_type_mapping
-            .insert(key, TypeMapping { ty, moved: false, mutable });
+        self.var_type_mapping.insert(
+            key,
+            TypeMapping {
+                ty,
+                moved: false,
+                mutable,
+            },
+        );
     }
 
     pub fn move_var(&mut self, key: &str) {
@@ -35,21 +40,13 @@ impl TypeSymbolTable {
         self.var_type_mapping.contains_key(key)
     }
 
-    pub fn get_ident_expr_by_name(&self, key: &String) -> Option<IdentExpr> {
-        self.var_type_mapping.get(key).map(|ty_mapping| IdentExpr {
-            name: key.clone(),
-            ty: ty_mapping.ty.clone(),
-        })
-    }
-
     // TODO: refactor
     pub fn get_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
         self.var_type_mapping
             .iter()
-            .filter(|&(_k, v)| v.ty == *ty && !v.moved)
-            .map(|(name, ty_mapping)| IdentExpr {
-                name: name.clone(),
-                ty: ty_mapping.ty.clone(),
+            .filter_map(|(name, mapping)| {
+                (mapping.ty == *ty && !mapping.moved)
+                    .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
     }
@@ -57,10 +54,9 @@ impl TypeSymbolTable {
     pub fn get_mut_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
         self.var_type_mapping
             .iter()
-            .filter(|&(_k, v)| v.mutable && v.ty == *ty && !v.moved)
-            .map(|(name, ty_mapping)| IdentExpr {
-                name: name.clone(),
-                ty: ty_mapping.ty.clone(),
+            .filter_map(|(name, mapping)| {
+                (mapping.mutable && mapping.ty == *ty && !mapping.moved)
+                    .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
     }
@@ -68,13 +64,13 @@ impl TypeSymbolTable {
     pub fn merge_inplace(&mut self, other: &TypeSymbolTable) {
         for (k, v) in self.var_type_mapping.iter_mut() {
             v.moved = other.var_type_mapping.get(k).unwrap().moved;
-        };
+        }
     }
 
     pub fn merge(mut self, other: &TypeSymbolTable) -> TypeSymbolTable {
         for (k, v) in self.var_type_mapping.iter_mut() {
             v.moved = other.var_type_mapping.get(k).unwrap().moved;
-        };
+        }
         self
     }
 }

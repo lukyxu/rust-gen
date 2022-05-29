@@ -6,13 +6,12 @@ use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
+use crate::ast::ty::{GTy, PrimTy, Ty};
 #[cfg(test)]
 use crate::ast::ty::{IntTy, UIntTy};
-use crate::ast::ty::{PrimTy, GTy, Ty};
 use crate::wrapping::{WrappingDiv, WrappingRem};
 use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingSub};
 use std::mem::swap;
-
 
 #[derive(Debug, Clone, PartialEq)]
 /// Evaluated Rust expression
@@ -206,8 +205,12 @@ impl LitExpr {
     pub fn cast(self, res_type: &Ty) -> Option<LitExpr> {
         if let LitExpr::Int(lit_int_expr) = self {
             match res_type {
-                Ty(GTy::Prim(PrimTy::Int(s_int))) => Some(lit_int_expr.cast((*s_int).into()).into()),
-                Ty(GTy::Prim(PrimTy::UInt(u_int))) => Some(lit_int_expr.cast((*u_int).into()).into()),
+                Ty(GTy::Prim(PrimTy::Int(s_int))) => {
+                    Some(lit_int_expr.cast((*s_int).into()).into())
+                }
+                Ty(GTy::Prim(PrimTy::UInt(u_int))) => {
+                    Some(lit_int_expr.cast((*u_int).into()).into())
+                }
                 _ => None,
             }
         } else {

@@ -238,8 +238,7 @@ fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockE
     visitor.exit_scope();
 }
 
-fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name, ty }: &mut IdentExpr) {
-    visitor.visit_type(ty);
+fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name }: &mut IdentExpr) {
     visitor.visit_name(name);
 }
 

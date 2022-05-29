@@ -245,7 +245,7 @@ impl Policy {
             (BinaryOp::Ge, 1.0),
             (BinaryOp::Gt, 1.0),
         ];
-        policy.item_dist = vec![(ItemKind::Struct,1.0)];
+        policy.item_dist = vec![(ItemKind::Struct, 1.0)];
         // policy.type_dist.push((TyKind::Reference, 3.0));
         policy.num_item_dist = Distribution::new_uniform_inclusive(2, 8);
         policy
@@ -343,7 +343,7 @@ impl Policy {
             (ExprKind::Index, 1.0),
         ];
         policy.unary_op_dist = vec![(UnaryOp::Not, 1.0), (UnaryOp::Neg, 1.0)];
-        policy.item_dist = vec![(ItemKind::Struct,1.0)];
+        policy.item_dist = vec![(ItemKind::Struct, 1.0)];
         // policy.type_dist.push((TyKind::Reference, 3.0));
         policy.num_item_dist = Distribution::new_uniform_inclusive(2, 8);
         policy.field_struct_copy_prob = 0.0;

@@ -1,5 +1,5 @@
 use crate::ast::expr::Expr;
-use crate::ast::ty::{Ty};
+use crate::ast::ty::Ty;
 use crate::ast::utils::track_stmt;
 use crate::context::Context;
 use serde::{Deserialize, Serialize};

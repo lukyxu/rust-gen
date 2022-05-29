@@ -1,5 +1,8 @@
 use crate::ast::stmt::Stmt;
-use crate::ast::ty::{ArrayTy, FieldDef, FieldStructTy, FloatTy, IntTy, PrimTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, GTy, UIntTy, Ty};
+use crate::ast::ty::{
+    ArrayTy, FieldDef, FieldStructTy, FloatTy, GTy, IntTy, PrimTy, ReferenceTy, StructTy,
+    TupleStructTy, TupleTy, Ty, UIntTy,
+};
 use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
@@ -416,7 +419,6 @@ impl BlockExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IdentExpr {
     pub name: String,
-    pub ty: Ty,
 }
 
 impl From<IdentExpr> for Expr {

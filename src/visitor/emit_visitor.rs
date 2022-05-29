@@ -1,14 +1,14 @@
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr,
+    TupleExpr, TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
-use crate::ast::item::{StructItem};
+use crate::ast::item::StructItem;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
-use crate::ast::ty::{IntTy, Lifetime, StructTy, UIntTy, Ty};
+use crate::ast::ty::{IntTy, Lifetime, StructTy, Ty, UIntTy};
 use crate::visitor::base_visitor::Visitor;
 
 /// Visitor used to print a given ast.
@@ -78,7 +78,8 @@ impl Visitor for EmitVisitor {
         if item.struct_ty.is_clone() {
             derives.push("Clone")
         }
-        self.output.push_str(&format!("#[derive({})]\n", derives.join(", ")));
+        self.output
+            .push_str(&format!("#[derive({})]\n", derives.join(", ")));
         let lifetimes = (!item.struct_ty.lifetimes().is_empty())
             .then(|| {
                 item.struct_ty
