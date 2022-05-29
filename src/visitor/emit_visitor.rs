@@ -327,11 +327,6 @@ impl Visitor for EmitVisitor {
         self.visit_tuple_expr(&mut expr.fields);
     }
 
-    fn visit_field(&mut self, field: &mut Field) {
-        self.output.push_str(&format!("{}: ", &field.name));
-        self.visit_expr(&mut field.expr);
-    }
-
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         self.output.push_str(&format!(
             "&{}(",
@@ -339,6 +334,11 @@ impl Visitor for EmitVisitor {
         ));
         self.visit_expr(&mut expr.expr);
         self.output.push(')');
+    }
+
+    fn visit_field(&mut self, field: &mut Field) {
+        self.output.push_str(&format!("{}: ", &field.name));
+        self.visit_expr(&mut field.expr);
     }
 
     fn visit_unary_op(&mut self, op: &mut UnaryOp) {

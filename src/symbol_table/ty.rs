@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct TypeMapping {
-    pub ty: Ty,
+    pub ty: TrackedTy,
     pub moved: bool,
     mutable: bool,
 }

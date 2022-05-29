@@ -652,6 +652,7 @@ mod tests {
             assert_eq!(UnaryOp::Neg.apply(&EvalExpr::i8(i)), Ok(EvalExpr::i8(-i)))
         }
     }
+
     #[test]
     fn unary_expr_fail_neg_signed_min_val() {
         // i = -128
