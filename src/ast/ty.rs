@@ -10,13 +10,16 @@ use std::cmp::max;
 use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum Ty {
+pub struct Ty(pub GTy<Ty>);
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum GTy<T> {
     Unit,
     Prim(PrimTy),
-    Tuple(TupleTy), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
-    Array(ArrayTy),
-    Struct(StructTy),
-    Reference(ReferenceTy),
+    Tuple(GTupleTy<T>), // TODO: Add more types such as Arrays, Slices, Ptrs (https://doc.rust-lang.org/nightly/nightly-rustc/rustc_middle/ty/sty/enum.TyKind.html)
+    Array(GArrayTy<T>),
+    Struct(GStructTy<T>),
+    Reference(GReferenceTy<T>),
 }
 
 impl Ty {
@@ -56,27 +59,27 @@ impl Ty {
     }
 
     fn generate_unit_internal(_ctx: &mut Context) -> Option<Ty> {
-        Some(Ty::Unit)
+        Some(Ty(GTy::Unit))
     }
 
     /// Returns whether a given type is the unit type.
     /// Both `Ty::Unit` and `Ty::Tuple(vec![])` correspond to the unit type.
     pub fn is_unit(&self) -> bool {
-        match self {
-            Ty::Unit => true,
-            Ty::Tuple(tuple_ty) => tuple_ty.tuple.is_empty(),
+        match &self.0 {
+            GTy::Unit => true,
+            GTy::Tuple(tuple_ty) => tuple_ty.tuple.is_empty(),
             _ => false,
         }
     }
 
     pub fn unit_type() -> Ty {
-        Ty::Unit
+        Ty(GTy::Unit)
     }
 
     /// Returns whether a given type is a primitive integer.
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
-        matches!(self, Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
+        matches!(self.0, GTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
     }
 
     /// Checks to see if a given cast is compatible.
@@ -88,7 +91,7 @@ impl Ty {
     /// Returns the array depth of a type.
     pub fn array_depth(&self) -> usize {
         match self {
-            Ty::Array(array_ty) => 1 + array_ty.base_ty.array_depth(),
+            Ty(GTy::Array(array_ty)) => 1 + array_ty.base_ty.array_depth(),
             _ => 0,
         }
     }
@@ -96,7 +99,7 @@ impl Ty {
     /// Returns the tuple depth of a type.
     pub fn tuple_depth(&self) -> usize {
         match self {
-            Ty::Tuple(tuple_ty) => tuple_ty.tuple_depth(),
+            Ty(GTy::Tuple(tuple_ty)) => tuple_ty.tuple_depth(),
             _ => 0,
         }
     }
@@ -104,30 +107,30 @@ impl Ty {
     /// Returns the struct depth of a type.
     pub fn struct_depth(&self) -> usize {
         match self {
-            Ty::Struct(struct_ty) => struct_ty.struct_depth(),
+            Ty(GTy::Struct(struct_ty)) => struct_ty.struct_depth(),
             _ => 0,
         }
     }
 
     pub fn require_lifetime(&self) -> bool {
-        match self {
-            Ty::Unit => false,
-            Ty::Prim(ty) => ty.require_lifetime(),
-            Ty::Tuple(ty) => ty.require_lifetime(),
-            Ty::Array(ty) => ty.require_lifetime(),
-            Ty::Struct(ty) => ty.require_lifetime(),
-            Ty::Reference(ty) => ty.require_lifetime(),
+        match &self.0 {
+            GTy::Unit => false,
+            GTy::Prim(ty) => ty.require_lifetime(),
+            GTy::Tuple(ty) => ty.require_lifetime(),
+            GTy::Array(ty) => ty.require_lifetime(),
+            GTy::Struct(ty) => ty.require_lifetime(),
+            GTy::Reference(ty) => ty.require_lifetime(),
         }
     }
 
     pub fn is_copy(&self) -> bool {
-        let is_copy = match self {
-            Ty::Unit => true,
-            Ty::Prim(ty) => ty.is_copy(),
-            Ty::Tuple(ty) => ty.is_copy(),
-            Ty::Array(ty) => ty.is_copy(),
-            Ty::Struct(ty) => ty.is_copy(),
-            Ty::Reference(ty) => ty.is_copy(),
+        let is_copy = match &self.0 {
+            GTy::Unit => true,
+            GTy::Prim(ty) => ty.is_copy(),
+            GTy::Tuple(ty) => ty.is_copy(),
+            GTy::Array(ty) => ty.is_copy(),
+            GTy::Struct(ty) => ty.is_copy(),
+            GTy::Reference(ty) => ty.is_copy(),
         };
         if is_copy {
             assert!(self.is_clone())
@@ -136,26 +139,26 @@ impl Ty {
     }
 
     pub fn is_clone(&self) -> bool {
-        match self {
-            Ty::Unit => true,
-            Ty::Prim(ty) => ty.is_clone(),
-            Ty::Tuple(ty) => ty.is_clone(),
-            Ty::Array(ty) => ty.is_clone(),
-            Ty::Struct(ty) => ty.is_clone(),
-            Ty::Reference(ty) => ty.is_clone(),
+        match &self.0 {
+            GTy::Unit => true,
+            GTy::Prim(ty) => ty.is_clone(),
+            GTy::Tuple(ty) => ty.is_clone(),
+            GTy::Array(ty) => ty.is_clone(),
+            GTy::Struct(ty) => ty.is_clone(),
+            GTy::Reference(ty) => ty.is_clone(),
         }
     }
 }
 
 impl ToString for Ty {
     fn to_string(&self) -> String {
-        match self {
-            Ty::Unit => "()".to_string(),
-            Ty::Prim(prim) => prim.to_string(),
-            Ty::Tuple(tuple) => tuple.to_string(),
-            Ty::Array(array) => array.to_string(),
-            Ty::Struct(struct_ty) => struct_ty.to_string(),
-            Ty::Reference(reference) => reference.to_string(),
+        match &self.0 {
+            GTy::Unit => "()".to_string(),
+            GTy::Prim(prim) => prim.to_string(),
+            GTy::Tuple(tuple) => tuple.to_string(),
+            GTy::Array(array) => array.to_string(),
+            GTy::Struct(struct_ty) => struct_ty.to_string(),
+            GTy::Reference(reference) => reference.to_string(),
         }
     }
 }
@@ -192,7 +195,7 @@ impl ToString for PrimTy {
 
 impl From<PrimTy> for Ty {
     fn from(ty: PrimTy) -> Ty {
-        Ty::Prim(ty)
+        Ty(GTy::Prim(ty))
     }
 }
 
@@ -270,7 +273,7 @@ pub enum IntTy {
 
 impl From<IntTy> for Ty {
     fn from(ty: IntTy) -> Ty {
-        Ty::Prim(ty.into())
+        Ty(GTy::Prim(ty.into()))
     }
 }
 
@@ -337,7 +340,7 @@ pub enum UIntTy {
 
 impl From<UIntTy> for Ty {
     fn from(ty: UIntTy) -> Ty {
-        Ty::Prim(ty.into())
+        Ty(GTy::Prim(ty.into()))
     }
 }
 
@@ -393,13 +396,15 @@ impl UIntTy {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct TupleTy {
-    pub tuple: Vec<Ty>,
+pub struct GTupleTy<T> {
+    pub tuple: Vec<T>,
 }
+
+pub type TupleTy = GTupleTy<Ty>;
 
 impl From<TupleTy> for Ty {
     fn from(ty: TupleTy) -> Ty {
-        Ty::Tuple(ty)
+        Ty(GTy::Tuple(ty))
     }
 }
 
@@ -424,7 +429,7 @@ impl<'a> IntoIterator for &'a TupleTy {
     type IntoIter = std::slice::Iter<'a, Ty>;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.tuple).iter()
+        self.tuple.iter()
     }
 }
 
@@ -500,15 +505,17 @@ impl TupleTy {
     }
 }
 
+pub type ArrayTy = GArrayTy<Ty>;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ArrayTy {
-    pub base_ty: Box<Ty>,
+pub struct GArrayTy<T> {
+    pub base_ty: Box<T>,
     pub len: usize,
 }
 
 impl From<ArrayTy> for Ty {
     fn from(ty: ArrayTy) -> Ty {
-        Ty::Array(ty)
+        Ty(GTy::Array(ty))
     }
 }
 
@@ -585,15 +592,17 @@ impl ArrayTy {
     }
 }
 
+pub type StructTy = GStructTy<Ty>;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum StructTy {
-    Field(FieldStructTy),
-    Tuple(TupleStructTy),
+pub enum GStructTy<T> {
+    Field(GFieldStructTy<T>),
+    Tuple(GTupleStructTy<T>),
 }
 
 impl From<StructTy> for Ty {
     fn from(ty: StructTy) -> Ty {
-        Ty::Struct(ty)
+        Ty(GTy::Struct(ty))
     }
 }
 
@@ -690,12 +699,14 @@ impl StructTy {
     }
 }
 
+pub type FieldStructTy = GFieldStructTy<Ty>;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct FieldStructTy {
+pub struct GFieldStructTy<T> {
     pub name: String,
     is_copy: bool,
     is_clone: bool,
-    pub fields: Vec<FieldDef>,
+    pub fields: Vec<GFieldDef<T>>,
     pub lifetimes: BTreeSet<Lifetime>,
 }
 
@@ -760,10 +771,12 @@ impl FieldStructTy {
     }
 }
 
+pub type FieldDef = GFieldDef<Ty>;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct FieldDef {
+pub struct GFieldDef<T> {
     pub name: String,
-    pub ty: Box<Ty>,
+    pub ty: Box<T>,
 }
 
 impl ToString for FieldDef {
@@ -783,12 +796,14 @@ impl FieldDef {
     }
 }
 
+pub type TupleStructTy = GTupleStructTy<Ty>;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct TupleStructTy {
+pub struct GTupleStructTy<T> {
     pub name: String,
     is_copy: bool,
     is_clone: bool,
-    pub fields: TupleTy,
+    pub fields: GTupleTy<T>,
     pub lifetimes: BTreeSet<Lifetime>,
 }
 
@@ -882,11 +897,13 @@ impl ToString for Lifetime {
     }
 }
 
+pub type ReferenceTy = GReferenceTy<Ty>;
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct ReferenceTy {
+pub struct GReferenceTy<T> {
     pub mutability: bool,
     pub lifetime: Option<Lifetime>,
-    pub elem: Box<Ty>,
+    pub elem: Box<T>,
 }
 
 impl ToString for ReferenceTy {
@@ -905,7 +922,7 @@ impl ToString for ReferenceTy {
 
 impl From<ReferenceTy> for Ty {
     fn from(ty: ReferenceTy) -> Ty {
-        Ty::Reference(ty)
+        Ty(GTy::Reference(ty))
     }
 }
 

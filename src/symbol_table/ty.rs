@@ -1,12 +1,12 @@
 
 use crate::ast::expr::IdentExpr;
-use crate::ast::ty::Ty;
+use crate::ast::ty::{GTy, Ty};
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone)]
 pub struct TypeMapping {
-    pub ty: TrackedTy,
+    pub ty: Ty,
     pub moved: bool,
     mutable: bool,
 }

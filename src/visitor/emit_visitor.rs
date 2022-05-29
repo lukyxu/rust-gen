@@ -8,7 +8,7 @@ use crate::ast::function::Function;
 use crate::ast::item::{StructItem};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
-use crate::ast::ty::{IntTy, Lifetime, StructTy, Ty, UIntTy};
+use crate::ast::ty::{IntTy, Lifetime, StructTy, GTy, UIntTy, Ty};
 use crate::visitor::base_visitor::Visitor;
 
 /// Visitor used to print a given ast.
