@@ -704,8 +704,8 @@ pub type FieldStructTy = GFieldStructTy<Ty>;
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GFieldStructTy<T> {
     pub name: String,
-    is_copy: bool,
-    is_clone: bool,
+    pub is_copy: bool,
+    pub is_clone: bool,
     pub fields: Vec<GFieldDef<T>>,
     pub lifetimes: BTreeSet<Lifetime>,
 }
@@ -801,8 +801,8 @@ pub type TupleStructTy = GTupleStructTy<Ty>;
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GTupleStructTy<T> {
     pub name: String,
-    is_copy: bool,
-    is_clone: bool,
+    pub is_copy: bool,
+    pub is_clone: bool,
     pub fields: GTupleTy<T>,
     pub lifetimes: BTreeSet<Lifetime>,
 }
