@@ -137,9 +137,7 @@ impl Policy {
             prim_type_dist: vec![(IntTy::I8.into(), 3.0)],
             new_tuple_prob: 1.0,
             default_tuple_type_dist: vec![(
-                TupleTy {
-                    tuple: vec![IntTy::I8.into(), IntTy::I8.into()],
-                },
+                TupleTy::new(vec![IntTy::I8.into(), IntTy::I8.into()]),
                 1.0,
             )],
             tuple_length_dist: Distribution::new_uniform_inclusive(3, 4),
@@ -257,13 +255,7 @@ impl Policy {
             stmt_dist: vec![(StmtKind::Local, 1.0), (StmtKind::Semi, 1.0)],
             prim_type_dist: vec![(IntTy::I8.into(), 1.0)],
             new_array_prob: 0.5,
-            default_array_type_dist: vec![(
-                ArrayTy {
-                    base_ty: Box::new(IntTy::I8.into()),
-                    len: 3,
-                },
-                0.5,
-            )],
+            default_array_type_dist: vec![(ArrayTy::new(IntTy::I8.into(), 3), 0.5)],
             array_length_dist: Distribution::new_uniform_inclusive(3, 4),
             max_array_depth: 3,
 

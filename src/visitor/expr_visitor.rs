@@ -566,7 +566,7 @@ mod tests {
                             stmts: vec![Stmt::Semi(SemiStmt {
                                 expr: Expr::Assign(AssignExpr {
                                     place: PlaceExpr::Ident(IdentExpr {
-                                        name: "var_0".to_owned()
+                                        name: "var_0".to_owned(),
                                     }),
                                     rhs: Box::new(Expr::i8(127)),
                                 }),
@@ -576,7 +576,7 @@ mod tests {
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
                             place: PlaceExpr::Ident(IdentExpr {
-                                name: "var_0".to_owned()
+                                name: "var_0".to_owned(),
                             }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
@@ -626,7 +626,7 @@ mod tests {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
                                         place: PlaceExpr::Ident(IdentExpr {
-                                            name: "var_0".to_owned()
+                                            name: "var_0".to_owned(),
                                         }),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
@@ -636,7 +636,7 @@ mod tests {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
                                         place: PlaceExpr::Ident(IdentExpr {
-                                            name: "var_0".to_owned()
+                                            name: "var_0".to_owned(),
                                         }),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
@@ -647,7 +647,7 @@ mod tests {
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
                             place: PlaceExpr::Ident(IdentExpr {
-                                name: "var_0".to_owned()
+                                name: "var_0".to_owned(),
                             }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
@@ -697,7 +697,7 @@ mod tests {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
                                         place: PlaceExpr::Ident(IdentExpr {
-                                            name: "var_0".to_owned()
+                                            name: "var_0".to_owned(),
                                         }),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
@@ -707,7 +707,7 @@ mod tests {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
                                         place: PlaceExpr::Ident(IdentExpr {
-                                            name: "var_0".to_owned()
+                                            name: "var_0".to_owned(),
                                         }),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
@@ -718,7 +718,7 @@ mod tests {
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
                             place: PlaceExpr::Ident(IdentExpr {
-                                name: "var_0".to_owned()
+                                name: "var_0".to_owned(),
                             }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {

@@ -137,7 +137,7 @@ fn walk_item<V: Visitor>(visitor: &mut V, item: &mut Item) {
 }
 
 fn walk_struct_item<V: Visitor>(visitor: &mut V, item: &mut StructItem) {
-    visitor.visit_type(&Ty(GTy::Struct(item.struct_ty.clone())));
+    visitor.visit_type(&GTy::Struct(item.struct_ty.clone()));
 }
 
 fn walk_function_item<V: Visitor>(visitor: &mut V, item: &mut FunctionItem) {

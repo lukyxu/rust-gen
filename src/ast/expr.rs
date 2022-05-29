@@ -135,20 +135,20 @@ impl LitExpr {
     /// Attempts to generate a base literal type (not necessarily `LitExpr` but also includes arrays and structs).
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
         match res_type {
-            Ty(GTy::Unit) => Some(TupleExpr::empty_tuple()),
-            Ty(GTy::Prim(PrimTy::Bool)) => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
-            Ty(GTy::Prim(PrimTy::Int(t))) => {
+            GTy::Unit => Some(TupleExpr::empty_tuple()),
+            GTy::Prim(PrimTy::Bool) => Some(LitExpr::Bool(ctx.choose_boolean_true()).into()),
+            GTy::Prim(PrimTy::Int(t)) => {
                 let value = t.rand_val(ctx);
                 Some(LitIntExpr::new(value, (*t).into()).into())
             }
-            Ty(GTy::Prim(PrimTy::UInt(t))) => {
+            GTy::Prim(PrimTy::UInt(t)) => {
                 let value = t.rand_val(ctx);
                 Some(LitIntExpr::new(value, (*t).into()).into())
             }
-            Ty(GTy::Tuple(tuple_ty)) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
-            Ty(GTy::Array(array_ty)) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
-            Ty(GTy::Struct(struct_ty)) => StructExpr::generate_expr(ctx, struct_ty).map(From::from),
-            Ty(GTy::Reference(reference_ty)) => {
+            GTy::Tuple(tuple_ty) => TupleExpr::generate_expr(ctx, tuple_ty).map(From::from),
+            GTy::Array(array_ty) => ArrayExpr::generate_expr(ctx, array_ty).map(From::from),
+            GTy::Struct(struct_ty) => StructExpr::generate_expr(ctx, struct_ty).map(From::from),
+            GTy::Reference(reference_ty) => {
                 ReferenceExpr::generate_expr(ctx, reference_ty).map(From::from)
             }
             _ => panic!(

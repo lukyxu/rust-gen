@@ -205,12 +205,8 @@ impl LitExpr {
     pub fn cast(self, res_type: &Ty) -> Option<LitExpr> {
         if let LitExpr::Int(lit_int_expr) = self {
             match res_type {
-                Ty(GTy::Prim(PrimTy::Int(s_int))) => {
-                    Some(lit_int_expr.cast((*s_int).into()).into())
-                }
-                Ty(GTy::Prim(PrimTy::UInt(u_int))) => {
-                    Some(lit_int_expr.cast((*u_int).into()).into())
-                }
+                GTy::Prim(PrimTy::Int(s_int)) => Some(lit_int_expr.cast((*s_int).into()).into()),
+                GTy::Prim(PrimTy::UInt(u_int)) => Some(lit_int_expr.cast((*u_int).into()).into()),
                 _ => None,
             }
         } else {
