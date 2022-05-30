@@ -290,6 +290,27 @@ macro_rules! apply_int {
     };
 }
 
+macro_rules! apply_int_f_rhs {
+    ($fn_name: ident, $op_name: ident, $rhs_ty: ty) => {
+        fn $fn_name(self, lhs: &LitIntExpr, rhs: $rhs_ty) -> Result<LitExpr, EvalExprError> {
+            match lhs.ty {
+                Signed(I8) => i8::$op_name(lhs.value as i8, rhs),
+                Signed(I16) => i16::$op_name(lhs.value as i16, rhs),
+                Signed(I32) => i32::$op_name(lhs.value as i32, rhs),
+                Signed(I64) => i64::$op_name(lhs.value as i64, rhs),
+                Signed(I128) => i128::$op_name(lhs.value as i128, rhs),
+                Signed(ISize) => isize::$op_name(lhs.value as isize, rhs),
+                Unsigned(U8) => u8::$op_name(lhs.value as u8, rhs),
+                Unsigned(U16) => u16::$op_name(lhs.value as u16, rhs),
+                Unsigned(U32) => u32::$op_name(lhs.value as u32, rhs),
+                Unsigned(U64) => u64::$op_name(lhs.value as u64, rhs),
+                Unsigned(U128) => u128::$op_name(lhs.value as u128, rhs),
+                Unsigned(USize) => usize::$op_name(lhs.value as usize, rhs),
+            }
+        }
+    };
+}
+
 impl BinaryOp {
     pub fn short_circuit_rhs(self, lhs: &EvalExpr) -> bool {
         let short_circuit_and = matches!(
@@ -405,39 +426,8 @@ impl BinaryOp {
         }
     }
 
-    fn apply_wrapping_shl(&self, lhs: &LitIntExpr, rhs: u32) -> Result<LitExpr, EvalExprError> {
-        match lhs.ty {
-            Signed(I8) => i8::expr_wrapping_shl(lhs.value as i8, rhs),
-            Signed(I16) => i16::expr_wrapping_shl(lhs.value as i16, rhs),
-            Signed(I32) => i32::expr_wrapping_shl(lhs.value as i32, rhs),
-            Signed(I64) => i64::expr_wrapping_shl(lhs.value as i64, rhs),
-            Signed(I128) => i128::expr_wrapping_shl(lhs.value as i128, rhs),
-            Signed(ISize) => isize::expr_wrapping_shl(lhs.value as isize, rhs),
-            Unsigned(U8) => u8::expr_wrapping_shl(lhs.value as u8, rhs),
-            Unsigned(U16) => u16::expr_wrapping_shl(lhs.value as u16, rhs),
-            Unsigned(U32) => u32::expr_wrapping_shl(lhs.value as u32, rhs),
-            Unsigned(U64) => u64::expr_wrapping_shl(lhs.value as u64, rhs),
-            Unsigned(U128) => u128::expr_wrapping_shl(lhs.value as u128, rhs),
-            Unsigned(USize) => usize::expr_wrapping_shl(lhs.value as usize, rhs),
-        }
-    }
-
-    fn apply_wrapping_shr(&self, lhs: &LitIntExpr, rhs: u32) -> Result<LitExpr, EvalExprError> {
-        match lhs.ty {
-            Signed(I8) => i8::expr_wrapping_shr(lhs.value as i8, rhs),
-            Signed(I16) => i16::expr_wrapping_shr(lhs.value as i16, rhs),
-            Signed(I32) => i32::expr_wrapping_shr(lhs.value as i32, rhs),
-            Signed(I64) => i64::expr_wrapping_shr(lhs.value as i64, rhs),
-            Signed(I128) => i128::expr_wrapping_shr(lhs.value as i128, rhs),
-            Signed(ISize) => isize::expr_wrapping_shr(lhs.value as isize, rhs),
-            Unsigned(U8) => u8::expr_wrapping_shr(lhs.value as u8, rhs),
-            Unsigned(U16) => u16::expr_wrapping_shr(lhs.value as u16, rhs),
-            Unsigned(U32) => u32::expr_wrapping_shr(lhs.value as u32, rhs),
-            Unsigned(U64) => u64::expr_wrapping_shr(lhs.value as u64, rhs),
-            Unsigned(U128) => u128::expr_wrapping_shr(lhs.value as u128, rhs),
-            Unsigned(USize) => usize::expr_wrapping_shr(lhs.value as usize, rhs),
-        }
-    }
+    apply_int_f_rhs!(apply_wrapping_shl, expr_wrapping_shl, u32);
+    apply_int_f_rhs!(apply_wrapping_shr, expr_wrapping_shr, u32);
 }
 
 trait Literal<
