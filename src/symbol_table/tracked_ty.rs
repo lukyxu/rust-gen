@@ -14,7 +14,7 @@ pub enum OwnershipState {
 
 impl OwnershipState {
     pub fn moveable(self) -> bool {
-        matches!(self, OwnershipState::NotApplicable | OwnershipState::Owned)
+        matches!(self, OwnershipState::NotApplicable)
     }
 }
 
