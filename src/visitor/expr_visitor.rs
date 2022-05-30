@@ -3,14 +3,10 @@ use crate::ast::eval_expr::{
     EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
 };
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr,
+    TupleExpr, TupleStructExpr, UnaryExpr,
 };
-
-
-
-
 
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
@@ -569,7 +565,9 @@ mod tests {
                         expr: Expr::Block(BlockExpr {
                             stmts: vec![Stmt::Semi(SemiStmt {
                                 expr: Expr::Assign(AssignExpr {
-                                    place: "var_0".to_owned(),
+                                    place: PlaceExpr::Ident(IdentExpr {
+                                        name: "var_0".to_owned(),
+                                    }),
                                     rhs: Box::new(Expr::i8(127)),
                                 }),
                             })],
@@ -577,11 +575,12 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            place: "var_0".to_owned(),
+                            place: PlaceExpr::Ident(IdentExpr {
+                                name: "var_0".to_owned(),
+                            }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
-                                    ty: IntTy::I8.into(),
                                 })),
                                 rhs: Box::new(Expr::i8(1)),
                                 op: BinaryOp::Add,
@@ -626,7 +625,9 @@ mod tests {
                             then: Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned(),
+                                        }),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
                                 })],
@@ -634,7 +635,9 @@ mod tests {
                             otherwise: Some(Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned(),
+                                        }),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
                                 })],
@@ -643,11 +646,12 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            place: "var_0".to_owned(),
+                            place: PlaceExpr::Ident(IdentExpr {
+                                name: "var_0".to_owned(),
+                            }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
-                                    ty: IntTy::I8.into(),
                                 })),
                                 rhs: Box::new(Expr::i8(1)),
                                 op: BinaryOp::Add,
@@ -692,7 +696,9 @@ mod tests {
                             then: Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned(),
+                                        }),
                                         rhs: Box::new(Expr::i8(127)),
                                     }),
                                 })],
@@ -700,7 +706,9 @@ mod tests {
                             otherwise: Some(Box::new(BlockExpr {
                                 stmts: vec![Stmt::Semi(SemiStmt {
                                     expr: Expr::Assign(AssignExpr {
-                                        place: "var_0".to_owned(),
+                                        place: PlaceExpr::Ident(IdentExpr {
+                                            name: "var_0".to_owned(),
+                                        }),
                                         rhs: Box::new(Expr::i8(0)),
                                     }),
                                 })],
@@ -709,11 +717,12 @@ mod tests {
                     }),
                     Stmt::Semi(SemiStmt {
                         expr: Expr::Assign(AssignExpr {
-                            place: "var_0".to_owned(),
+                            place: PlaceExpr::Ident(IdentExpr {
+                                name: "var_0".to_owned(),
+                            }),
                             rhs: Box::new(Expr::Binary(BinaryExpr {
                                 lhs: Box::new(Expr::Ident(IdentExpr {
                                     name: "var_0".to_owned(),
-                                    ty: IntTy::I8.into(),
                                 })),
                                 rhs: Box::new(Expr::i8(1)),
                                 op: BinaryOp::Add,

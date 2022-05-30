@@ -11,7 +11,7 @@ use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::{
     CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
 };
-use crate::ast::ty::Ty;
+use crate::ast::ty::{GTy, Ty};
 
 /// AST visitor trait.
 /// The default implementation visits in execution order.
@@ -137,7 +137,7 @@ fn walk_item<V: Visitor>(visitor: &mut V, item: &mut Item) {
 }
 
 fn walk_struct_item<V: Visitor>(visitor: &mut V, item: &mut StructItem) {
-    visitor.visit_type(&Ty::Struct(item.struct_ty.clone()));
+    visitor.visit_type(&GTy::Struct(item.struct_ty.clone()));
 }
 
 fn walk_function_item<V: Visitor>(visitor: &mut V, item: &mut FunctionItem) {
@@ -238,8 +238,7 @@ fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockE
     visitor.exit_scope();
 }
 
-fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name, ty }: &mut IdentExpr) {
-    visitor.visit_type(ty);
+fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name }: &mut IdentExpr) {
     visitor.visit_name(name);
 }
 

@@ -1,4 +1,4 @@
-use crate::ast::ty::{PrimTy, ReferenceTy, Ty};
+use crate::ast::ty::{GTy, PrimTy, ReferenceTy, Ty};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 
@@ -117,7 +117,7 @@ impl BinaryOp {
             BinaryOp::Eq | BinaryOp::Ne => PrimTy::int_types(ctx)
                 .into_iter()
                 .map(From::from)
-                .chain(std::iter::once(Ty::Prim(PrimTy::Bool)))
+                .chain(std::iter::once(GTy::Prim(PrimTy::Bool)))
                 .collect(),
             BinaryOp::Le | BinaryOp::Lq | BinaryOp::Ge | BinaryOp::Gt => {
                 PrimTy::int_types(ctx).into_iter().map(From::from).collect()
@@ -152,7 +152,7 @@ impl UnaryOp {
             UnaryOp::Deref => PrimTy::int_types(ctx)
                 .into_iter()
                 .map(From::from)
-                .chain(std::iter::once(Ty::Prim(PrimTy::Bool)))
+                .chain(std::iter::once(GTy::Prim(PrimTy::Bool)))
                 .collect(),
             UnaryOp::Not => vec![PrimTy::Bool.into()],
             UnaryOp::Neg => PrimTy::int_types(ctx)
@@ -166,16 +166,8 @@ impl UnaryOp {
     pub fn get_compatible_arg_types(&self, res_type: &Ty) -> Vec<Ty> {
         match self {
             UnaryOp::Deref => vec![
-                Ty::Reference(ReferenceTy {
-                    mutability: false,
-                    lifetime: None,
-                    elem: Box::new(res_type.clone()),
-                }),
-                Ty::Reference(ReferenceTy {
-                    mutability: false,
-                    lifetime: None,
-                    elem: Box::new(res_type.clone()),
-                }),
+                GTy::Reference(ReferenceTy::new(res_type.clone(), false, None)),
+                GTy::Reference(ReferenceTy::new(res_type.clone(), false, None)),
             ],
             UnaryOp::Not => vec![PrimTy::Bool.into()],
             UnaryOp::Neg => vec![res_type.clone()],
