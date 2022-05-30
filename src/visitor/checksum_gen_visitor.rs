@@ -56,7 +56,7 @@ impl Visitor for ChecksumGenVisitor {
         //     .merge(&self.full_type_symbol_table);
     }
 
-    fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
+    fn visit_ident_expr(&mut self, _expr: &mut IdentExpr) {
         // self.full_type_symbol_table.move_var(&expr.name);
         // if self.local_type_symbol_table.contains(&expr.name) {
         //     self.local_type_symbol_table.move_var(&expr.name)
