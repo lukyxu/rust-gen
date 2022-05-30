@@ -53,10 +53,8 @@ impl TypeSymbolTable {
         self.var_type_mapping
             .iter()
             .filter_map(|(name, mapping)| {
-                (mapping.mutable
-                    && Ty::from(&mapping.ty) == *ty
-                    && mapping.ty.moveable())
-                .then(|| IdentExpr { name: name.clone() })
+                (mapping.mutable && Ty::from(&mapping.ty) == *ty && mapping.ty.moveable())
+                    .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
     }

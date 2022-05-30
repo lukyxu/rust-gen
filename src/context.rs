@@ -1,4 +1,4 @@
-use crate::ast::expr::{ExprKind, IdentExpr};
+use crate::ast::expr::{ExprKind, IdentExpr, GENERABLE_EXPR_FNS};
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
@@ -171,8 +171,15 @@ impl Context {
         choose(&dist, &mut self.rng).unwrap()
     }
 
-    pub fn choose_expr_kind(&mut self) -> ExprKind {
-        choose(&self.policy.expr_dist, &mut self.rng).unwrap()
+    pub fn choose_expr_kind(&mut self, res_type: &Ty) -> ExprKind {
+        let mut dist: Vec<(ExprKind, f64)> = self.policy.expr_dist.clone();
+        dist.retain(|(expr_kind, _w)| {
+            GENERABLE_EXPR_FNS
+                .get(expr_kind)
+                .and_then(|f| Some(f(self, res_type)))
+                .unwrap_or(true)
+        });
+        choose(&dist, &mut self.rng).unwrap()
     }
 
     pub fn choose_place_expr_kind(&mut self) -> ExprKind {

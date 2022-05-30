@@ -12,8 +12,10 @@ use crate::ast::utils::{
     limit_if_else_depth, track_expr,
 };
 use crate::context::Context;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
@@ -68,7 +70,7 @@ impl Expr {
 
     /// Attempts a single attempt to generate a valid expression.
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        let expr_kind = ctx.choose_expr_kind();
+        let expr_kind = ctx.choose_expr_kind(res_type);
         match expr_kind {
             ExprKind::Literal => LitExpr::generate_expr(ctx, res_type),
             ExprKind::If => IfExpr::generate_expr(ctx, res_type).map(From::from),
@@ -157,6 +159,17 @@ impl LitExpr {
             ),
         }
     }
+
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        match res_type {
+            Ty::Unit => true,
+            Ty::Prim(_) => true,
+            Ty::Tuple(_) => ctx.policy.new_tuple_prob > 0.0 || !ctx.tuple_type_dist.is_empty(),
+            Ty::Array(_) => ctx.policy.new_array_prob > 0.0 || !ctx.array_type_dist.is_empty(),
+            Ty::Struct(_) => !ctx.struct_type_dist.is_empty(),
+            Ty::Reference(_) => true,
+        }
+    }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -236,6 +249,14 @@ impl BinaryExpr {
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
+
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.expr_depth <= ctx.policy.max_expr_depth
+            && match res_type {
+                Ty::Prim(_) => true,
+                _ => false,
+            }
+    }
 }
 
 impl From<BinaryExpr> for Expr {
@@ -277,6 +298,14 @@ impl UnaryExpr {
         *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
+
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.expr_depth <= ctx.policy.max_expr_depth
+            && match res_type {
+                Ty::Prim(PrimTy::Bool | PrimTy::Int(_)) => true,
+                _ => false,
+            }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -311,6 +340,14 @@ impl CastExpr {
             expr,
             ty: res_type.clone(),
         })
+    }
+
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.expr_depth <= ctx.policy.max_expr_depth
+            && match res_type {
+                Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => true,
+                _ => false,
+            }
     }
 }
 
@@ -368,6 +405,10 @@ impl IfExpr {
         // ctx.type_symbol_table = outer_symbol_table;
         if_expr
     }
+
+    pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
+        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.block_depth <= ctx.policy.max_block_depth
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -411,6 +452,10 @@ impl BlockExpr {
         // ctx.type_symbol_table = outer_symbol_table.merge(&ctx.type_symbol_table);
         block_expr
     }
+
+    pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
+        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.block_depth <= ctx.policy.max_block_depth
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -450,6 +495,12 @@ impl IdentExpr {
     fn generate_place_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(res_type);
         mut_ident_exprs.choose(&mut ctx.rng).cloned()
+    }
+
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        !ctx.type_symbol_table
+            .get_ident_exprs_by_type(res_type)
+            .is_empty()
     }
 }
 
@@ -523,7 +574,7 @@ impl AssignExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<AssignExpr> {
         track_expr(
             ExprKind::Assign,
-            Box::new(AssignExpr::generate_expr_internal),
+            limit_expr_depth(Box::new(AssignExpr::generate_expr_internal)),
         )(ctx, res_type)
     }
 
@@ -539,6 +590,10 @@ impl AssignExpr {
             place,
             rhs: Box::new(Expr::fuzz_expr(ctx, &ty)?),
         })
+    }
+
+    pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
+        ctx.expr_depth <= ctx.policy.max_expr_depth
     }
 }
 
@@ -646,6 +701,11 @@ impl FieldExpr {
         };
         Some(FieldExpr { base, member })
     }
+
+    pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
+        // TODO: Can improve this
+        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.arith_depth <= ctx.policy.max_arith_depth
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -703,6 +763,11 @@ impl IndexExpr {
             base,
             index: inbound_index,
         })
+    }
+
+    pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
+        // TODO: Can improve this
+        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.arith_depth <= ctx.policy.max_arith_depth
     }
 }
 
@@ -832,6 +897,22 @@ pub enum ExprKind {
     Assign,
     Index,
     Field,
-    Reference,
     __Nonexhaustive,
+}
+
+lazy_static! {
+    pub static ref GENERABLE_EXPR_FNS: HashMap<ExprKind, fn(&mut Context, &Ty) -> bool> = {
+        let mut map: HashMap<ExprKind, fn(&mut Context, &Ty) -> bool> = HashMap::new();
+        map.insert(ExprKind::Literal, LitExpr::can_generate);
+        map.insert(ExprKind::Binary, BinaryExpr::can_generate);
+        map.insert(ExprKind::Unary, UnaryExpr::can_generate);
+        map.insert(ExprKind::Cast, CastExpr::can_generate);
+        map.insert(ExprKind::If, IfExpr::can_generate);
+        map.insert(ExprKind::Block, BlockExpr::can_generate);
+        map.insert(ExprKind::Ident, IdentExpr::can_generate);
+        map.insert(ExprKind::Assign, AssignExpr::can_generate);
+        map.insert(ExprKind::Index, IndexExpr::can_generate);
+        map.insert(ExprKind::Field, FieldExpr::can_generate);
+        map
+    };
 }
