@@ -1,19 +1,22 @@
-use std::{i128, i32, i64, u128, u16, u64};
 use crate::ast::eval_expr::EvalExprError::{
     MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
 };
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
 use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member};
 use crate::ast::op::{BinaryOp, UnaryOp};
+#[cfg(test)]
+use crate::ast::ty::IntTy;
 use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
+use crate::ast::ty::UIntTy;
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 use crate::ast::ty::{GTy, PrimTy, Ty};
-use crate::ast::ty::{UIntTy};
-#[cfg(test)]
-use crate::ast::ty::{IntTy};
 use crate::wrapping::{WrappingDiv, WrappingRem};
-use num_traits::{AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingShl, WrappingShr, WrappingSub};
+use num_traits::{
+    AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingShl, WrappingShr,
+    WrappingSub,
+};
 use std::mem::swap;
+use std::{i128, i32, i64, u128, u16, u64};
 
 #[derive(Debug, Clone, PartialEq)]
 /// Evaluated Rust expression
@@ -325,10 +328,22 @@ impl BinaryOp {
     pub fn apply_lit(self, lhs: &LitExpr, rhs: &LitExpr) -> Result<LitExpr, EvalExprError> {
         use LitExpr::{Bool, Int};
         match (lhs, rhs, self) {
-            (Int(lhs), Int(LitIntExpr{ ty: LitIntTy::Unsigned(UIntTy::U32), value}), BinaryOp::WrappingShl) => {
-                self.apply_wrapping_shl(lhs, *value as u32)
-            }
-            (Int(lhs), Int(LitIntExpr{ ty: LitIntTy::Unsigned(UIntTy::U32), value}), BinaryOp::WrappingShr) => {
+            (
+                Int(lhs),
+                Int(LitIntExpr {
+                    ty: LitIntTy::Unsigned(UIntTy::U32),
+                    value,
+                }),
+                BinaryOp::WrappingShl,
+            ) => self.apply_wrapping_shl(lhs, *value as u32),
+            (
+                Int(lhs),
+                Int(LitIntExpr {
+                    ty: LitIntTy::Unsigned(UIntTy::U32),
+                    value,
+                }),
+                BinaryOp::WrappingShr,
+            ) => {
                 // self.apply_wrapping_shr
                 self.apply_wrapping_shr(lhs, *value as u32)
             }
@@ -396,22 +411,14 @@ impl BinaryOp {
             Signed(I16) => i16::expr_wrapping_shl(lhs.value as i16, rhs),
             Signed(I32) => i32::expr_wrapping_shl(lhs.value as i32, rhs),
             Signed(I64) => i64::expr_wrapping_shl(lhs.value as i64, rhs),
-            Signed(I128) => {
-                i128::expr_wrapping_shl(lhs.value as i128, rhs)
-            }
-            Signed(ISize) => {
-                isize::expr_wrapping_shl(lhs.value as isize, rhs)
-            }
+            Signed(I128) => i128::expr_wrapping_shl(lhs.value as i128, rhs),
+            Signed(ISize) => isize::expr_wrapping_shl(lhs.value as isize, rhs),
             Unsigned(U8) => u8::expr_wrapping_shl(lhs.value as u8, rhs),
             Unsigned(U16) => u16::expr_wrapping_shl(lhs.value as u16, rhs),
             Unsigned(U32) => u32::expr_wrapping_shl(lhs.value as u32, rhs),
             Unsigned(U64) => u64::expr_wrapping_shl(lhs.value as u64, rhs),
-            Unsigned(U128) => {
-                u128::expr_wrapping_shl(lhs.value as u128, rhs)
-            }
-            Unsigned(USize) => {
-                usize::expr_wrapping_shl(lhs.value as usize, rhs)
-            }
+            Unsigned(U128) => u128::expr_wrapping_shl(lhs.value as u128, rhs),
+            Unsigned(USize) => usize::expr_wrapping_shl(lhs.value as usize, rhs),
         }
     }
 
@@ -421,22 +428,14 @@ impl BinaryOp {
             Signed(I16) => i16::expr_wrapping_shr(lhs.value as i16, rhs),
             Signed(I32) => i32::expr_wrapping_shr(lhs.value as i32, rhs),
             Signed(I64) => i64::expr_wrapping_shr(lhs.value as i64, rhs),
-            Signed(I128) => {
-                i128::expr_wrapping_shr(lhs.value as i128, rhs)
-            }
-            Signed(ISize) => {
-                isize::expr_wrapping_shr(lhs.value as isize, rhs)
-            }
+            Signed(I128) => i128::expr_wrapping_shr(lhs.value as i128, rhs),
+            Signed(ISize) => isize::expr_wrapping_shr(lhs.value as isize, rhs),
             Unsigned(U8) => u8::expr_wrapping_shr(lhs.value as u8, rhs),
             Unsigned(U16) => u16::expr_wrapping_shr(lhs.value as u16, rhs),
             Unsigned(U32) => u32::expr_wrapping_shr(lhs.value as u32, rhs),
             Unsigned(U64) => u64::expr_wrapping_shr(lhs.value as u64, rhs),
-            Unsigned(U128) => {
-                u128::expr_wrapping_shr(lhs.value as u128, rhs)
-            }
-            Unsigned(USize) => {
-                usize::expr_wrapping_shr(lhs.value as usize, rhs)
-            }
+            Unsigned(U128) => u128::expr_wrapping_shr(lhs.value as u128, rhs),
+            Unsigned(USize) => usize::expr_wrapping_shr(lhs.value as usize, rhs),
         }
     }
 }

@@ -98,7 +98,7 @@ impl Visitor for ChecksumGenVisitor {
             self.visit_stmt(stmt);
         }
         for (name, ty_mapping) in &self.local_type_symbol_table {
-            if name == self.checksum_name || ty_mapping.ty.moveable() {
+            if name == self.checksum_name || !ty_mapping.ty.moveable() {
                 continue;
             }
             let exprs = exprs_from_ident(name, &ty_mapping.ty);

@@ -140,7 +140,7 @@ impl BinaryOp {
             BinaryOp::WrappingShl | BinaryOp::WrappingShr => {
                 vec![UIntTy::U32.into()]
             }
-            _ => vec![lhs_arg.clone()]
+            _ => vec![lhs_arg.clone()],
         }
     }
 }
