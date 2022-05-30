@@ -391,10 +391,6 @@ impl BlockExpr {
         )(ctx, res_type)
     }
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
-        // if !res_type.is_copy() {
-        //     dbg!(res_type.clone());
-        // }
-        // assert!(res_type.is_copy());
         let mut stmts: Vec<Stmt> = Vec::new();
         let outer_symbol_table = ctx.type_symbol_table.clone();
         let block_expr = (|| {
@@ -411,7 +407,8 @@ impl BlockExpr {
             }
             Some(BlockExpr { stmts })
         })();
-        ctx.type_symbol_table = outer_symbol_table.merge(&ctx.type_symbol_table);
+        ctx.type_symbol_table = outer_symbol_table;
+        // ctx.type_symbol_table = outer_symbol_table.merge(&ctx.type_symbol_table);
         block_expr
     }
 }
@@ -440,7 +437,6 @@ impl IdentExpr {
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
         let ident = ctx.choose_ident_expr_by_type(res_type)?;
-        ctx.type_symbol_table.move_var(&ident.name);
         Some(ident)
     }
 

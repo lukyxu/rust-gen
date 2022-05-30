@@ -8,7 +8,8 @@ use crate::ast::function::Function;
 
 use crate::ast::op::BinaryOp;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{GTy, PrimTy, StructTy, Ty, UIntTy};
+use crate::ast::ty::{PrimTy, UIntTy};
+use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
 
@@ -46,20 +47,20 @@ impl Visitor for ChecksumGenVisitor {
 
     fn exit_scope(&mut self) {
         self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap();
-        self.local_type_symbol_table
-            .merge_inplace(&self.full_type_symbol_table);
-        self.full_type_symbol_table = self
-            .prev_full_type_symbol_tables
-            .pop()
-            .unwrap()
-            .merge(&self.full_type_symbol_table);
+        // self.local_type_symbol_table
+        //     .merge_inplace(&self.full_type_symbol_table);
+        // self.full_type_symbol_table = self
+        //     .prev_full_type_symbol_tables
+        //     .pop()
+        //     .unwrap()
+        //     .merge(&self.full_type_symbol_table);
     }
 
     fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
-        self.full_type_symbol_table.move_var(&expr.name);
-        if self.local_type_symbol_table.contains(&expr.name) {
-            self.local_type_symbol_table.move_var(&expr.name)
-        }
+        // self.full_type_symbol_table.move_var(&expr.name);
+        // if self.local_type_symbol_table.contains(&expr.name) {
+        //     self.local_type_symbol_table.move_var(&expr.name)
+        // }
     }
 
     fn visit_function(&mut self, function: &mut Function) {
@@ -97,7 +98,7 @@ impl Visitor for ChecksumGenVisitor {
             self.visit_stmt(stmt);
         }
         for (name, ty_mapping) in &self.local_type_symbol_table {
-            if name == self.checksum_name || ty_mapping.moved {
+            if name == self.checksum_name || ty_mapping.ty.moveable() {
                 continue;
             }
             let exprs = exprs_from_ident(name, &ty_mapping.ty);
@@ -139,15 +140,15 @@ impl Visitor for ChecksumGenVisitor {
     }
 }
 
-fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
+fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
     let mut accumulator = vec![];
     match ty {
-        GTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => {
+        TrackedTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => {
             accumulator.push(Expr::Ident(IdentExpr {
                 name: name.to_owned(),
             }));
         }
-        GTy::Tuple(tuple_ty) => {
+        TrackedTy::Tuple(tuple_ty) => {
             for (i, t) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
@@ -158,7 +159,7 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                 exprs_from_exprs(tuple_access, t, &mut accumulator);
             }
         }
-        GTy::Array(array_ty) => {
+        TrackedTy::Array(array_ty) => {
             for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(Expr::Ident(IdentExpr {
@@ -171,8 +172,8 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                 exprs_from_exprs(array_access, &ty, &mut accumulator);
             }
         }
-        GTy::Struct(struct_ty) => match struct_ty {
-            StructTy::Field(field_struct) => {
+        TrackedTy::Struct(struct_ty) => match struct_ty {
+            TrackedStructTy::Field(field_struct) => {
                 for field in &field_struct.fields {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(Expr::Ident(IdentExpr {
@@ -183,7 +184,7 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
                     exprs_from_exprs(tuple_access, &*field.ty, &mut accumulator);
                 }
             }
-            StructTy::Tuple(tuple_struct) => {
+            TrackedStructTy::Tuple(tuple_struct) => {
                 for (i, ty) in tuple_struct.fields.tuple.iter().enumerate() {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(Expr::Ident(IdentExpr {
@@ -200,10 +201,10 @@ fn exprs_from_ident(name: &str, ty: &Ty) -> Vec<Expr> {
     accumulator
 }
 
-fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
+fn exprs_from_exprs(expr: Expr, ty: &TrackedTy, accumulator: &mut Vec<Expr>) {
     match ty {
-        GTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => accumulator.push(expr),
-        GTy::Tuple(tuple_ty) => {
+        TrackedTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => accumulator.push(expr),
+        TrackedTy::Tuple(tuple_ty) => {
             for (i, ty) in tuple_ty.into_iter().enumerate() {
                 let tuple_access = Expr::Field(FieldExpr {
                     base: Box::new(expr.clone()),
@@ -212,7 +213,7 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                 exprs_from_exprs(tuple_access, ty, accumulator);
             }
         }
-        GTy::Array(array_ty) => {
+        TrackedTy::Array(array_ty) => {
             for (i, ty) in array_ty.iter().enumerate() {
                 let array_access = Expr::Index(IndexExpr {
                     base: Box::new(expr.clone()),
@@ -223,8 +224,8 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                 exprs_from_exprs(array_access, &ty, accumulator);
             }
         }
-        GTy::Struct(struct_ty) => match struct_ty {
-            StructTy::Field(field_struct) => {
+        TrackedTy::Struct(struct_ty) => match struct_ty {
+            TrackedStructTy::Field(field_struct) => {
                 for field in &field_struct.fields {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(expr.clone()),
@@ -233,7 +234,7 @@ fn exprs_from_exprs(expr: Expr, ty: &Ty, accumulator: &mut Vec<Expr>) {
                     exprs_from_exprs(tuple_access, &*field.ty, accumulator);
                 }
             }
-            StructTy::Tuple(tuple_struct) => {
+            TrackedStructTy::Tuple(tuple_struct) => {
                 for (i, ty) in tuple_struct.fields.tuple.iter().enumerate() {
                     let tuple_access = Expr::Field(FieldExpr {
                         base: Box::new(expr.clone()),

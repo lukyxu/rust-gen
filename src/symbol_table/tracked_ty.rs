@@ -1,4 +1,7 @@
-use crate::ast::ty::{ArrayTy, FieldStructTy, GArrayTy, GFieldDef, GFieldStructTy, GReferenceTy, GStructTy, GTupleStructTy, GTupleTy, GTy,  ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty};
+use crate::ast::ty::{
+    ArrayTy, FieldStructTy, GArrayTy, GFieldDef, GFieldStructTy, GReferenceTy, GStructTy,
+    GTupleStructTy, GTupleTy, GTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -22,7 +25,7 @@ macro_rules! ownership {
         } else {
             OwnershipState::Owned
         }
-    }
+    };
 }
 
 pub type TrackedTy = GTy<OwnershipState>;
@@ -30,9 +33,7 @@ pub type TrackedTy = GTy<OwnershipState>;
 impl TrackedTy {
     pub fn ownership_state(&self) -> OwnershipState {
         match self {
-            TrackedTy::Unit | TrackedTy::Prim(_) => {
-                OwnershipState::NotApplicable
-            }
+            TrackedTy::Unit | TrackedTy::Prim(_) => OwnershipState::NotApplicable,
             TrackedTy::Tuple(ty) => ty.assoc,
             TrackedTy::Array(ty) => ty.assoc,
             TrackedTy::Struct(ty) => match ty {
@@ -41,6 +42,10 @@ impl TrackedTy {
             },
             TrackedTy::Reference(ty) => ty.assoc,
         }
+    }
+
+    pub fn moveable(&self) -> bool {
+        self.ownership_state().moveable()
     }
 }
 
@@ -70,14 +75,13 @@ impl From<&TrackedTy> for Ty {
     }
 }
 
-
-type TrackedTupleTy = GTupleTy<OwnershipState>;
+pub type TrackedTupleTy = GTupleTy<OwnershipState>;
 
 impl TupleTy {
     pub fn to_tracked(&self) -> TrackedTupleTy {
         GTupleTy {
             tuple: self.tuple.iter().map(Ty::to_tracked).collect(),
-            assoc: ownership!(self)
+            assoc: ownership!(self),
         }
     }
 }
@@ -88,14 +92,23 @@ impl From<&TrackedTupleTy> for TupleTy {
     }
 }
 
-type TrackedArrayTy = GArrayTy<OwnershipState>;
+impl<'a> IntoIterator for &'a TrackedTupleTy {
+    type Item = &'a TrackedTy;
+    type IntoIter = std::slice::Iter<'a, TrackedTy>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.tuple.iter()
+    }
+}
+
+pub type TrackedArrayTy = GArrayTy<OwnershipState>;
 
 impl ArrayTy {
     pub fn to_tracked(&self) -> TrackedArrayTy {
         GArrayTy {
             base_ty: Box::new(self.base_ty.to_tracked()),
             len: self.len,
-            assoc: ownership!(self)
+            assoc: ownership!(self),
         }
     }
 }
@@ -106,7 +119,13 @@ impl From<&TrackedArrayTy> for ArrayTy {
     }
 }
 
-type TrackedStructTy = GStructTy<OwnershipState>;
+impl TrackedArrayTy {
+    pub fn iter(&self) -> impl Iterator<Item = TrackedTy> {
+        std::iter::repeat(*self.base_ty.clone()).take(self.len)
+    }
+}
+
+pub type TrackedStructTy = GStructTy<OwnershipState>;
 
 impl StructTy {
     pub fn to_tracked(&self) -> TrackedStructTy {
@@ -126,7 +145,7 @@ impl From<&TrackedStructTy> for StructTy {
     }
 }
 
-type TrackedFieldStructTy = GFieldStructTy<OwnershipState>;
+pub type TrackedFieldStructTy = GFieldStructTy<OwnershipState>;
 
 impl FieldStructTy {
     pub fn to_tracked(&self) -> TrackedFieldStructTy {
@@ -134,12 +153,16 @@ impl FieldStructTy {
             name: self.name.clone(),
             is_copy: self.is_copy,
             is_clone: self.is_clone,
-            fields: self.fields.iter().map(|field| GFieldDef {
-                name: field.name.clone(),
-                ty: Box::new(field.ty.to_tracked()),
-            }).collect(),
+            fields: self
+                .fields
+                .iter()
+                .map(|field| GFieldDef {
+                    name: field.name.clone(),
+                    ty: Box::new(field.ty.to_tracked()),
+                })
+                .collect(),
             lifetimes: self.lifetimes.clone(),
-            assoc: ownership!(self)
+            assoc: ownership!(self),
         }
     }
 }
@@ -150,17 +173,21 @@ impl From<&TrackedFieldStructTy> for FieldStructTy {
             name: ty.name.clone(),
             is_copy: ty.is_copy,
             is_clone: ty.is_clone,
-            fields: ty.fields.iter().map(|field| GFieldDef {
-                name: field.name.clone(),
-                ty: Box::new((&*field.ty).into()),
-            }).collect(),
+            fields: ty
+                .fields
+                .iter()
+                .map(|field| GFieldDef {
+                    name: field.name.clone(),
+                    ty: Box::new((&*field.ty).into()),
+                })
+                .collect(),
             lifetimes: ty.lifetimes.clone(),
-            assoc: ()
+            assoc: (),
         }
     }
 }
 
-type TrackedTupleStructTy = GTupleStructTy<OwnershipState>;
+pub type TrackedTupleStructTy = GTupleStructTy<OwnershipState>;
 
 impl TupleStructTy {
     pub fn to_tracked(&self) -> TrackedTupleStructTy {
@@ -170,7 +197,7 @@ impl TupleStructTy {
             is_clone: self.is_clone,
             fields: self.fields.to_tracked(),
             lifetimes: self.lifetimes.clone(),
-            assoc: ownership!(self)
+            assoc: ownership!(self),
         }
     }
 }
@@ -183,12 +210,12 @@ impl From<&TrackedTupleStructTy> for TupleStructTy {
             is_clone: ty.is_clone,
             fields: (&ty.fields).into(),
             lifetimes: ty.lifetimes.clone(),
-            assoc: ()
+            assoc: (),
         }
     }
 }
 
-type TrackedReferenceTy = GReferenceTy<OwnershipState>;
+pub type TrackedReferenceTy = GReferenceTy<OwnershipState>;
 
 impl ReferenceTy {
     pub fn to_tracked(&self) -> TrackedReferenceTy {
@@ -196,7 +223,7 @@ impl ReferenceTy {
             elem: Box::new(self.elem.to_tracked()),
             mutability: self.mutability,
             lifetime: self.lifetime.clone(),
-            assoc: ownership!(self)
+            assoc: ownership!(self),
         }
     }
 }
@@ -207,7 +234,7 @@ impl From<&TrackedReferenceTy> for ReferenceTy {
             elem: Box::new((&*ty.elem).into()),
             mutability: ty.mutability,
             lifetime: ty.lifetime.clone(),
-            assoc: ()
+            assoc: (),
         }
     }
 }
