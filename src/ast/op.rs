@@ -1,4 +1,4 @@
-use crate::ast::ty::{GTy, PrimTy, ReferenceTy, Ty};
+use crate::ast::ty::{GTy, PrimTy, ReferenceTy, Ty, UIntTy};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +30,8 @@ pub enum BinaryOp {
     WrappingMul,
     WrappingDiv,
     WrappingRem,
+    WrappingShl,
+    WrappingShr,
 }
 
 impl ToString for BinaryOp {
@@ -53,6 +55,8 @@ impl ToString for BinaryOp {
             BinaryOp::WrappingMul => "wrapping_mul",
             BinaryOp::WrappingDiv => "wrapping_div",
             BinaryOp::WrappingRem => "wrapping_rem",
+            BinaryOp::WrappingShl => "wrapping_shl",
+            BinaryOp::WrappingShr => "wrapping_shr",
         }
         .to_owned()
     }
@@ -65,7 +69,9 @@ impl BinaryOp {
             | BinaryOp::WrappingSub
             | BinaryOp::WrappingMul
             | BinaryOp::WrappingDiv
-            | BinaryOp::WrappingRem => true,
+            | BinaryOp::WrappingRem
+            | BinaryOp::WrappingShl
+            | BinaryOp::WrappingShr => true,
             _ => false,
         }
     }
@@ -81,7 +87,9 @@ impl BinaryOp {
             | BinaryOp::WrappingSub
             | BinaryOp::WrappingMul
             | BinaryOp::WrappingDiv
-            | BinaryOp::WrappingRem => PrimTy::int_types(ctx).into_iter().map(From::from).collect(),
+            | BinaryOp::WrappingRem
+            | BinaryOp::WrappingShl
+            | BinaryOp::WrappingShr => PrimTy::int_types(ctx).into_iter().map(From::from).collect(),
             BinaryOp::And
             | BinaryOp::Or
             | BinaryOp::Eq
@@ -97,7 +105,7 @@ impl BinaryOp {
 
     /// Returns compatible argument types of a binary operation for a given operation.
     /// Both arguments in binary operation must be of the same type.
-    pub fn get_compatible_arg_types(&self, res_type: &Ty, ctx: &Context) -> Vec<Ty> {
+    pub fn get_compatible_lhs_arg_types(&self, res_type: &Ty, ctx: &Context) -> Vec<Ty> {
         match self {
             BinaryOp::Add
             | BinaryOp::Sub
@@ -108,7 +116,9 @@ impl BinaryOp {
             | BinaryOp::WrappingSub
             | BinaryOp::WrappingMul
             | BinaryOp::WrappingDiv
-            | BinaryOp::WrappingRem => {
+            | BinaryOp::WrappingRem
+            | BinaryOp::WrappingShl
+            | BinaryOp::WrappingShr => {
                 vec![res_type.clone()]
             }
             BinaryOp::And | BinaryOp::Or => {
@@ -122,6 +132,15 @@ impl BinaryOp {
             BinaryOp::Le | BinaryOp::Lq | BinaryOp::Ge | BinaryOp::Gt => {
                 PrimTy::int_types(ctx).into_iter().map(From::from).collect()
             }
+        }
+    }
+
+    pub fn get_compatible_rhs_arg_types(&self, lhs_arg: &Ty) -> Vec<Ty> {
+        match self {
+            BinaryOp::WrappingShl | BinaryOp::WrappingShr => {
+                vec![UIntTy::U32.into()]
+            }
+            _ => vec![lhs_arg.clone()],
         }
     }
 }

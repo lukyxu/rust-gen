@@ -239,13 +239,18 @@ impl BinaryExpr {
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
         let op = ctx.choose_binary_op(res_type)?;
-        let args_type = op
-            .get_compatible_arg_types(res_type, ctx)
+        let lhs_arg_ty = op
+            .get_compatible_lhs_arg_types(res_type, ctx)
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
-        let lhs = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
-        let rhs = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
+        let rhs_arg_ty = op
+            .get_compatible_rhs_arg_types(&lhs_arg_ty)
+            .choose(&mut ctx.rng)
+            .cloned()
+            .unwrap();
+        let lhs = Box::new(Expr::fuzz_expr(ctx, &lhs_arg_ty)?);
+        let rhs = Box::new(Expr::fuzz_expr(ctx, &rhs_arg_ty)?);
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }

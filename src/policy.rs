@@ -437,6 +437,8 @@ impl Policy {
                 (BinaryOp::WrappingMul, 1.0),
                 (BinaryOp::WrappingDiv, 1.0),
                 (BinaryOp::WrappingRem, 1.0),
+                (BinaryOp::WrappingShl, 1.0),
+                (BinaryOp::WrappingShr, 1.0),
             ],
 
             unary_op_dist: vec![
