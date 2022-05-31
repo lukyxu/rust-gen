@@ -1,6 +1,6 @@
 use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
-use crate::ast::utils::track_stmt;
+use crate::ast::utils::{revert_ctx_on_failure, track_stmt};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
@@ -84,7 +84,7 @@ impl From<LocalStmt> for Stmt {
 impl LocalStmt {
     // TODO: Decl statements
     pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
-        track_stmt(StmtKind::Local, Box::new(LocalStmt::generate_stmt_internal))(ctx, res_type)
+        track_stmt(StmtKind::Local, revert_ctx_on_failure(Box::new(LocalStmt::generate_stmt_internal)))(ctx, res_type)
     }
 
     fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<LocalStmt> {
@@ -154,7 +154,7 @@ impl From<SemiStmt> for Stmt {
 
 impl SemiStmt {
     pub fn generate_stmt(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
-        track_stmt(StmtKind::Semi, Box::new(SemiStmt::generate_stmt_internal))(ctx, res_type)
+        track_stmt(StmtKind::Semi, revert_ctx_on_failure(Box::new(SemiStmt::generate_stmt_internal)))(ctx, res_type)
     }
 
     fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
