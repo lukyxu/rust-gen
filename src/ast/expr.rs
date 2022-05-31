@@ -85,6 +85,10 @@ impl Expr {
             _ => panic!("ExprKind {:?} not supported yet", expr_kind),
         }
     }
+
+    pub fn generate_move_expr() {
+
+    }
 }
 
 #[cfg(test)]
