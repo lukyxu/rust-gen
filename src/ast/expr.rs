@@ -6,8 +6,13 @@ use crate::ast::ty::{
 use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::utils::{apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct, apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, revert_ctx_on_failure, track_expr};
+use crate::ast::utils::{
+    apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct,
+    apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth,
+    limit_if_else_depth, revert_ctx_on_failure, track_expr,
+};
 use crate::context::Context;
+use crate::symbol_table::ty::TypeSymbolTable;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::cmp::max;
@@ -81,6 +86,30 @@ impl Expr {
             _ => panic!("ExprKind {:?} not supported yet", expr_kind),
         }
     }
+
+    pub fn fuzz_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let mut res: Option<Expr> = None;
+        let mut num_failed_attempts = 0;
+        while res.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
+            res = Expr::generate_move_expr(ctx, res_type);
+            if res.is_none() {
+                num_failed_attempts += 1;
+                ctx.statistics.max_failed_expr_depth =
+                    max(ctx.statistics.max_failed_expr_depth, num_failed_attempts);
+            }
+        }
+        res
+    }
+
+    pub fn generate_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let expr = Expr::generate_expr(ctx, res_type)?;
+        let snapshot = ctx.snapshot();
+        let moved = ctx.type_symbol_table.move_expr(&expr);
+        if !moved {
+            ctx.restore_snapshot(snapshot)
+        }
+        Some(expr)
+    }
 }
 
 #[cfg(test)]
@@ -127,7 +156,10 @@ impl From<LitExpr> for Expr {
 
 impl LitExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        track_expr(ExprKind::Literal, revert_ctx_on_failure(Box::new(LitExpr::generate_expr_internal)))(ctx, res_type)
+        track_expr(
+            ExprKind::Literal,
+            revert_ctx_on_failure(Box::new(LitExpr::generate_expr_internal)),
+        )(ctx, res_type)
     }
 
     /// Attempts to generate a base literal type (not necessarily `LitExpr` but also includes arrays and structs).
@@ -245,8 +277,8 @@ impl BinaryExpr {
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
-        let lhs = Box::new(Expr::fuzz_expr(ctx, &lhs_arg_ty)?);
-        let rhs = Box::new(Expr::fuzz_expr(ctx, &rhs_arg_ty)?);
+        let lhs = Box::new(Expr::fuzz_move_expr(ctx, &lhs_arg_ty)?);
+        let rhs = Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?);
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
@@ -295,7 +327,7 @@ impl UnaryExpr {
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
-        let expr = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
+        let expr = Box::new(Expr::fuzz_move_expr(ctx, &args_type)?);
         *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
@@ -336,7 +368,7 @@ impl CastExpr {
         if !source_type.compatible_cast(res_type) {
             return None;
         }
-        let expr = Box::new(Expr::fuzz_expr(ctx, &source_type)?);
+        let expr = Box::new(Expr::fuzz_move_expr(ctx, &source_type)?);
         Some(CastExpr {
             expr,
             ty: res_type.clone(),
@@ -381,24 +413,20 @@ impl IfExpr {
         let if_expr = (|| match cond {
             None => None,
             Some(cond) => {
-                let then = BlockExpr::generate_expr(ctx, res_type);
-                let then = if let Some(then) = then {
-                    Box::new(then)
+                let (then, then_sym_t) = BlockExpr::generate_block_expr_internal(ctx, res_type)?;
+                let otherwise = (!res_type.is_unit() || ctx.choose_otherwise_if_stmt())
+                    .then(|| BlockExpr::generate_block_expr_internal(ctx, res_type));
+                let (otherwise, otherwise_sym_t) = if let Some(otherwise) = otherwise {
+                    let (otherwise, otherwise_sym_t) = otherwise?;
+                    (Some(Box::new(otherwise)), Some(otherwise_sym_t))
                 } else {
-                    return None;
+                    (None, None)
                 };
-                let otherwise = if !res_type.is_unit() || ctx.choose_otherwise_if_stmt() {
-                    if let Some(otherwise) = BlockExpr::generate_expr(ctx, res_type) {
-                        Some(Box::new(otherwise))
-                    } else {
-                        return None;
-                    }
-                } else {
-                    None
-                };
+                ctx.type_symbol_table
+                    .update_branch(&then_sym_t, &otherwise_sym_t);
                 Some(IfExpr {
                     condition: Box::new(cond),
-                    then,
+                    then: Box::new(then),
                     otherwise,
                 })
             }
@@ -432,14 +460,18 @@ impl BlockExpr {
             )))),
         )(ctx, res_type)
     }
-    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
+
+    fn generate_block_expr_internal(
+        ctx: &mut Context,
+        res_type: &Ty,
+    ) -> Option<(BlockExpr, TypeSymbolTable)> {
         let mut stmts: Vec<Stmt> = Vec::new();
-        let outer_symbol_table = ctx.type_symbol_table.clone();
+        let mut outer_symbol_table = ctx.type_symbol_table.clone();
+        let mut num_stmts = ctx.choose_num_stmts();
+        if !res_type.is_unit() {
+            num_stmts -= 1;
+        }
         let block_expr = (|| {
-            let mut num_stmts = ctx.choose_num_stmts();
-            if !res_type.is_unit() {
-                num_stmts -= 1;
-            }
             for _ in 0..num_stmts {
                 // TODO: Make sure these statements are not expression statements.
                 stmts.push(Stmt::fuzz_non_expr_stmt(ctx)?);
@@ -449,9 +481,14 @@ impl BlockExpr {
             }
             Some(BlockExpr { stmts })
         })();
-        ctx.type_symbol_table = outer_symbol_table;
-        // ctx.type_symbol_table = outer_symbol_table.merge(&ctx.type_symbol_table);
-        block_expr
+        std::mem::swap(&mut outer_symbol_table, &mut ctx.type_symbol_table);
+        block_expr.map(|block_expr| (block_expr, outer_symbol_table))
+    }
+
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
+        let (block, sym_table) = BlockExpr::generate_block_expr_internal(ctx, res_type)?;
+        ctx.type_symbol_table.update(&sym_table);
+        Some(block)
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
@@ -478,7 +515,10 @@ impl From<IdentExpr> for PlaceExpr {
 
 impl IdentExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
-        track_expr(ExprKind::Ident, revert_ctx_on_failure(Box::new(IdentExpr::generate_expr_internal)))(ctx, res_type)
+        track_expr(
+            ExprKind::Ident,
+            revert_ctx_on_failure(Box::new(IdentExpr::generate_expr_internal)),
+        )(ctx, res_type)
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
@@ -524,7 +564,11 @@ impl TupleExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &TupleTy) -> Option<TupleExpr> {
         let mut res = vec![];
         for ty in &res_type.tuple {
-            res.push(apply_limit_expr_depth_in_tuple(Expr::fuzz_expr, ctx, ty)?);
+            res.push(apply_limit_expr_depth_in_tuple(
+                Expr::fuzz_move_expr,
+                ctx,
+                ty,
+            )?);
         }
         Some(TupleExpr { tuple: res })
     }
@@ -575,7 +619,9 @@ impl AssignExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<AssignExpr> {
         track_expr(
             ExprKind::Assign,
-            limit_expr_depth(revert_ctx_on_failure(Box::new(AssignExpr::generate_expr_internal))),
+            limit_expr_depth(revert_ctx_on_failure(Box::new(
+                AssignExpr::generate_expr_internal,
+            ))),
         )(ctx, res_type)
     }
 
@@ -589,7 +635,7 @@ impl AssignExpr {
 
         Some(AssignExpr {
             place,
-            rhs: Box::new(Expr::fuzz_expr(ctx, &ty)?),
+            rhs: Box::new(Expr::fuzz_move_expr(ctx, &ty)?),
         })
     }
 
@@ -613,7 +659,11 @@ impl ArrayExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &ArrayTy) -> Option<ArrayExpr> {
         let mut res = vec![];
         for ty in res_type.iter() {
-            res.push(apply_limit_expr_depth_in_array(Expr::fuzz_expr, ctx, &ty)?);
+            res.push(apply_limit_expr_depth_in_array(
+                Expr::fuzz_move_expr,
+                ctx,
+                &ty,
+            )?);
         }
         Some(ArrayExpr { array: res })
     }
@@ -664,7 +714,7 @@ impl FieldExpr {
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
-        let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
+        let base = Box::new(Expr::fuzz_move_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
             .enumerate()
@@ -677,7 +727,7 @@ impl FieldExpr {
 
     pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, &Some(res_type.clone()))?;
-        let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
+        let base = Box::new(Expr::fuzz_move_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
                 field_struct
@@ -743,16 +793,16 @@ impl IndexExpr {
         }
         // [Struct1(5), Struct1(5), Struct1(5)][0] is invalid if Struct1 is not copy
         // However [Struct1(5), Struct1(5), Struct1(5)][0].0 should work
-        if !res_type.is_copy() {
-            return None;
-        }
-        // TODO: See if we can make this work
         // if !res_type.is_copy() {
         //     return None;
         // }
+        // TODO: See if we can make this work
+        if !res_type.is_copy() {
+            return None;
+        }
 
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
-        let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
+        let base = Box::new(Expr::fuzz_move_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
@@ -859,7 +909,7 @@ impl Field {
     pub fn generate_field(ctx: &mut Context, field_def: &FieldDef) -> Option<Field> {
         Some(Field {
             name: field_def.name.clone(),
-            expr: Expr::fuzz_expr(ctx, &*field_def.ty)?,
+            expr: Expr::fuzz_move_expr(ctx, &*field_def.ty)?,
         })
     }
 }

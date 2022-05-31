@@ -66,8 +66,8 @@ impl ExprVisitor {
         res
     }
 
-    fn update_symbol_table(&mut self, new_symbol_table: &ExprSymbolTable) {
-        self.symbol_table.update_symbol_table(new_symbol_table);
+    fn update(&mut self, new_symbol_table: &ExprSymbolTable) {
+        self.symbol_table.update(new_symbol_table);
     }
 
     fn eval_place_expr(&mut self, expr: &mut Expr) -> Option<EvalPlaceExpr> {
@@ -216,12 +216,12 @@ impl Visitor for ExprVisitor {
 
         self.expr = Some(match &cond_expr {
             EvalExpr::Literal(LitExpr::Bool(true)) => {
-                self.update_symbol_table(&true_sym_table);
+                self.update(&true_sym_table);
                 true_expr
             }
             EvalExpr::Literal(LitExpr::Bool(false)) => {
                 if let Some(false_sym_table) = false_sym_table {
-                    self.update_symbol_table(&false_sym_table);
+                    self.update(&false_sym_table);
                 }
                 false_expr
             }
@@ -235,7 +235,7 @@ impl Visitor for ExprVisitor {
 
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
         let scoped_symbol_table = self.visit_block_internal(expr);
-        self.update_symbol_table(&scoped_symbol_table);
+        self.update(&scoped_symbol_table);
     }
 
     // fn visit_block_expr(&mut self, expr: &mut BlockExpr) {

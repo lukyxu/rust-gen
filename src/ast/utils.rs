@@ -10,13 +10,11 @@ use std::hash::Hash;
 pub fn revert_ctx_on_failure<T: 'static>(
     f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
 ) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
-    Box::new(|ctx, res_type| -> Option<T>   {
-        let name_handler = ctx.name_handler.clone();
-        let sym_table = ctx.type_symbol_table.clone();
+    Box::new(|ctx, res_type| -> Option<T> {
+        let snapshot = ctx.snapshot();
         let res = f(ctx, res_type);
         if res.is_none() {
-            ctx.name_handler = name_handler;
-            ctx.type_symbol_table = sym_table;
+            ctx.restore_snapshot(snapshot);
         }
         res
     })
@@ -182,4 +180,3 @@ track_function!(
     failed_item_counter
 );
 track_function!(track_type, TyKind, successful_ty_counter, failed_ty_counter);
-
