@@ -1,23 +1,25 @@
+use std::collections::{BTreeMap, BTreeSet};
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr,
-    LitIntTy, Member,
-};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::file::RustFile;
 
 use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
 
-use crate::ast::op::BinaryOp;
-use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{PrimTy, UIntTy};
+use crate::ast::op::{BinaryOp, UnaryOp};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
+use crate::ast::ty::{PrimTy, Ty, UIntTy};
 use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
-use crate::visitor::base_visitor::Visitor;
+use crate::visitor::base_visitor::{Visitor, walk_expr};
+
+type LocalTypeSymbolTable = BTreeSet<String>;
 
 /// Visitor used to generate and insert checksum calculations into the program.
 pub struct ChecksumGenVisitor {
     add_checksum: bool,
-    local_type_symbol_table: TypeSymbolTable,
-    prev_local_type_symbol_tables: Vec<TypeSymbolTable>,
+    local_type_symbol_table: LocalTypeSymbolTable,
+    prev_local_type_symbol_tables: Vec<LocalTypeSymbolTable>,
     full_type_symbol_table: TypeSymbolTable,
     prev_full_type_symbol_tables: Vec<TypeSymbolTable>,
     checksum_name: &'static str,
@@ -27,7 +29,7 @@ impl ChecksumGenVisitor {
     pub fn new(add_checksum: bool) -> ChecksumGenVisitor {
         ChecksumGenVisitor {
             add_checksum,
-            local_type_symbol_table: TypeSymbolTable::default(),
+            local_type_symbol_table: LocalTypeSymbolTable::new(),
             prev_local_type_symbol_tables: vec![],
             full_type_symbol_table: TypeSymbolTable::default(),
             prev_full_type_symbol_tables: vec![],
@@ -40,7 +42,7 @@ impl Visitor for ChecksumGenVisitor {
     fn enter_scope(&mut self) {
         self.prev_local_type_symbol_tables
             .push(self.local_type_symbol_table.clone());
-        self.local_type_symbol_table = TypeSymbolTable::default();
+        self.local_type_symbol_table = LocalTypeSymbolTable::new();
         self.prev_full_type_symbol_tables
             .push(self.full_type_symbol_table.clone());
     }
@@ -79,7 +81,7 @@ impl Visitor for ChecksumGenVisitor {
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         self.local_type_symbol_table
-            .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
+            .insert(stmt.name.clone());
         self.full_type_symbol_table
             .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
         self.visit_expr(&mut stmt.rhs);
@@ -90,11 +92,12 @@ impl Visitor for ChecksumGenVisitor {
         for stmt in (&mut expr.stmts).split_last_mut().unwrap().1 {
             self.visit_stmt(stmt);
         }
-        for (name, ty_mapping) in &self.local_type_symbol_table {
+        for name in &self.local_type_symbol_table {
             if name == self.checksum_name {
                 continue;
             }
-            let exprs = exprs_from_ident(name, &ty_mapping.ty);
+            let ty = self.full_type_symbol_table.get_var_type(&name).unwrap();
+            let exprs = exprs_from_ident(name, &ty);
             let cast_exprs: Vec<Expr> = exprs
                 .into_iter()
                 .map(|expr| {
@@ -128,7 +131,7 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_ident_expr(&mut self, _expr: &mut IdentExpr) {
-        self.local_type_symbol_table.
+        // self.local_type_symbol_table.insert(e)
         // self.full_type_symbol_table.move_var(&expr.name);
         // if self.local_type_symbol_table.contains(&expr.name) {
         //     self.local_type_symbol_table.move_var(&expr.name)
@@ -139,6 +142,13 @@ impl Visitor for ChecksumGenVisitor {
         // TODO: Visit place expression
         self.visit_expr(&mut expr.rhs);
     }
+
+    fn visit_expr(&mut self, expr: &mut Expr) {
+        walk_expr(self, expr);
+        self.full_type_symbol_table.move_expr(expr);
+    }
+
+    fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {}
 }
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {

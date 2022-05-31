@@ -30,6 +30,10 @@ impl TypeSymbolTable {
         self.var_type_mapping.contains_key(key)
     }
 
+    pub fn get_var_type(&self, key: &str) -> Option<TrackedTy> {
+        Some(self.var_type_mapping.get(key)?.ty.clone())
+    }
+
     // TODO: refactor
     pub fn get_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
         self.var_type_mapping
@@ -51,10 +55,7 @@ impl TypeSymbolTable {
             .collect()
     }
 
-    pub fn move_expr(&mut self, expr: &Expr, ty: &Ty) -> bool {
-        if ty.is_copy() {
-            return true
-        }
+    pub fn move_expr(&mut self, expr: &Expr) -> bool {
         match expr {
             Expr::Literal(_) | Expr::Binary(_) | Expr::Unary(_) | Expr::Cast(_) | Expr::If(_) | Expr::Block(_) | Expr::Tuple(_) | Expr::Array(_) | Expr::Index(_) | Expr::Struct(_) => {
                 true

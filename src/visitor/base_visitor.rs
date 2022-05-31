@@ -63,6 +63,9 @@ pub trait Visitor: Sized {
     fn visit_expr(&mut self, expr: &mut Expr) {
         walk_expr(self, expr);
     }
+    fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
+        walk_place_expr(self, expr);
+    }
     fn visit_literal_expr(&mut self, _expr: &mut LitExpr) {}
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         walk_binary_expr(self, expr);
@@ -199,6 +202,14 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
     }
 }
 
+pub fn walk_place_expr<V: Visitor>(visitor: &mut V, expr: &mut PlaceExpr) {
+    match expr {
+        PlaceExpr::Field(expr) => visitor.visit_field_expr(expr),
+        PlaceExpr::Index(expr) => visitor.visit_index_expr(expr),
+        PlaceExpr::Ident(expr) => visitor.visit_ident_expr(expr),
+    }
+}
+
 fn walk_binary_expr<V: Visitor>(visitor: &mut V, BinaryExpr { lhs, rhs, op }: &mut BinaryExpr) {
     visitor.visit_expr(lhs);
     visitor.visit_expr(rhs);
@@ -249,11 +260,7 @@ fn walk_tuple_expr<V: Visitor>(visitor: &mut V, TupleExpr { tuple }: &mut TupleE
 }
 
 fn walk_assign_expr<V: Visitor>(visitor: &mut V, AssignExpr { place, rhs }: &mut AssignExpr) {
-    match place {
-        PlaceExpr::Field(expr) => visitor.visit_field_expr(expr),
-        PlaceExpr::Index(expr) => visitor.visit_index_expr(expr),
-        PlaceExpr::Ident(expr) => visitor.visit_ident_expr(expr),
-    };
+    visitor.visit_place_expr(place);
     visitor.visit_expr(rhs);
 }
 
