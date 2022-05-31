@@ -56,13 +56,6 @@ impl Visitor for ChecksumGenVisitor {
         //     .merge(&self.full_type_symbol_table);
     }
 
-    fn visit_ident_expr(&mut self, _expr: &mut IdentExpr) {
-        // self.full_type_symbol_table.move_var(&expr.name);
-        // if self.local_type_symbol_table.contains(&expr.name) {
-        //     self.local_type_symbol_table.move_var(&expr.name)
-        // }
-    }
-
     fn visit_function(&mut self, function: &mut Function) {
         if function.name != "main" {
             return;
@@ -98,7 +91,7 @@ impl Visitor for ChecksumGenVisitor {
             self.visit_stmt(stmt);
         }
         for (name, ty_mapping) in &self.local_type_symbol_table {
-            if name == self.checksum_name || !ty_mapping.ty.moveable() {
+            if name == self.checksum_name {
                 continue;
             }
             let exprs = exprs_from_ident(name, &ty_mapping.ty);
@@ -134,6 +127,14 @@ impl Visitor for ChecksumGenVisitor {
         self.exit_scope();
     }
 
+    fn visit_ident_expr(&mut self, _expr: &mut IdentExpr) {
+        self.local_type_symbol_table.
+        // self.full_type_symbol_table.move_var(&expr.name);
+        // if self.local_type_symbol_table.contains(&expr.name) {
+        //     self.local_type_symbol_table.move_var(&expr.name)
+        // }
+    }
+
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         // TODO: Visit place expression
         self.visit_expr(&mut expr.rhs);
@@ -142,6 +143,9 @@ impl Visitor for ChecksumGenVisitor {
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
     let mut accumulator = vec![];
+    if !ty.moveable() {
+        return vec![]
+    }
     match ty {
         TrackedTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => {
             accumulator.push(Expr::Ident(IdentExpr {
@@ -202,6 +206,9 @@ fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
 }
 
 fn exprs_from_exprs(expr: Expr, ty: &TrackedTy, accumulator: &mut Vec<Expr>) {
+    if !ty.moveable() {
+        return
+    }
     match ty {
         TrackedTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => accumulator.push(expr),
         TrackedTy::Tuple(tuple_ty) => {

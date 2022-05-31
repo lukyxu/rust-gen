@@ -462,7 +462,7 @@ impl Policy {
             max_main_fn_attempts: 1,
             max_item_attempts: 1,
             max_stmt_attempts: 30,
-            max_expr_attempts: 1,
+            max_expr_attempts: 5,
             max_ty_attempts: 10,
 
             tuple_struct_copy_prob: 0.5,

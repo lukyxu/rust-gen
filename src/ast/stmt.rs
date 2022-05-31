@@ -94,7 +94,7 @@ impl LocalStmt {
         let res = Some(LocalStmt::Init(InitLocalStmt {
             name: name.clone(),
             ty: res_type.clone(),
-            rhs: Expr::fuzz_expr(ctx, res_type)?,
+            rhs: Expr::fuzz_move_expr(ctx, res_type)?,
             mutable,
         }));
         ctx.type_symbol_table
@@ -136,7 +136,7 @@ impl ExprStmt {
 
     fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<ExprStmt> {
         Some(ExprStmt {
-            expr: Expr::fuzz_expr(ctx, res_type)?,
+            expr: Expr::fuzz_move_expr(ctx, res_type)?,
         })
     }
 }
@@ -159,7 +159,7 @@ impl SemiStmt {
 
     fn generate_stmt_internal(ctx: &mut Context, res_type: &Ty) -> Option<SemiStmt> {
         Some(SemiStmt {
-            expr: Expr::fuzz_expr(ctx, res_type)?,
+            expr: Expr::fuzz_move_expr(ctx, res_type)?,
         })
     }
 }

@@ -269,8 +269,8 @@ impl BinaryExpr {
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
-        let lhs = Box::new(Expr::fuzz_expr(ctx, &lhs_arg_ty)?);
-        let rhs = Box::new(Expr::fuzz_expr(ctx, &rhs_arg_ty)?);
+        let lhs = Box::new(Expr::fuzz_move_expr(ctx, &lhs_arg_ty)?);
+        let rhs = Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?);
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
@@ -319,7 +319,7 @@ impl UnaryExpr {
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
-        let expr = Box::new(Expr::fuzz_expr(ctx, &args_type)?);
+        let expr = Box::new(Expr::fuzz_move_expr(ctx, &args_type)?);
         *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
@@ -360,7 +360,7 @@ impl CastExpr {
         if !source_type.compatible_cast(res_type) {
             return None;
         }
-        let expr = Box::new(Expr::fuzz_expr(ctx, &source_type)?);
+        let expr = Box::new(Expr::fuzz_move_expr(ctx, &source_type)?);
         Some(CastExpr {
             expr,
             ty: res_type.clone(),
@@ -548,7 +548,7 @@ impl TupleExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &TupleTy) -> Option<TupleExpr> {
         let mut res = vec![];
         for ty in &res_type.tuple {
-            res.push(apply_limit_expr_depth_in_tuple(Expr::fuzz_expr, ctx, ty)?);
+            res.push(apply_limit_expr_depth_in_tuple(Expr::fuzz_move_expr, ctx, ty)?);
         }
         Some(TupleExpr { tuple: res })
     }
@@ -613,7 +613,7 @@ impl AssignExpr {
 
         Some(AssignExpr {
             place,
-            rhs: Box::new(Expr::fuzz_expr(ctx, &ty)?),
+            rhs: Box::new(Expr::fuzz_move_expr(ctx, &ty)?),
         })
     }
 
@@ -637,7 +637,7 @@ impl ArrayExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &ArrayTy) -> Option<ArrayExpr> {
         let mut res = vec![];
         for ty in res_type.iter() {
-            res.push(apply_limit_expr_depth_in_array(Expr::fuzz_expr, ctx, &ty)?);
+            res.push(apply_limit_expr_depth_in_array(Expr::fuzz_move_expr, ctx, &ty)?);
         }
         Some(ArrayExpr { array: res })
     }
@@ -688,7 +688,7 @@ impl FieldExpr {
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
-        let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
+        let base = Box::new(Expr::fuzz_move_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
             .enumerate()
@@ -701,7 +701,7 @@ impl FieldExpr {
 
     pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, &Some(res_type.clone()))?;
-        let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
+        let base = Box::new(Expr::fuzz_move_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
                 field_struct
@@ -767,16 +767,16 @@ impl IndexExpr {
         }
         // [Struct1(5), Struct1(5), Struct1(5)][0] is invalid if Struct1 is not copy
         // However [Struct1(5), Struct1(5), Struct1(5)][0].0 should work
-        if !res_type.is_copy() {
-            return None;
-        }
-        // TODO: See if we can make this work
         // if !res_type.is_copy() {
         //     return None;
         // }
+        // TODO: See if we can make this work
+        if !res_type.is_copy() {
+            return None;
+        }
 
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
-        let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
+        let base = Box::new(Expr::fuzz_move_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
@@ -883,7 +883,7 @@ impl Field {
     pub fn generate_field(ctx: &mut Context, field_def: &FieldDef) -> Option<Field> {
         Some(Field {
             name: field_def.name.clone(),
-            expr: Expr::fuzz_expr(ctx, &*field_def.ty)?,
+            expr: Expr::fuzz_move_expr(ctx, &*field_def.ty)?,
         })
     }
 }

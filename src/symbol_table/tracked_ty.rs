@@ -48,13 +48,10 @@ impl TrackedTy {
         // TODO: Recursive moves
         match self {
             TrackedTy::Unit | TrackedTy::Prim(_) => {},
-            TrackedTy::Tuple(ty) => { ty.assoc = state },
-            TrackedTy::Array(ty) => { ty.assoc = state },
-            TrackedTy::Struct(ty) => match ty {
-                GStructTy::Field(ty) => { ty.assoc = state },
-                GStructTy::Tuple(ty) => { ty.assoc = state },
-            },
-            TrackedTy::Reference(ty) => { ty.assoc = state },
+            TrackedTy::Tuple(ty) => { ty.set_ownership_state(state) },
+            TrackedTy::Array(ty) => { ty.set_ownership_state(state) },
+            TrackedTy::Struct(ty) => { ty.set_ownership_state(state) },
+            TrackedTy::Reference(_) => { unimplemented!() },
         }
     }
 
@@ -91,6 +88,13 @@ impl From<&TrackedTy> for Ty {
 
 pub type TrackedTupleTy = GTupleTy<OwnershipState>;
 
+impl TrackedTupleTy {
+    pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        self.assoc = state;
+        self.tuple.iter_mut().for_each(|ty|ty.set_ownership_state(state));
+    }
+}
+
 impl TupleTy {
     pub fn to_tracked(&self) -> TrackedTupleTy {
         GTupleTy {
@@ -117,6 +121,13 @@ impl<'a> IntoIterator for &'a TrackedTupleTy {
 
 pub type TrackedArrayTy = GArrayTy<OwnershipState>;
 
+impl TrackedArrayTy {
+    pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        self.assoc = state;
+        self.base_ty.set_ownership_state(state);
+    }
+}
+
 impl ArrayTy {
     pub fn to_tracked(&self) -> TrackedArrayTy {
         GArrayTy {
@@ -141,6 +152,15 @@ impl TrackedArrayTy {
 
 pub type TrackedStructTy = GStructTy<OwnershipState>;
 
+impl TrackedStructTy {
+    pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        match self {
+            TrackedStructTy::Field(ty) => ty.set_ownership_state(state),
+            TrackedStructTy::Tuple(ty) => ty.set_ownership_state(state),
+        }
+    }
+}
+
 impl StructTy {
     pub fn to_tracked(&self) -> TrackedStructTy {
         match self {
@@ -160,6 +180,13 @@ impl From<&TrackedStructTy> for StructTy {
 }
 
 pub type TrackedFieldStructTy = GFieldStructTy<OwnershipState>;
+
+impl TrackedFieldStructTy {
+    pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        self.assoc = state;
+        self.fields.iter_mut().for_each(|field|field.ty.set_ownership_state(state));
+    }
+}
 
 impl FieldStructTy {
     pub fn to_tracked(&self) -> TrackedFieldStructTy {
@@ -202,6 +229,13 @@ impl From<&TrackedFieldStructTy> for FieldStructTy {
 }
 
 pub type TrackedTupleStructTy = GTupleStructTy<OwnershipState>;
+
+impl TrackedTupleStructTy {
+    pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        self.assoc = state;
+        self.fields.set_ownership_state(state);
+    }
+}
 
 impl TupleStructTy {
     pub fn to_tracked(&self) -> TrackedTupleStructTy {
