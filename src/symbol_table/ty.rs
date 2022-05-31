@@ -57,9 +57,16 @@ impl TypeSymbolTable {
 
     pub fn move_expr(&mut self, expr: &Expr) -> bool {
         match expr {
-            Expr::Literal(_) | Expr::Binary(_) | Expr::Unary(_) | Expr::Cast(_) | Expr::If(_) | Expr::Block(_) | Expr::Tuple(_) | Expr::Array(_) | Expr::Index(_) | Expr::Struct(_) => {
-                true
-            }
+            Expr::Literal(_)
+            | Expr::Binary(_)
+            | Expr::Unary(_)
+            | Expr::Cast(_)
+            | Expr::If(_)
+            | Expr::Block(_)
+            | Expr::Tuple(_)
+            | Expr::Array(_)
+            | Expr::Index(_)
+            | Expr::Struct(_) => true,
             Expr::Ident(ident) => {
                 let mapping = self.var_type_mapping.get_mut(&ident.name).unwrap();
                 match mapping.ty.ownership_state() {
@@ -68,19 +75,19 @@ impl TypeSymbolTable {
                         mapping.ty.set_ownership_state(OwnershipState::Moved);
                         true
                     }
-                    OwnershipState::PartiallyOwned | OwnershipState::Moved => false
+                    OwnershipState::PartiallyOwned | OwnershipState::Moved => false,
                 }
             }
-            Expr::Assign(_) => {
-                false
-            }
+            Expr::Assign(_) => false,
             Expr::Field(field_expr) => {
                 // Find ident of original
                 // recursively update chain
                 // field_expr.base
                 false
             }
-            Expr::Reference(_) => {unimplemented!()}
+            Expr::Reference(_) => {
+                unimplemented!()
+            }
         }
         // let mapping = self.var_type_mapping.get_mut(key).unwrap();
         // assert!(!mapping.ty.ownership_state());
@@ -94,13 +101,28 @@ impl TypeSymbolTable {
     //         v.moved = other.var_type_mapping.get(k).unwrap().moved;
     //     }
     // }
-    //
-    // pub fn merge(mut self, other: &TypeSymbolTable) -> TypeSymbolTable {
-    //     for (k, v) in self.var_type_mapping.iter_mut() {
-    //         v.moved = other.var_type_mapping.get(k).unwrap().moved;
-    //     }
-    //     self
-    // }
+
+    pub fn update(&mut self, other: &TypeSymbolTable) {
+        for (key, v) in self.var_type_mapping.iter_mut() {
+            v.ty.set_ownership_state(other.get_var_type(key).unwrap().ownership_state())
+        }
+    }
+
+    pub fn update_branch(&mut self, branch1: &TypeSymbolTable, branch2: &Option<TypeSymbolTable>) {
+        for (key, v) in self.var_type_mapping.iter_mut() {
+            let branch1_ownership = branch1.get_var_type(key).unwrap().ownership_state();
+            let branch2_ownership = if let Some(branch2) = branch2 {
+                branch2.get_var_type(key).unwrap().ownership_state()
+            } else {
+                v.ty.ownership_state()
+            };
+            if matches!(branch1_ownership, OwnershipState::Moved)
+                || matches!(branch2_ownership, OwnershipState::Moved)
+            {
+                v.ty.set_ownership_state(OwnershipState::Moved)
+            }
+        }
+    }
 }
 
 impl<'a> IntoIterator for &'a TypeSymbolTable {

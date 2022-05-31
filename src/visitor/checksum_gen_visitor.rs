@@ -1,17 +1,23 @@
-use std::collections::{BTreeMap, BTreeSet};
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 use crate::ast::file::RustFile;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::function::Function;
 use crate::ast::item::{FunctionItem, Item, StructItem};
 
 use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
+use crate::ast::stmt::{
+    CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
+};
 use crate::ast::ty::{PrimTy, Ty, UIntTy};
 use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
-use crate::visitor::base_visitor::{Visitor, walk_expr};
+use crate::visitor::base_visitor::{walk_expr, Visitor};
 
 type LocalTypeSymbolTable = BTreeSet<String>;
 
@@ -80,8 +86,7 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
-        self.local_type_symbol_table
-            .insert(stmt.name.clone());
+        self.local_type_symbol_table.insert(stmt.name.clone());
         self.full_type_symbol_table
             .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
         self.visit_expr(&mut stmt.rhs);
@@ -154,7 +159,7 @@ impl Visitor for ChecksumGenVisitor {
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
     let mut accumulator = vec![];
     if !ty.moveable() {
-        return vec![]
+        return vec![];
     }
     match ty {
         TrackedTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => {
@@ -217,7 +222,7 @@ fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
 
 fn exprs_from_exprs(expr: Expr, ty: &TrackedTy, accumulator: &mut Vec<Expr>) {
     if !ty.moveable() {
-        return
+        return;
     }
     match ty {
         TrackedTy::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => accumulator.push(expr),

@@ -47,11 +47,13 @@ impl TrackedTy {
     pub fn set_ownership_state(&mut self, state: OwnershipState) {
         // TODO: Recursive moves
         match self {
-            TrackedTy::Unit | TrackedTy::Prim(_) => {},
-            TrackedTy::Tuple(ty) => { ty.set_ownership_state(state) },
-            TrackedTy::Array(ty) => { ty.set_ownership_state(state) },
-            TrackedTy::Struct(ty) => { ty.set_ownership_state(state) },
-            TrackedTy::Reference(_) => { unimplemented!() },
+            TrackedTy::Unit | TrackedTy::Prim(_) => {}
+            TrackedTy::Tuple(ty) => ty.set_ownership_state(state),
+            TrackedTy::Array(ty) => ty.set_ownership_state(state),
+            TrackedTy::Struct(ty) => ty.set_ownership_state(state),
+            TrackedTy::Reference(_) => {
+                unimplemented!()
+            }
         }
     }
 
@@ -91,7 +93,9 @@ pub type TrackedTupleTy = GTupleTy<OwnershipState>;
 impl TrackedTupleTy {
     pub fn set_ownership_state(&mut self, state: OwnershipState) {
         self.assoc = state;
-        self.tuple.iter_mut().for_each(|ty|ty.set_ownership_state(state));
+        self.tuple
+            .iter_mut()
+            .for_each(|ty| ty.set_ownership_state(state));
     }
 }
 
@@ -184,7 +188,9 @@ pub type TrackedFieldStructTy = GFieldStructTy<OwnershipState>;
 impl TrackedFieldStructTy {
     pub fn set_ownership_state(&mut self, state: OwnershipState) {
         self.assoc = state;
-        self.fields.iter_mut().for_each(|field|field.ty.set_ownership_state(state));
+        self.fields
+            .iter_mut()
+            .for_each(|field| field.ty.set_ownership_state(state));
     }
 }
 
