@@ -1,6 +1,6 @@
-use crate::ast::expr::IdentExpr;
+use crate::ast::expr::{Expr, IdentExpr};
 use crate::ast::ty::Ty;
-use crate::symbol_table::tracked_ty::TrackedTy;
+use crate::symbol_table::tracked_ty::{OwnershipState, TrackedTy};
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
 
@@ -26,14 +26,6 @@ impl TypeSymbolTable {
         );
     }
 
-    // pub fn move_var(&mut self, key: &str) {
-    //     let mapping = self.var_type_mapping.get_mut(key).unwrap();
-    //     assert!(!mapping.ty.ownership_state());
-    //     if !mapping.ty.is_copy() {
-    //         (*mapping).moved = true;
-    //     }
-    // }
-
     pub fn contains(&self, key: &String) -> bool {
         self.var_type_mapping.contains_key(key)
     }
@@ -57,6 +49,43 @@ impl TypeSymbolTable {
                     .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
+    }
+
+    pub fn move_expr(&mut self, expr: &Expr, ty: &Ty) -> bool {
+        if ty.is_copy() {
+            return true
+        }
+        match expr {
+            Expr::Literal(_) | Expr::Binary(_) | Expr::Unary(_) | Expr::Cast(_) | Expr::If(_) | Expr::Block(_) | Expr::Tuple(_) | Expr::Array(_) | Expr::Index(_) | Expr::Struct(_) => {
+                true
+            }
+            Expr::Ident(ident) => {
+                let mapping = self.var_type_mapping.get_mut(&ident.name).unwrap();
+                match mapping.ty.ownership_state() {
+                    OwnershipState::NotApplicable => true,
+                    OwnershipState::Owned => {
+                        mapping.ty.set_ownership_state(OwnershipState::Moved);
+                        true
+                    }
+                    OwnershipState::PartiallyOwned | OwnershipState::Moved => false
+                }
+            }
+            Expr::Assign(_) => {
+                false
+            }
+            Expr::Field(field_expr) => {
+                // Find ident of original
+                // recursively update chain
+                // field_expr.base
+                false
+            }
+            Expr::Reference(_) => {unimplemented!()}
+        }
+        // let mapping = self.var_type_mapping.get_mut(key).unwrap();
+        // assert!(!mapping.ty.ownership_state());
+        // if !mapping.ty.is_copy() {
+        //     (*mapping).moved = true;
+        // }
     }
 
     // pub fn merge_inplace(&mut self, other: &TypeSymbolTable) {

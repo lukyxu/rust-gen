@@ -285,6 +285,26 @@ impl Context {
     }
 }
 
+#[derive(Clone)]
+pub struct ContextSnapshot {
+    name_handler: NameHandler,
+    type_symbol_table: TypeSymbolTable,
+}
+
+impl Context {
+    pub fn snapshot(&self) -> ContextSnapshot {
+        ContextSnapshot {
+            name_handler: self.name_handler.clone(),
+            type_symbol_table: self.type_symbol_table.clone(),
+        }
+    }
+
+    pub fn restore_snapshot(&mut self, snapshot: ContextSnapshot) {
+        self.name_handler = snapshot.name_handler;
+        self.type_symbol_table = snapshot.type_symbol_table;
+    }
+}
+
 #[derive(Default, Clone)]
 pub struct NameHandler {
     var_counter: i32,

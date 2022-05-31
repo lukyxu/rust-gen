@@ -44,6 +44,20 @@ impl TrackedTy {
         }
     }
 
+    pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        // TODO: Recursive moves
+        match self {
+            TrackedTy::Unit | TrackedTy::Prim(_) => {},
+            TrackedTy::Tuple(ty) => { ty.assoc = state },
+            TrackedTy::Array(ty) => { ty.assoc = state },
+            TrackedTy::Struct(ty) => match ty {
+                GStructTy::Field(ty) => { ty.assoc = state },
+                GStructTy::Tuple(ty) => { ty.assoc = state },
+            },
+            TrackedTy::Reference(ty) => { ty.assoc = state },
+        }
+    }
+
     pub fn moveable(&self) -> bool {
         self.ownership_state().moveable()
     }

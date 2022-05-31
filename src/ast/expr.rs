@@ -81,6 +81,30 @@ impl Expr {
             _ => panic!("ExprKind {:?} not supported yet", expr_kind),
         }
     }
+
+    pub fn fuzz_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let mut res: Option<Expr> = None;
+        let mut num_failed_attempts = 0;
+        while res.is_none() && num_failed_attempts < ctx.policy.max_expr_attempts {
+            res = Expr::generate_move_expr(ctx, res_type);
+            if res.is_none() {
+                num_failed_attempts += 1;
+                ctx.statistics.max_failed_expr_depth =
+                    max(ctx.statistics.max_failed_expr_depth, num_failed_attempts);
+            }
+        }
+        res
+    }
+
+    pub fn generate_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        let expr = Expr::generate_expr(ctx, res_type)?;
+        let snapshot = ctx.snapshot();
+        let moved = ctx.type_symbol_table.move_expr(&expr, &res_type);
+        if !moved {
+            ctx.restore_snapshot(snapshot)
+        }
+        Some(expr)
+    }
 }
 
 #[cfg(test)]
