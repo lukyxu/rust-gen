@@ -7,19 +7,19 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-fn revert_ctx_on_failure<T: 'static, S: 'static>(
-    f: fn(&mut Context, &S) -> Option<T>,
-    ctx: &mut Context,
-    res_type: &S,
-) -> Option<T> {
-    let name_handler = ctx.name_handler.clone();
-    let sym_table = ctx.type_symbol_table.clone();
-    let res = f(ctx, res_type);
-    if res.is_none() {
-        ctx.name_handler = name_handler;
-        ctx.type_symbol_table = sym_table;
-    }
-    res
+pub fn revert_ctx_on_failure<T: 'static>(
+    f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
+) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
+    Box::new(|ctx, res_type| -> Option<T>   {
+        let name_handler = ctx.name_handler.clone();
+        let sym_table = ctx.type_symbol_table.clone();
+        let res = f(ctx, res_type);
+        if res.is_none() {
+            ctx.name_handler = name_handler;
+            ctx.type_symbol_table = sym_table;
+        }
+        res
+    })
 }
 
 macro_rules! limit_function {
