@@ -454,8 +454,8 @@ impl Policy {
             disable_lifetime: true,
 
             max_expr_depth: 10,
-            max_if_else_depth: 2,
-            max_block_depth: 2,
+            max_if_else_depth: 1,
+            max_block_depth: 1,
             max_arith_depth: 5,
 
             max_file_attempts: 1,
