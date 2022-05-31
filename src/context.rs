@@ -285,7 +285,7 @@ impl Context {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct NameHandler {
     var_counter: i32,
     struct_counter: i32,

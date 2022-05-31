@@ -6,11 +6,7 @@ use crate::ast::ty::{
 use rand::prelude::SliceRandom;
 
 use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::utils::{
-    apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct,
-    apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth,
-    limit_if_else_depth, track_expr,
-};
+use crate::ast::utils::{apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct, apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, revert_ctx_on_failure, track_expr};
 use crate::context::Context;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -131,7 +127,7 @@ impl From<LitExpr> for Expr {
 
 impl LitExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        track_expr(ExprKind::Literal, Box::new(LitExpr::generate_expr_internal))(ctx, res_type)
+        track_expr(ExprKind::Literal, revert_ctx_on_failure(Box::new(LitExpr::generate_expr_internal)))(ctx, res_type)
     }
 
     /// Attempts to generate a base literal type (not necessarily `LitExpr` but also includes arrays and structs).
@@ -231,9 +227,9 @@ impl BinaryExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
         track_expr(
             ExprKind::Binary,
-            limit_expr_depth(limit_arith_depth(Box::new(
+            limit_expr_depth(limit_arith_depth(revert_ctx_on_failure(Box::new(
                 BinaryExpr::generate_expr_internal,
-            ))),
+            )))),
         )(ctx, res_type)
     }
 
@@ -286,9 +282,9 @@ impl UnaryExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<UnaryExpr> {
         track_expr(
             ExprKind::Unary,
-            limit_expr_depth(limit_arith_depth(Box::new(
+            limit_expr_depth(limit_arith_depth(revert_ctx_on_failure(Box::new(
                 UnaryExpr::generate_expr_internal,
-            ))),
+            )))),
         )(ctx, res_type)
     }
 
@@ -329,9 +325,9 @@ impl CastExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<CastExpr> {
         track_expr(
             ExprKind::Cast,
-            limit_expr_depth(limit_arith_depth(Box::new(
+            limit_expr_depth(limit_arith_depth(revert_ctx_on_failure(Box::new(
                 CastExpr::generate_expr_internal,
-            ))),
+            )))),
         )(ctx, res_type)
     }
 
@@ -373,9 +369,9 @@ impl IfExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IfExpr> {
         track_expr(
             ExprKind::Cast,
-            limit_expr_depth(limit_if_else_depth(Box::new(
+            limit_expr_depth(limit_if_else_depth(revert_ctx_on_failure(Box::new(
                 IfExpr::generate_expr_internal,
-            ))),
+            )))),
         )(ctx, res_type)
     }
 
@@ -431,9 +427,9 @@ impl BlockExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
         track_expr(
             ExprKind::Block,
-            limit_expr_depth(limit_block_depth(Box::new(
+            limit_expr_depth(limit_block_depth(revert_ctx_on_failure(Box::new(
                 BlockExpr::generate_expr_internal,
-            ))),
+            )))),
         )(ctx, res_type)
     }
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
@@ -482,7 +478,7 @@ impl From<IdentExpr> for PlaceExpr {
 
 impl IdentExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
-        track_expr(ExprKind::Ident, Box::new(IdentExpr::generate_expr_internal))(ctx, res_type)
+        track_expr(ExprKind::Ident, revert_ctx_on_failure(Box::new(IdentExpr::generate_expr_internal)))(ctx, res_type)
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
@@ -579,7 +575,7 @@ impl AssignExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<AssignExpr> {
         track_expr(
             ExprKind::Assign,
-            limit_expr_depth(Box::new(AssignExpr::generate_expr_internal)),
+            limit_expr_depth(revert_ctx_on_failure(Box::new(AssignExpr::generate_expr_internal))),
         )(ctx, res_type)
     }
 
@@ -651,9 +647,9 @@ impl FieldExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         track_expr(
             ExprKind::Field,
-            limit_expr_depth(limit_arith_depth(Box::new(
+            limit_expr_depth(limit_arith_depth(revert_ctx_on_failure(Box::new(
                 FieldExpr::generate_expr_internal,
-            ))),
+            )))),
         )(ctx, res_type)
     }
 
@@ -735,9 +731,9 @@ impl IndexExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
         track_expr(
             ExprKind::Index,
-            limit_expr_depth(limit_arith_depth(Box::new(
+            limit_expr_depth(limit_arith_depth(revert_ctx_on_failure(Box::new(
                 IndexExpr::generate_expr_internal,
-            ))),
+            )))),
         )(ctx, res_type)
     }
 
