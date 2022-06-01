@@ -1,20 +1,19 @@
 use crate::ast::expr::LitIntTy::Unsigned;
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr,
 };
-use crate::ast::file::RustFile;
-use std::collections::{BTreeMap, BTreeSet};
+
+use std::collections::{BTreeSet};
 
 use crate::ast::function::Function;
-use crate::ast::item::{FunctionItem, Item, StructItem};
 
-use crate::ast::op::{BinaryOp, UnaryOp};
+
+use crate::ast::op::{BinaryOp};
 use crate::ast::stmt::{
-    CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
+    CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
 };
-use crate::ast::ty::{PrimTy, Ty, UIntTy};
+use crate::ast::ty::{PrimTy, UIntTy};
 use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::{walk_expr, Visitor};
