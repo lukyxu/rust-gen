@@ -89,6 +89,7 @@ impl Policy {
             Policy::default(),
             Policy::debug(),
             Policy::fields_stress_test(),
+            Policy::reassign_ownership_transfer_debug(),
         ]
     }
 
@@ -342,6 +343,13 @@ impl Policy {
         policy.tuple_struct_copy_prob = 0.0;
         policy
     }
+
+    pub fn reassign_ownership_transfer_debug() -> Self {
+        let mut policy = Policy::default_with_name("rot_debug");
+        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 2);
+        policy.item_dist = vec![(ItemKind::Struct, 1.0)];
+        policy
+    }
 }
 
 impl Default for Policy {
@@ -355,8 +363,8 @@ impl Policy {
     fn default_with_name(name: &'static str) -> Self {
         Policy {
             name,
-            num_item_dist: Distribution::new_uniform_inclusive(2, 2),
-            item_dist: vec![(ItemKind::Struct, 1.0)],
+            num_item_dist: Distribution::new_uniform_inclusive(2, 10),
+            item_dist: vec![(ItemKind::Struct, 1.0), (ItemKind::Function, 1.0)],
 
             num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             stmt_dist: vec![
