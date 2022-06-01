@@ -1,4 +1,4 @@
-use crate::ast::expr::{Expr, IdentExpr};
+use crate::ast::expr::{Expr, IdentExpr, PlaceExpr};
 use crate::ast::ty::Ty;
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedTy};
 use std::collections::btree_map::Iter;
@@ -49,7 +49,7 @@ impl TypeSymbolTable {
         self.var_type_mapping
             .iter()
             .filter_map(|(name, mapping)| {
-                (mapping.mutable && Ty::from(&mapping.ty) == *ty && mapping.ty.moveable())
+                (mapping.mutable && Ty::from(&mapping.ty) == *ty)
                     .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
@@ -89,18 +89,32 @@ impl TypeSymbolTable {
                 unimplemented!()
             }
         }
-        // let mapping = self.var_type_mapping.get_mut(key).unwrap();
-        // assert!(!mapping.ty.ownership_state());
-        // if !mapping.ty.is_copy() {
-        //     (*mapping).moved = true;
-        // }
     }
 
-    // pub fn merge_inplace(&mut self, other: &TypeSymbolTable) {
-    //     for (k, v) in self.var_type_mapping.iter_mut() {
-    //         v.moved = other.var_type_mapping.get(k).unwrap().moved;
-    //     }
-    // }
+    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TrackedTy>{
+        match place {
+            Expr::Field(expr) => {
+                let ty = self.regain_ownership(&expr.base)?;
+                match ty {
+                    TrackedTy::Tuple(_) => {}
+                    TrackedTy::Struct(_) => {}
+                    _ => {}
+                };
+                None
+            }
+            Expr::Ident(expr) => {
+                let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
+                if matches!(mapping.ty.ownership_state(), OwnershipState::NotApplicable) {
+                    return None;
+                }
+                mapping.ty.set_ownership_state(OwnershipState::Owned);
+                Some(&mut mapping.ty)
+            }
+            _ => {
+                None
+            }
+        }
+    }
 
     pub fn update(&mut self, other: &TypeSymbolTable) {
         for (key, v) in self.var_type_mapping.iter_mut() {

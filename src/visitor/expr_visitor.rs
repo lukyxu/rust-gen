@@ -291,12 +291,7 @@ impl Visitor for ExprVisitor {
         let mut place_expr: Expr = expr.place.clone().into();
         let eval_expr = self.eval_place_expr(&mut place_expr);
 
-        expr.place = match place_expr {
-            Expr::Ident(expr) => PlaceExpr::Ident(expr),
-            Expr::Index(expr) => PlaceExpr::Index(expr),
-            Expr::Field(expr) => PlaceExpr::Field(expr),
-            _ => panic!("Invalid place expression type"),
-        };
+        expr.place = place_expr.try_into().unwrap();
 
         if let Some(eval_expr) = eval_expr {
             // (var2.1)[1] = 5
