@@ -49,7 +49,7 @@ impl TypeSymbolTable {
         self.var_type_mapping
             .iter()
             .filter_map(|(name, mapping)| {
-                (mapping.mutable && Ty::from(&mapping.ty) == *ty && mapping.ty.moveable())
+                (mapping.mutable && Ty::from(&mapping.ty) == *ty)
                     .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
@@ -91,23 +91,28 @@ impl TypeSymbolTable {
         }
     }
 
-    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TypeMapping>{
+    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TrackedTy>{
         match place {
             Expr::Field(expr) => {
-                unimplemented!()
-            }
-            Expr::Index(expr) => {
-                self.regain_ownership(&expr.base)
+                let ty = self.regain_ownership(&expr.base)?;
+                match ty {
+                    TrackedTy::Tuple(_) => {}
+                    TrackedTy::Struct(_) => {}
+                    _ => {}
+                };
+                None
             }
             Expr::Ident(expr) => {
                 let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
                 if matches!(mapping.ty.ownership_state(), OwnershipState::NotApplicable) {
-                    return Some(mapping);
+                    return None;
                 }
                 mapping.ty.set_ownership_state(OwnershipState::Owned);
-                Some(mapping)
+                Some(&mut mapping.ty)
             }
-            _ => {unimplemented!()}
+            _ => {
+                None
+            }
         }
     }
 

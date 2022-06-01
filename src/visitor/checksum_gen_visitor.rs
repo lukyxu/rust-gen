@@ -44,6 +44,17 @@ impl ChecksumGenVisitor {
     }
 }
 
+impl ChecksumGenVisitor {
+    fn visit_field_place(&mut self, expr: &mut Expr) {
+        match expr {
+            Expr::Field(expr) => {
+                self.visit_field_place(&mut expr.base)
+            }
+            _ => self.visit_expr(expr)
+        }
+    }
+}
+
 impl Visitor for ChecksumGenVisitor {
     fn enter_scope(&mut self) {
         self.prev_local_type_symbol_tables
@@ -98,15 +109,16 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
-        // TODO: correct this
+        self.full_type_symbol_table.regain_ownership(&expr.clone().into());
+
         match expr {
             PlaceExpr::Field(expr) => {
-                self.visit_expr(&mut expr.base);
-            }
-            PlaceExpr::Index(expr) => {
-                self.visit_expr(&mut expr.base);
+                self.visit_field_place(&mut expr.base)
             }
             PlaceExpr::Ident(_) => {}
+            PlaceExpr::Index(expr) => {
+                self.visit_index_expr(expr)
+            }
         }
     }
 

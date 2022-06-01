@@ -646,13 +646,13 @@ impl AssignExpr {
         };
         let ty = Ty::generate_type(ctx)?;
 
-        let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
-        // let place: Expr = PlaceExpr::generate_expr(ctx, &ty)?.into();
-        // ctx.type_symbol_table.regain_ownership(&place);
-        // let place = place.try_into().unwrap();
+        // let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
+        let place = PlaceExpr::generate_expr(ctx, &ty)?;
+        let rhs = Box::new(Expr::fuzz_move_expr(ctx, &ty)?);
+        ctx.type_symbol_table.regain_ownership(&place.clone().into());
         Some(AssignExpr {
             place,
-            rhs: Box::new(Expr::fuzz_move_expr(ctx, &ty)?),
+            rhs,
         })
     }
 
