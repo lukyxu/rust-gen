@@ -1,19 +1,18 @@
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr,
-    LitIntExpr, LitIntTy, Member, PlaceExpr,
-};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
 
 use std::collections::BTreeSet;
+use crate::ast::file::RustFile;
 
 use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
 
-use crate::ast::op::BinaryOp;
-use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{PrimTy, UIntTy};
+use crate::ast::op::{BinaryOp, UnaryOp};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
+use crate::ast::ty::{PrimTy, Ty, UIntTy};
 use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
-use crate::visitor::base_visitor::{walk_expr, Visitor};
+use crate::visitor::base_visitor::{walk_expr, Visitor, walk_ident_expr};
 
 type LocalTypeSymbolTable = BTreeSet<String>;
 
@@ -137,8 +136,32 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_expr(&mut self, expr: &mut Expr) {
+        // match expr {
+        //     Expr::Literal(literal_expr) => self.visit_literal_expr(literal_expr),
+        //     Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr),
+        //     Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr),
+        //     Expr::Cast(cast_expr) => self.visit_cast_expr(cast_expr),
+        //     Expr::If(if_expr) => self.visit_if_expr(if_expr),
+        //     Expr::Block(block_expr) => self.visit_block_expr(block_expr),
+        //     Expr::Ident(ident_expr) => self.visit_ident_expr(ident_expr),
+        //     Expr::Tuple(tuple_expr) => self.visit_tuple_expr(tuple_expr),
+        //     Expr::Assign(assign_expr) => self.visit_assign_expr(assign_expr),
+        //     Expr::Array(array_expr) => self.visit_array_expr(array_expr),
+        //     Expr::Field(expr) => self.visit_field_place_2(&mut expr.base),
+        //     Expr::Index(index_expr) => self.visit_index_expr(index_expr),
+        //     Expr::Struct(struct_expr) => self.visit_struct_expr(struct_expr),
+        //     Expr::Reference(reference_expr) => self.visit_reference_expr(reference_expr),
+        // }
+        // walk_expr(self, expr);
+        // assert!(self.full_type_symbol_table.move_expr(expr));
         walk_expr(self, expr);
-        self.full_type_symbol_table.move_expr(expr);
+        if !matches!(expr, Expr::Field(_)) {
+            if !self.full_type_symbol_table.move_expr(expr) {
+                assert!(false)
+            }
+        } else {
+            println!("");
+        }
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
@@ -173,6 +196,10 @@ impl Visitor for ChecksumGenVisitor {
         // TODO: Visit place expression
         self.visit_expr(&mut expr.rhs);
     }
+    // fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
+    //     walk_ident_expr(self, expr);
+    //     self.full_type_symbol_table.update(&sym_table);
+    // }
 }
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
