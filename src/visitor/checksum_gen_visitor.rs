@@ -118,7 +118,7 @@ impl Visitor for ChecksumGenVisitor {
                         place: IdentExpr {
                             name: self.checksum_name.to_owned(),
                         }
-                        .into(),
+                            .into(),
                         rhs: Box::new(Expr::Binary(BinaryExpr {
                             lhs: Box::new(Expr::Ident(IdentExpr {
                                 name: self.checksum_name.to_owned(),
@@ -141,9 +141,13 @@ impl Visitor for ChecksumGenVisitor {
         // if self.local_type_symbol_table.contains(&expr.name) {
         //     self.local_type_symbol_table.move_var(&expr.name)
         // }
+        if _expr.name == "var_278" {
+            println!(" ")
+        }
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
+        self.visit_place_expr(&mut expr.place);
         // TODO: Visit place expression
         self.visit_expr(&mut expr.rhs);
     }
@@ -153,7 +157,18 @@ impl Visitor for ChecksumGenVisitor {
         self.full_type_symbol_table.move_expr(expr);
     }
 
-    fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {}
+    fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
+        // TODO: correct this
+        match expr {
+            PlaceExpr::Field(expr) => {
+                self.visit_expr(&mut expr.base);
+            }
+            PlaceExpr::Index(expr) => {
+                self.visit_expr(&mut expr.base);
+            }
+            PlaceExpr::Ident(_) => {}
+        }
+    }
 }
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
