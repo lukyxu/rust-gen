@@ -66,13 +66,7 @@ impl Visitor for ChecksumGenVisitor {
 
     fn exit_scope(&mut self) {
         self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap();
-        // self.local_type_symbol_table
-        //     .merge_inplace(&self.full_type_symbol_table);
-        // self.full_type_symbol_table = self
-        //     .prev_full_type_symbol_tables
-        //     .pop()
-        //     .unwrap()
-        //     .merge(&self.full_type_symbol_table);
+        self.full_type_symbol_table = self.prev_full_type_symbol_tables.pop().unwrap();
     }
 
     fn visit_function(&mut self, function: &mut Function) {

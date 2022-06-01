@@ -355,8 +355,8 @@ impl Policy {
     fn default_with_name(name: &'static str) -> Self {
         Policy {
             name,
-            num_item_dist: Distribution::new_uniform_inclusive(2, 10),
-            item_dist: vec![(ItemKind::Struct, 1.0), (ItemKind::Function, 1.0)],
+            num_item_dist: Distribution::new_uniform_inclusive(2, 2),
+            item_dist: vec![(ItemKind::Struct, 1.0)],
 
             num_stmt_dist: Distribution::new_uniform_inclusive(2, 10),
             stmt_dist: vec![
