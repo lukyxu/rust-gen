@@ -102,6 +102,8 @@ impl Expr {
     }
 
     pub fn generate_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        // Do I need snapshot?
+        // I think not
         let snapshot = ctx.snapshot();
         let expr = Expr::generate_expr(ctx, res_type)?;
         let moved = ctx.type_symbol_table.move_expr(&expr);
@@ -736,7 +738,7 @@ impl FieldExpr {
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
-        let base = Box::new(Expr::fuzz_move_expr(ctx, &tuple.clone().into())?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
             .enumerate()
@@ -749,7 +751,7 @@ impl FieldExpr {
 
     pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, &Some(res_type.clone()))?;
-        let base = Box::new(Expr::fuzz_move_expr(ctx, &struct_ty.clone().into())?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
                 field_struct

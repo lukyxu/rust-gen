@@ -315,7 +315,11 @@ pub struct NameHandler {
 impl NameHandler {
     fn create_var_name(&mut self) -> String {
         self.var_counter += 1;
-        format!("var_{}", self.var_counter)
+        if self.var_counter == 1 {
+            format!("var_a")
+        } else {
+            format!("var_{}", self.var_counter)
+        }
     }
 
     fn create_struct_name(&mut self) -> String {
