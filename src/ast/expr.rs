@@ -114,7 +114,6 @@ impl Expr {
     }
 }
 
-#[cfg(test)]
 impl Expr {
     pub fn bool(b: bool) -> Expr {
         Expr::Literal(LitExpr::Bool(b))
@@ -126,6 +125,14 @@ impl Expr {
 
     pub fn u8(u: u8) -> Expr {
         LitIntExpr::new(u as u128, UIntTy::U8.into()).into()
+    }
+
+    pub fn u32(u: u32) -> Expr {
+        LitIntExpr::new(u as u128, UIntTy::U32.into()).into()
+    }
+
+    pub fn u128(u: u128) -> Expr {
+        LitIntExpr::new(u, UIntTy::U128.into()).into()
     }
 }
 
@@ -601,7 +608,7 @@ impl TryFrom<Expr> for PlaceExpr {
             Expr::Ident(expr) => Ok(expr.into()),
             Expr::Index(expr) => Ok(expr.into()),
             Expr::Field(expr) => Ok(expr.into()),
-            _ => Err("Cannot convert expr to place expr")
+            _ => Err("Cannot convert expr to place expr"),
         }
     }
 }
@@ -649,11 +656,9 @@ impl AssignExpr {
         // let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
         let place = PlaceExpr::generate_expr(ctx, &ty)?;
         let rhs = Box::new(Expr::fuzz_move_expr(ctx, &ty)?);
-        ctx.type_symbol_table.regain_ownership(&place.clone().into());
-        Some(AssignExpr {
-            place,
-            rhs,
-        })
+        ctx.type_symbol_table
+            .regain_ownership(&place.clone().into());
+        Some(AssignExpr { place, rhs })
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
@@ -879,6 +884,12 @@ pub struct TupleStructExpr {
 impl From<TupleStructExpr> for StructExpr {
     fn from(expr: TupleStructExpr) -> StructExpr {
         StructExpr::Tuple(expr)
+    }
+}
+
+impl From<TupleStructExpr> for Expr {
+    fn from(expr: TupleStructExpr) -> Expr {
+        Expr::Struct(StructExpr::Tuple(expr))
     }
 }
 

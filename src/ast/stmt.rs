@@ -121,6 +121,18 @@ pub struct InitLocalStmt {
     pub mutable: bool,
 }
 
+impl From<InitLocalStmt> for LocalStmt {
+    fn from(stmt: InitLocalStmt) -> LocalStmt {
+        LocalStmt::Init(stmt)
+    }
+}
+
+impl From<InitLocalStmt> for Stmt {
+    fn from(stmt: InitLocalStmt) -> Self {
+        Stmt::Local(LocalStmt::Init(stmt))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExprStmt {
     pub expr: Expr,

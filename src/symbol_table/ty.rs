@@ -91,7 +91,7 @@ impl TypeSymbolTable {
         }
     }
 
-    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TrackedTy>{
+    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TrackedTy> {
         match place {
             Expr::Field(expr) => {
                 let ty = self.regain_ownership(&expr.base)?;
@@ -110,9 +110,7 @@ impl TypeSymbolTable {
                 mapping.ty.set_ownership_state(OwnershipState::Owned);
                 Some(&mut mapping.ty)
             }
-            _ => {
-                None
-            }
+            _ => None,
         }
     }
 

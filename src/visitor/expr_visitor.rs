@@ -4,8 +4,8 @@ use crate::ast::eval_expr::{
 };
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr,
-    TupleExpr, TupleStructExpr, UnaryExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr, TupleExpr,
+    TupleStructExpr, UnaryExpr,
 };
 
 use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};

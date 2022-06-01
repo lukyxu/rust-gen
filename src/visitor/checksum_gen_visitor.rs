@@ -1,14 +1,14 @@
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr, LitIntExpr, LitIntTy, Member, PlaceExpr};
+use crate::ast::expr::{
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr,
+    LitIntExpr, LitIntTy, Member, PlaceExpr,
+};
 
-use std::collections::{BTreeSet};
-
+use std::collections::BTreeSet;
 
 use crate::ast::function::Function;
 
-
-
-use crate::ast::op::{BinaryOp};
+use crate::ast::op::BinaryOp;
 use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{PrimTy, UIntTy};
 use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
@@ -43,10 +43,8 @@ impl ChecksumGenVisitor {
 impl ChecksumGenVisitor {
     fn visit_field_place(&mut self, expr: &mut Expr) {
         match expr {
-            Expr::Field(expr) => {
-                self.visit_field_place(&mut expr.base)
-            }
-            _ => self.visit_expr(expr)
+            Expr::Field(expr) => self.visit_field_place(&mut expr.base),
+            _ => self.visit_expr(expr),
         }
     }
 
@@ -76,7 +74,7 @@ impl ChecksumGenVisitor {
                         place: IdentExpr {
                             name: self.checksum_name.to_owned(),
                         }
-                            .into(),
+                        .into(),
                         rhs: Box::new(Expr::Binary(BinaryExpr {
                             lhs: Box::new(Expr::Ident(IdentExpr {
                                 name: self.checksum_name.to_owned(),
@@ -144,16 +142,13 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
-        self.full_type_symbol_table.regain_ownership(&expr.clone().into());
+        self.full_type_symbol_table
+            .regain_ownership(&expr.clone().into());
 
         match expr {
-            PlaceExpr::Field(expr) => {
-                self.visit_field_place(&mut expr.base)
-            }
+            PlaceExpr::Field(expr) => self.visit_field_place(&mut expr.base),
             PlaceExpr::Ident(_) => {}
-            PlaceExpr::Index(expr) => {
-                self.visit_index_expr(expr)
-            }
+            PlaceExpr::Index(expr) => self.visit_index_expr(expr),
         }
     }
 
@@ -165,8 +160,12 @@ impl Visitor for ChecksumGenVisitor {
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         self.visit_expr(&mut expr.condition);
         let then_sym_t = self.visit_block_internal(&mut expr.then);
-        let false_sym_t = expr.otherwise.as_mut().map(|otherwise|self.visit_block_internal(otherwise));
-        self.full_type_symbol_table.update_branch(&then_sym_t, &false_sym_t)
+        let false_sym_t = expr
+            .otherwise
+            .as_mut()
+            .map(|otherwise| self.visit_block_internal(otherwise));
+        self.full_type_symbol_table
+            .update_branch(&then_sym_t, &false_sym_t)
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
