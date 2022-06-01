@@ -593,6 +593,19 @@ impl From<PlaceExpr> for Expr {
     }
 }
 
+impl TryFrom<Expr> for PlaceExpr {
+    type Error = &'static str;
+
+    fn try_from(expr: Expr) -> Result<PlaceExpr, Self::Error> {
+        match expr {
+            Expr::Ident(expr) => Ok(expr.into()),
+            Expr::Index(expr) => Ok(expr.into()),
+            Expr::Field(expr) => Ok(expr.into()),
+            _ => Err("Cannot convert expr to place expr")
+        }
+    }
+}
+
 impl PlaceExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<PlaceExpr> {
         let expr_kind = ctx.choose_place_expr_kind();
@@ -634,7 +647,9 @@ impl AssignExpr {
         let ty = Ty::generate_type(ctx)?;
 
         let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
-
+        // let place: Expr = PlaceExpr::generate_expr(ctx, &ty)?.into();
+        // ctx.type_symbol_table.regain_ownership(&place);
+        // let place = place.try_into().unwrap();
         Some(AssignExpr {
             place,
             rhs: Box::new(Expr::fuzz_move_expr(ctx, &ty)?),
