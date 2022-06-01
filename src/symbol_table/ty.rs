@@ -78,7 +78,7 @@ impl TypeSymbolTable {
                     OwnershipState::PartiallyOwned | OwnershipState::Moved => false,
                 }
             }
-            Expr::Assign(_) => false,
+            Expr::Assign(_) => true,
             Expr::Field(field_expr) => {
                 // Find ident of original
                 // recursively update chain
