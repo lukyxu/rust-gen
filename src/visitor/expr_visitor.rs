@@ -4,7 +4,7 @@ use crate::ast::eval_expr::{
 };
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr,
     TupleExpr, TupleStructExpr, UnaryExpr,
 };
 
@@ -434,7 +434,7 @@ impl ExprVisitor {
 mod tests {
     use super::*;
 
-    use crate::ast::expr::BlockExpr;
+    use crate::ast::expr::{BlockExpr, PlaceExpr};
     use crate::ast::function::Function;
     use crate::ast::op::{BinaryOp, UnaryOp};
     use crate::ast::stmt::{LocalStmt, Stmt};

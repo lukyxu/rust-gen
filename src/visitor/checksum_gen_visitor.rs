@@ -1,20 +1,16 @@
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
-};
-use crate::ast::file::RustFile;
-use std::collections::{BTreeMap, BTreeSet};
+use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr, LitIntExpr, LitIntTy, Member, PlaceExpr};
+
+use std::collections::{BTreeSet};
+
 
 use crate::ast::function::Function;
-use crate::ast::item::{FunctionItem, Item, StructItem};
 
-use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::stmt::{
-    CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
-};
-use crate::ast::ty::{PrimTy, Ty, UIntTy};
+
+
+use crate::ast::op::{BinaryOp};
+use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
+use crate::ast::ty::{PrimTy, UIntTy};
 use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::{walk_expr, Visitor};
@@ -53,6 +49,51 @@ impl ChecksumGenVisitor {
             _ => self.visit_expr(expr)
         }
     }
+
+    fn visit_block_internal(&mut self, expr: &mut BlockExpr) -> TypeSymbolTable {
+        self.enter_scope();
+        for stmt in (&mut expr.stmts).split_last_mut().unwrap().1 {
+            self.visit_stmt(stmt);
+        }
+        for name in &self.local_type_symbol_table {
+            if name == self.checksum_name {
+                continue;
+            }
+            let ty = self.full_type_symbol_table.get_var_type(&name).unwrap();
+            let exprs = exprs_from_ident(name, &ty);
+            let cast_exprs: Vec<Expr> = exprs
+                .into_iter()
+                .map(|expr| {
+                    Expr::Cast(CastExpr {
+                        expr: Box::new(expr),
+                        ty: UIntTy::U128.into(),
+                    })
+                })
+                .collect();
+            for cast_expr in cast_exprs {
+                let stmt = Stmt::Semi(SemiStmt {
+                    expr: Expr::Assign(AssignExpr {
+                        place: IdentExpr {
+                            name: self.checksum_name.to_owned(),
+                        }
+                            .into(),
+                        rhs: Box::new(Expr::Binary(BinaryExpr {
+                            lhs: Box::new(Expr::Ident(IdentExpr {
+                                name: self.checksum_name.to_owned(),
+                            })),
+                            rhs: Box::new(cast_expr),
+                            op: BinaryOp::Add,
+                        })),
+                    }),
+                });
+                expr.stmts.insert(expr.stmts.len() - 1, stmt);
+            }
+        }
+        self.visit_stmt((&mut expr.stmts).last_mut().unwrap());
+        let res = self.full_type_symbol_table.clone();
+        self.exit_scope();
+        res
+    }
 }
 
 impl Visitor for ChecksumGenVisitor {
@@ -66,13 +107,7 @@ impl Visitor for ChecksumGenVisitor {
 
     fn exit_scope(&mut self) {
         self.local_type_symbol_table = self.prev_local_type_symbol_tables.pop().unwrap();
-        // self.local_type_symbol_table
-        //     .merge_inplace(&self.full_type_symbol_table);
-        // self.full_type_symbol_table = self
-        //     .prev_full_type_symbol_tables
-        //     .pop()
-        //     .unwrap()
-        //     .merge(&self.full_type_symbol_table);
+        self.full_type_symbol_table = self.prev_full_type_symbol_tables.pop().unwrap();
     }
 
     fn visit_function(&mut self, function: &mut Function) {
@@ -123,46 +158,15 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        self.enter_scope();
-        for stmt in (&mut expr.stmts).split_last_mut().unwrap().1 {
-            self.visit_stmt(stmt);
-        }
-        for name in &self.local_type_symbol_table {
-            if name == self.checksum_name {
-                continue;
-            }
-            let ty = self.full_type_symbol_table.get_var_type(&name).unwrap();
-            let exprs = exprs_from_ident(name, &ty);
-            let cast_exprs: Vec<Expr> = exprs
-                .into_iter()
-                .map(|expr| {
-                    Expr::Cast(CastExpr {
-                        expr: Box::new(expr),
-                        ty: UIntTy::U128.into(),
-                    })
-                })
-                .collect();
-            for cast_expr in cast_exprs {
-                let stmt = Stmt::Semi(SemiStmt {
-                    expr: Expr::Assign(AssignExpr {
-                        place: IdentExpr {
-                            name: self.checksum_name.to_owned(),
-                        }
-                            .into(),
-                        rhs: Box::new(Expr::Binary(BinaryExpr {
-                            lhs: Box::new(Expr::Ident(IdentExpr {
-                                name: self.checksum_name.to_owned(),
-                            })),
-                            rhs: Box::new(cast_expr),
-                            op: BinaryOp::Add,
-                        })),
-                    }),
-                });
-                expr.stmts.insert(expr.stmts.len() - 1, stmt);
-            }
-        }
-        self.visit_stmt((&mut expr.stmts).last_mut().unwrap());
-        self.exit_scope();
+        let sym_table = self.visit_block_internal(expr);
+        self.full_type_symbol_table.update(&sym_table);
+    }
+
+    fn visit_if_expr(&mut self, expr: &mut IfExpr) {
+        self.visit_expr(&mut expr.condition);
+        let then_sym_t = self.visit_block_internal(&mut expr.then);
+        let false_sym_t = expr.otherwise.as_mut().map(|otherwise|self.visit_block_internal(otherwise));
+        self.full_type_symbol_table.update_branch(&then_sym_t, &false_sym_t)
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {

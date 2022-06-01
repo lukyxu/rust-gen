@@ -1,4 +1,4 @@
-use crate::ast::expr::{Expr, IdentExpr, PlaceExpr};
+use crate::ast::expr::{Expr, IdentExpr};
 use crate::ast::ty::Ty;
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedTy};
 use std::collections::btree_map::Iter;
@@ -79,7 +79,7 @@ impl TypeSymbolTable {
                 }
             }
             Expr::Assign(_) => true,
-            Expr::Field(field_expr) => {
+            Expr::Field(_field_expr) => {
                 // Find ident of original
                 // recursively update chain
                 // field_expr.base
