@@ -102,8 +102,7 @@ impl Expr {
     }
 
     pub fn generate_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        // Do I need snapshot?
-        // I think not
+        // TODO: Check if I need snapshot here
         let snapshot = ctx.snapshot();
         let expr = Expr::generate_expr(ctx, res_type)?;
         let moved = ctx.type_symbol_table.move_expr(&expr);

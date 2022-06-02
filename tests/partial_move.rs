@@ -1,4 +1,6 @@
-use rust_gen::ast::expr::{BlockExpr, Expr, FieldExpr, IdentExpr, Member, TupleExpr, TupleStructExpr};
+use rust_gen::ast::expr::{
+    BlockExpr, Expr, FieldExpr, IdentExpr, Member, TupleExpr, TupleStructExpr,
+};
 use rust_gen::ast::file::RustFile;
 use rust_gen::ast::function::Function;
 use rust_gen::ast::item::{FunctionItem, StructItem};
@@ -8,6 +10,16 @@ use rust_gen::visitor::base_visitor::Visitor;
 use rust_gen::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use rust_gen::visitor::emit_visitor::EmitVisitor;
 
+// #[derive(PartialEq, Clone)]
+// struct Struct1(u32);
+//
+// #[derive(PartialEq, Clone)]
+// struct Struct2(Struct1, Struct1);
+//
+// fn main() {
+//     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
+//     s2;
+// }
 
 #[test]
 fn struct_move() {
@@ -32,11 +44,11 @@ fn struct_move() {
             StructItem {
                 struct_ty: struct1.clone(),
             }
-                .into(),
+            .into(),
             StructItem {
                 struct_ty: struct2.clone(),
             }
-                .into(),
+            .into(),
             FunctionItem {
                 function: Function {
                     name: "main".to_string(),
@@ -56,31 +68,33 @@ fn struct_move() {
                                                     tuple: vec![Expr::u32(1)],
                                                 },
                                             }
-                                                .into(),
+                                            .into(),
                                             TupleStructExpr {
                                                 struct_name: "Struct1".to_string(),
                                                 fields: TupleExpr {
                                                     tuple: vec![Expr::u32(2)],
                                                 },
                                             }
-                                                .into(),
+                                            .into(),
                                         ],
                                     },
                                 }
-                                    .into(),
+                                .into(),
                                 mutable: false,
                             }
-                                .into(),
+                            .into(),
                             SemiStmt {
                                 expr: IdentExpr {
-                                    name: "s2".to_string()
-                                }.into()
-                            }.into(),
+                                    name: "s2".to_string(),
+                                }
+                                .into(),
+                            }
+                            .into(),
                         ],
                     },
                 },
             }
-                .into(),
+            .into(),
         ],
     };
     let mut checksum_gen_visitor = ChecksumGenVisitor::new(true);
@@ -92,7 +106,6 @@ fn struct_move() {
     assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
     assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
 }
-
 
 // #[derive(PartialEq, Clone)]
 // struct Struct1(u32);
@@ -169,12 +182,17 @@ fn partial_struct_move() {
                             .into(),
                             SemiStmt {
                                 expr: FieldExpr {
-                                    base: Box::new(IdentExpr {
-                                        name: "s2".to_string()
-                                    }.into()),
-                                    member: Member::Unnamed(0)
-                                }.into()
-                            }.into(),
+                                    base: Box::new(
+                                        IdentExpr {
+                                            name: "s2".to_string(),
+                                        }
+                                        .into(),
+                                    ),
+                                    member: Member::Unnamed(0),
+                                }
+                                .into(),
+                            }
+                            .into(),
                         ],
                     },
                 },
@@ -191,4 +209,3 @@ fn partial_struct_move() {
     assert!(output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
     assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
 }
-
