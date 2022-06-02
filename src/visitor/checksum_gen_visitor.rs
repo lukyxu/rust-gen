@@ -175,11 +175,6 @@ impl Visitor for ChecksumGenVisitor {
             .regain_ownership(&expr.clone().into());
     }
 
-    fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        let sym_table = self.visit_block_internal(expr);
-        self.full_type_symbol_table.update(&sym_table);
-    }
-
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         self.visit_expr(&mut expr.condition);
         let then_sym_t = self.visit_block_internal(&mut expr.then);
@@ -191,6 +186,11 @@ impl Visitor for ChecksumGenVisitor {
             .update_branch(&then_sym_t, &false_sym_t)
     }
 
+    fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
+        let sym_table = self.visit_block_internal(expr);
+        self.full_type_symbol_table.update(&sym_table);
+    }
+
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
         self.visit_expr(&mut expr.rhs);
         self.visit_place_expr(&mut expr.place);
@@ -199,7 +199,7 @@ impl Visitor for ChecksumGenVisitor {
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
     let mut accumulator = vec![];
-    if ty.ownership_state() == OwnershipState::Owned {
+    if ty.ownership_state() == OwnershipState::Moved {
         return vec![];
     }
     match ty {

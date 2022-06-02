@@ -46,8 +46,7 @@ impl TrackedTy {
                     .iter()
                     .map(TrackedTy::ownership_state)
                     .any(|state| {
-                        ty.assoc == OwnershipState::Owned
-                            || ty.assoc == OwnershipState::PartiallyOwned
+                        state == OwnershipState::Owned || state == OwnershipState::PartiallyOwned
                     })
                 {
                     return OwnershipState::PartiallyOwned;
@@ -67,8 +66,8 @@ impl TrackedTy {
                         .iter()
                         .map(|field_def| field_def.ty.ownership_state())
                         .any(|state| {
-                            ty.assoc == OwnershipState::Owned
-                                || ty.assoc == OwnershipState::PartiallyOwned
+                            state == OwnershipState::Owned
+                                || state == OwnershipState::PartiallyOwned
                         })
                     {
                         return OwnershipState::PartiallyOwned;

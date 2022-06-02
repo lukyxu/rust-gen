@@ -1,5 +1,5 @@
 use crate::ast::expr::{Expr, IdentExpr, Member, PlaceExpr};
-use crate::ast::ty::{StructTy, Ty};
+use crate::ast::ty::Ty;
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
