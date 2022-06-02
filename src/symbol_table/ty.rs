@@ -139,7 +139,10 @@ impl TypeSymbolTable {
             {
                 v.ty.set_ownership_state(OwnershipState::Moved)
             }
-            if matches!((branch1_ownership, branch2_ownership), (OwnershipState::Owned, OwnershipState::Owned)) {
+            if matches!(
+                (branch1_ownership, branch2_ownership),
+                (OwnershipState::Owned, OwnershipState::Owned)
+            ) {
                 v.ty.set_ownership_state(OwnershipState::Owned)
             }
         }
