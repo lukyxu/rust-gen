@@ -43,7 +43,26 @@ impl ChecksumGenVisitor {
     fn visit_field_place(&mut self, expr: &mut Expr) {
         match expr {
             Expr::Field(expr) => self.visit_field_place(&mut expr.base),
-            _ => self.visit_expr(expr),
+            _ => self.visit_non_move_expr(expr),
+        }
+    }
+
+    fn visit_non_move_expr(&mut self, expr: &mut Expr) {
+        match expr {
+            Expr::Literal(literal_expr) => self.visit_literal_expr(literal_expr),
+            Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr),
+            Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr),
+            Expr::Cast(cast_expr) => self.visit_cast_expr(cast_expr),
+            Expr::If(if_expr) => self.visit_if_expr(if_expr),
+            Expr::Block(block_expr) => self.visit_block_expr(block_expr),
+            Expr::Ident(ident_expr) => self.visit_ident_expr(ident_expr),
+            Expr::Tuple(tuple_expr) => self.visit_tuple_expr(tuple_expr),
+            Expr::Assign(assign_expr) => self.visit_assign_expr(assign_expr),
+            Expr::Array(array_expr) => self.visit_array_expr(array_expr),
+            Expr::Field(expr) => self.visit_non_move_expr(&mut expr.base),
+            Expr::Index(index_expr) => self.visit_index_expr(index_expr),
+            Expr::Struct(struct_expr) => self.visit_struct_expr(struct_expr),
+            Expr::Reference(reference_expr) => self.visit_reference_expr(reference_expr),
         }
     }
 
@@ -135,44 +154,24 @@ impl Visitor for ChecksumGenVisitor {
         self.visit_expr(&mut stmt.rhs);
     }
 
+    // fuzz_move_expr
     fn visit_expr(&mut self, expr: &mut Expr) {
-        // match expr {
-        //     Expr::Literal(literal_expr) => self.visit_literal_expr(literal_expr),
-        //     Expr::Binary(binary_expr) => self.visit_binary_expr(binary_expr),
-        //     Expr::Unary(unary_expr) => self.visit_unary_expr(unary_expr),
-        //     Expr::Cast(cast_expr) => self.visit_cast_expr(cast_expr),
-        //     Expr::If(if_expr) => self.visit_if_expr(if_expr),
-        //     Expr::Block(block_expr) => self.visit_block_expr(block_expr),
-        //     Expr::Ident(ident_expr) => self.visit_ident_expr(ident_expr),
-        //     Expr::Tuple(tuple_expr) => self.visit_tuple_expr(tuple_expr),
-        //     Expr::Assign(assign_expr) => self.visit_assign_expr(assign_expr),
-        //     Expr::Array(array_expr) => self.visit_array_expr(array_expr),
-        //     Expr::Field(expr) => self.visit_field_place_2(&mut expr.base),
-        //     Expr::Index(index_expr) => self.visit_index_expr(index_expr),
-        //     Expr::Struct(struct_expr) => self.visit_struct_expr(struct_expr),
-        //     Expr::Reference(reference_expr) => self.visit_reference_expr(reference_expr),
-        // }
-        // walk_expr(self, expr);
-        // assert!(self.full_type_symbol_table.move_expr(expr));
-        walk_expr(self, expr);
-        if !matches!(expr, Expr::Field(_)) {
-            if !self.full_type_symbol_table.move_expr(expr) {
-                assert!(false)
-            }
-        } else {
-            println!("");
+        self.visit_non_move_expr(expr);
+        if !(matches!(expr, Expr::Field(_)) || self.full_type_symbol_table.move_expr(expr)) {
+            dbg!(expr);
+            panic!()
         }
+        // assert!(matches!(expr, Expr::Field(_)) || self.full_type_symbol_table.move_expr(expr))
+        // assert!();
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
-        self.full_type_symbol_table
-            .regain_ownership(&expr.clone().into());
-
         match expr {
             PlaceExpr::Field(expr) => self.visit_field_place(&mut expr.base),
-            PlaceExpr::Ident(_) => {}
+            PlaceExpr::Ident(_expr) => {}
             PlaceExpr::Index(expr) => self.visit_index_expr(expr),
         }
+        self.full_type_symbol_table.regain_ownership(&expr.clone().into());
     }
 
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
@@ -192,14 +191,9 @@ impl Visitor for ChecksumGenVisitor {
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
-        self.visit_place_expr(&mut expr.place);
-        // TODO: Visit place expression
         self.visit_expr(&mut expr.rhs);
+        self.visit_place_expr(&mut expr.place);
     }
-    // fn visit_ident_expr(&mut self, expr: &mut IdentExpr) {
-    //     walk_ident_expr(self, expr);
-    //     self.full_type_symbol_table.update(&sym_table);
-    // }
 }
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {

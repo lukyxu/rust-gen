@@ -279,8 +279,8 @@ pub fn walk_field_expr<V: Visitor>(visitor: &mut V, FieldExpr { base, member }: 
 }
 
 pub fn walk_index_expr<V: Visitor>(visitor: &mut V, IndexExpr { index, base }: &mut IndexExpr) {
-    visitor.visit_expr(index);
     visitor.visit_expr(base);
+    visitor.visit_expr(index);
 }
 
 pub fn walk_struct_expr<V: Visitor>(visitor: &mut V, expr: &mut StructExpr) {
