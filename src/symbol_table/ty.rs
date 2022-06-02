@@ -126,37 +126,11 @@ impl TypeSymbolTable {
     pub fn regain_ownership(&mut self, place: &PlaceExpr) {
         let ty = self.get_tracked_ty(&place.clone().into());
         if let Some(ty) = ty {
-            let ownership = ty.ownership_state();
-            assert!(
-                ownership == OwnershipState::Moved
-                    || ownership == OwnershipState::NotApplicable
-                    || ownership == OwnershipState::PartiallyOwned
-            );
             if matches!(ty.ownership_state(), OwnershipState::NotApplicable) {
                 return;
             }
             ty.set_ownership_state(OwnershipState::Owned);
         }
-        // match place {
-        //     Expr::Field(expr) => {
-        //         let ty = self.regain_ownership(&expr.base)?;
-        //         match ty {
-        //             TrackedTy::Tuple(_) => {}
-        //             TrackedTy::Struct(_) => {}
-        //             _ => {}
-        //         };
-        //         None
-        //     }
-        //     Expr::Ident(expr) => {
-        //         let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
-        //         if matches!(mapping.ty.ownership_state(), OwnershipState::NotApplicable) {
-        //             return None;
-        //         }
-        //         mapping.ty.set_ownership_state(OwnershipState::Owned);
-        //         Some(&mut mapping.ty)
-        //     }
-        //     _ => None,
-        // }
     }
 
     pub fn update(&mut self, other: &TypeSymbolTable) {
