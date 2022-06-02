@@ -67,7 +67,7 @@ impl StructTemplate {
                                     name: "s2".to_string(),
                                     ty: struct2.clone().into(),
                                     rhs: StructTemplate::struct2_expr(1, 2),
-                                    mutable: false,
+                                    mutable: mutable_struct,
                                 }
                                 .into(),
                             ],
@@ -129,6 +129,13 @@ impl StructTemplate {
                 rhs: Box::new(StructTemplate::struct2_expr(field_1, field_2)),
             }
             .into(),
+        }
+        .into()
+    }
+
+    fn block_stmt(stmts: Vec<Stmt>) -> Stmt {
+        SemiStmt {
+            expr: BlockExpr { stmts }.into(),
         }
         .into()
     }
@@ -201,17 +208,51 @@ fn struct_move_reassign() {
 // fn main() {
 //     let mut s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
 //     s2;
+//     {
+//         s2 = Struct2(Struct1(3_u32,), Struct1(4_u32,));
+//     };
+// }
+
+#[test]
+fn struct_move_reassign_block() {
+    let mut template = StructTemplate::new(true);
+    template.add_stmt(StructTemplate::struct_ident_stmt("s2"));
+    let block_stmts = vec![StructTemplate::struct_assign_stmt("s2", 3, 4)];
+    template.add_stmt(StructTemplate::block_stmt(block_stmts));
+    let output = generate_checksum_and_emit(&mut template.2);
+    assert!(output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+}
+
+// fn main() {
+//     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
+//     {
+//         s2;
+//     };
+// }
+#[test]
+fn struct_block_move() {
+    let mut template = StructTemplate::default();
+    let block_stmts = vec![StructTemplate::struct_ident_stmt("s2")];
+    template.add_stmt(StructTemplate::block_stmt(block_stmts));
+    let output = generate_checksum_and_emit(&mut template.2);
+    assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+}
+
+// fn main() {
+//     let mut s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
+//     s2;
 //     if (false) {
 //         s2 = Struct2(Struct1(3_u32,), Struct1(4_u32,));
 //     };
 // }
+
 #[test]
 fn struct_move_reassign_single_branch() {
     let mut template = StructTemplate::new(true);
     template.add_stmt(StructTemplate::struct_ident_stmt("s2"));
-    let then_stmts = vec![
-        StructTemplate::struct_assign_stmt("s2", 3, 4)
-    ];
+    let then_stmts = vec![StructTemplate::struct_assign_stmt("s2", 3, 4)];
     template.add_stmt(StructTemplate::if_else_stmt(false, then_stmts, None));
     let output = generate_checksum_and_emit(&mut template.2);
     assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
@@ -227,17 +268,18 @@ fn struct_move_reassign_single_branch() {
 //         s2 = Struct2(Struct1(5_u32,), Struct1(6_u32,));
 //     };
 // }
+
 #[test]
 fn struct_move_reassign_both_branch() {
     let mut template = StructTemplate::new(true);
     template.add_stmt(StructTemplate::struct_ident_stmt("s2"));
-    let then_stmts = vec![
-        StructTemplate::struct_assign_stmt("s2", 3, 4)
-    ];
-    let otherwise_stmts = vec![
-        StructTemplate::struct_assign_stmt("s2", 5, 6)
-    ];
-    template.add_stmt(StructTemplate::if_else_stmt(true, then_stmts, Some(otherwise_stmts)));
+    let then_stmts = vec![StructTemplate::struct_assign_stmt("s2", 3, 4)];
+    let otherwise_stmts = vec![StructTemplate::struct_assign_stmt("s2", 5, 6)];
+    template.add_stmt(StructTemplate::if_else_stmt(
+        true,
+        then_stmts,
+        Some(otherwise_stmts),
+    ));
     let output = generate_checksum_and_emit(&mut template.2);
     assert!(output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
     assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
