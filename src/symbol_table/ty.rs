@@ -16,7 +16,7 @@ pub struct TypeSymbolTable {
 }
 
 impl TypeSymbolTable {
-    pub fn add_var(&mut self, key: String, ty: Ty, mutable: bool) {
+    pub fn add_var(&mut self, key: String, ty: &Ty, mutable: bool) {
         self.var_type_mapping.insert(
             key,
             TypeMapping {
@@ -94,7 +94,8 @@ impl TypeSymbolTable {
             | Expr::Tuple(_)
             | Expr::Array(_)
             | Expr::Index(_)
-            | Expr::Struct(_) => true,
+            | Expr::Struct(_)
+            | Expr::Assign(_) => true,
             Expr::Ident(ident) => {
                 let mapping = self.var_type_mapping.get_mut(&ident.name).unwrap();
                 match mapping.ty.ownership_state() {
@@ -106,14 +107,13 @@ impl TypeSymbolTable {
                     OwnershipState::PartiallyOwned | OwnershipState::Moved => false,
                 }
             }
-            Expr::Assign(_) => true,
             Expr::Field(field_expr) => {
                 let ty = self.get_tracked_ty(&field_expr.clone().into());
                 if let Some(ty) = ty {
                     if !ty.movable() {
                         return false;
                     }
-                    ty.set_ownership_state(OwnershipState::Moved)
+                    ty.set_ownership_state(OwnershipState::Moved);
                 };
                 true
             }
@@ -134,13 +134,13 @@ impl TypeSymbolTable {
     }
 
     pub fn update(&mut self, other: &TypeSymbolTable) {
-        for (key, v) in self.var_type_mapping.iter_mut() {
-            v.ty.set_ownership_state(other.get_var_type(key).unwrap().ownership_state())
+        for (key, v) in &mut self.var_type_mapping {
+            v.ty.set_ownership_state(other.get_var_type(key).unwrap().ownership_state());
         }
     }
 
     pub fn update_branch(&mut self, branch1: &TypeSymbolTable, branch2: &Option<TypeSymbolTable>) {
-        for (key, v) in self.var_type_mapping.iter_mut() {
+        for (key, v) in &mut self.var_type_mapping {
             let prev_ownership = v.ty.ownership_state();
             let branch1_ownership = branch1.get_var_type(key).unwrap().ownership_state();
             let branch2_ownership = if let Some(branch2) = branch2 {
@@ -156,13 +156,13 @@ impl TypeSymbolTable {
             if matches!(branch1_ownership, OwnershipState::Moved)
                 || matches!(branch2_ownership, OwnershipState::Moved)
             {
-                v.ty.set_ownership_state(OwnershipState::Moved)
+                v.ty.set_ownership_state(OwnershipState::Moved);
             }
             if matches!(
                 (branch1_ownership, branch2_ownership),
                 (OwnershipState::Owned, OwnershipState::Owned)
             ) {
-                v.ty.set_ownership_state(OwnershipState::Owned)
+                v.ty.set_ownership_state(OwnershipState::Owned);
             }
         }
     }

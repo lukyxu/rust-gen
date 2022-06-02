@@ -76,7 +76,7 @@ impl ChecksumGenVisitor {
             if name == self.checksum_name {
                 continue;
             }
-            let ty = self.full_type_symbol_table.get_var_type(&name).unwrap();
+            let ty = self.full_type_symbol_table.get_var_type(name).unwrap();
             let exprs = exprs_from_ident(name, &ty);
             let cast_exprs: Vec<Expr> = exprs
                 .into_iter()
@@ -151,7 +151,7 @@ impl Visitor for ChecksumGenVisitor {
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         self.local_type_symbol_table.insert(stmt.name.clone());
         self.full_type_symbol_table
-            .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
+            .add_var(stmt.name.clone(), &stmt.ty, stmt.mutable);
         self.visit_expr(&mut stmt.rhs);
     }
 
@@ -162,7 +162,7 @@ impl Visitor for ChecksumGenVisitor {
             self.full_type_symbol_table.move_expr(expr),
             "Expr {:?} already moved",
             &expr
-        )
+        );
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
@@ -172,7 +172,7 @@ impl Visitor for ChecksumGenVisitor {
             PlaceExpr::Index(expr) => self.visit_index_expr(expr),
         }
         self.full_type_symbol_table
-            .regain_ownership(&expr.clone().into());
+            .regain_ownership(expr);
     }
 
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
@@ -183,7 +183,7 @@ impl Visitor for ChecksumGenVisitor {
             .as_mut()
             .map(|otherwise| self.visit_block_internal(otherwise));
         self.full_type_symbol_table
-            .update_branch(&then_sym_t, &false_sym_t)
+            .update_branch(&then_sym_t, &false_sym_t);
     }
 
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {

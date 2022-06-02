@@ -90,7 +90,7 @@ impl<A> GTy<A> {
             GTy::Reference(ty) => ty.is_copy(),
         };
         if is_copy {
-            assert!(self.is_clone())
+            assert!(self.is_clone());
         }
         is_copy
     }
@@ -240,7 +240,7 @@ impl PrimTy {
                 PrimTy::UInt(UIntTy::USize),
             ]);
         }
-        return ints;
+        ints
     }
 
     pub fn require_lifetime(&self) -> bool {
@@ -499,7 +499,7 @@ impl TupleTy {
         let len = ctx.choose_tuple_length();
         let mut types: Vec<Ty> = vec![];
         for _ in 0..len {
-            types.push(Ty::fuzz_type(ctx)?)
+            types.push(Ty::fuzz_type(ctx)?);
         }
         if let Some(ty) = &ty {
             let index = ctx.rng.gen_range(0..len);
@@ -531,7 +531,7 @@ impl<A: Clone> GArrayTy<A> {
 
 impl<A> GArrayTy<A> {
     pub fn array_depth(&self) -> usize {
-        return 1 + self.base_ty.array_depth();
+        1 + self.base_ty.array_depth()
     }
 
     pub fn require_lifetime(&self) -> bool {
@@ -784,7 +784,7 @@ impl FieldStructTy {
         let weight = 1.0;
         ctx.struct_type_dist
             .push((struct_ty.clone().into(), weight));
-        return Some(struct_ty);
+        Some(struct_ty)
     }
 }
 
@@ -886,9 +886,7 @@ pub struct Lifetime(pub String);
 
 impl Lifetime {
     fn generate_lifetime(ctx: &mut Context) -> Option<Lifetime> {
-        if ctx.struct_ctx.is_none() {
-            return None;
-        }
+        ctx.struct_ctx.as_ref()?;
         let mut lifetime: Option<Lifetime> = None;
         if !ctx.choose_new_lifetime() {
             lifetime = ctx
@@ -898,7 +896,7 @@ impl Lifetime {
                 .lifetimes
                 .iter()
                 .choose(&mut ctx.rng)
-                .cloned()
+                .cloned();
         }
         if lifetime.is_none() {
             lifetime = ctx.create_lifetime_name().map(Lifetime);

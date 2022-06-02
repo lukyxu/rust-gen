@@ -51,7 +51,7 @@ impl TrackedTy {
                 {
                     return OwnershipState::PartiallyOwned;
                 }
-                return OwnershipState::Owned;
+                OwnershipState::Owned
             }
             TrackedTy::Array(ty) => ty.assoc,
             TrackedTy::Struct(ty) => match ty {
@@ -72,7 +72,7 @@ impl TrackedTy {
                     {
                         return OwnershipState::PartiallyOwned;
                     }
-                    return OwnershipState::Owned;
+                    OwnershipState::Owned
                 }
                 GStructTy::Tuple(ty) => {
                     if ty.assoc == OwnershipState::Moved
@@ -92,7 +92,7 @@ impl TrackedTy {
                     {
                         return OwnershipState::PartiallyOwned;
                     }
-                    return OwnershipState::Owned;
+                    OwnershipState::Owned
                 }
             },
             TrackedTy::Reference(ty) => ty.assoc,

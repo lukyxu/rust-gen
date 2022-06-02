@@ -100,7 +100,7 @@ pub fn main() {
             fs::create_dir_all(&output_path).expect("Unable to create directory");
             let file = File::create(output_path.as_path().join("policy.txt"))
                 .expect("Unable to create file");
-            write_as_ron(file, &runner.policy)
+            write_as_ron(file, &runner.policy);
         }
         progress_bar.inc(1);
     }

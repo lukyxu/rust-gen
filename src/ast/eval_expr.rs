@@ -391,9 +391,7 @@ impl BinaryOp {
     apply_int!(apply_wrapping_rem, expr_wrapping_rem);
 
     fn apply_int(self, lhs: &LitIntExpr, rhs: &LitIntExpr) -> Result<LitExpr, EvalExprError> {
-        if lhs.ty != rhs.ty {
-            panic!("Incompatible types");
-        }
+        assert!(!(lhs.ty != rhs.ty), "Incompatible types");
         match self {
             BinaryOp::Add => self.apply_add(lhs, rhs),
             BinaryOp::Sub => self.apply_sub(lhs, rhs),
@@ -606,8 +604,7 @@ impl EvalPlaceExpr {
     pub fn name(&self) -> String {
         match self {
             EvalPlaceExpr::Ident(name) => name.clone(),
-            EvalPlaceExpr::Field(expr, _) => expr.name(),
-            EvalPlaceExpr::Index(expr, _) => expr.name(),
+            EvalPlaceExpr::Field(expr, _) | EvalPlaceExpr::Index(expr, _) => expr.name(),
         }
     }
 }

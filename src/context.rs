@@ -99,14 +99,14 @@ impl Context {
     pub fn choose_array_type(&mut self, elem_ty: &Option<Ty>) -> Option<ArrayTy> {
         let mut dist: Vec<(ArrayTy, f64)> = self.array_type_dist.clone();
         if let Some(elem_ty) = elem_ty {
-            dist.retain(|(array_ty, _)| &*array_ty.base_ty == elem_ty)
+            dist.retain(|(array_ty, _)| &*array_ty.base_ty == elem_ty);
         }
         dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
-            dist.retain(|(array_ty, _)| !array_ty.require_lifetime())
+            dist.retain(|(array_ty, _)| !array_ty.require_lifetime());
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(array_ty, _)| array_ty.is_copy())
+            dist.retain(|(array_ty, _)| array_ty.is_copy());
         }
         choose(&dist, &mut self.rng)
     }
@@ -118,14 +118,14 @@ impl Context {
     pub fn choose_tuple_type(&mut self, elem_ty: &Option<Ty>) -> Option<TupleTy> {
         let mut dist: Vec<(TupleTy, f64)> = self.tuple_type_dist.clone();
         if let Some(elem_ty) = elem_ty {
-            dist.retain(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty))
+            dist.retain(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty));
         }
         dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
-            dist.retain(|(tuple_ty, _)| !tuple_ty.require_lifetime())
+            dist.retain(|(tuple_ty, _)| !tuple_ty.require_lifetime());
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(tuple_ty, _)| tuple_ty.is_copy())
+            dist.retain(|(tuple_ty, _)| tuple_ty.is_copy());
         }
         choose(&dist, &mut self.rng)
     }
@@ -143,14 +143,14 @@ impl Context {
                     .iter()
                     .any(|field_def| &*field_def.ty == elem_ty),
                 StructTy::Tuple(tuple) => (&tuple.fields).into_iter().any(|ty| ty == elem_ty),
-            })
+            });
         }
         dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
-            dist.retain(|(struct_ty, _)| !struct_ty.require_lifetime())
+            dist.retain(|(struct_ty, _)| !struct_ty.require_lifetime());
         }
         if self.generate_only_copy_type() {
-            dist.retain(|(struct_ty, _)| struct_ty.is_copy())
+            dist.retain(|(struct_ty, _)| struct_ty.is_copy());
         }
         choose(&dist, &mut self.rng)
     }
@@ -176,8 +176,7 @@ impl Context {
         dist.retain(|(expr_kind, _w)| {
             GENERABLE_EXPR_FNS
                 .get(expr_kind)
-                .and_then(|f| Some(f(self, res_type)))
-                .unwrap_or(true)
+                .map_or(true, |f| f(self, res_type))
         });
         choose(&dist, &mut self.rng).unwrap()
     }
@@ -189,7 +188,7 @@ impl Context {
             .expr_dist
             .iter()
             .filter(|x| place_exprs.contains(&x.0))
-            .cloned()
+            .copied()
             .collect();
         choose(&place_exprs_dist, &mut self.rng).unwrap()
     }
@@ -200,7 +199,7 @@ impl Context {
             .binary_op_dist
             .iter()
             .filter(|x| x.0.get_compatible_return_types(self).contains(res_type))
-            .cloned()
+            .copied()
             .collect();
         choose(&filtered_binary_ops, &mut self.rng)
     }
@@ -211,7 +210,7 @@ impl Context {
             .unary_op_dist
             .iter()
             .filter(|x| x.0.get_compatible_return_types(self).contains(res_type))
-            .cloned()
+            .copied()
             .collect();
         choose(&filtered_unary_ops, &mut self.rng)
     }
