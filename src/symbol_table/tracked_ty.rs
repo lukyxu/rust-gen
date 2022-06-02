@@ -33,15 +33,68 @@ pub type TrackedTy = GTy<OwnershipState>;
 impl TrackedTy {
     pub fn ownership_state(&self) -> OwnershipState {
         if self.is_copy() {
-            return OwnershipState::NotApplicable
+            return OwnershipState::NotApplicable;
         }
         match self {
             TrackedTy::Unit | TrackedTy::Prim(_) => OwnershipState::NotApplicable,
-            TrackedTy::Tuple(ty) => { ty.assoc },
+            TrackedTy::Tuple(ty) => {
+                if ty.assoc == OwnershipState::Moved || ty.assoc == OwnershipState::PartiallyOwned {
+                    return ty.assoc;
+                }
+                if ty
+                    .tuple
+                    .iter()
+                    .map(TrackedTy::ownership_state)
+                    .any(|state| {
+                        ty.assoc == OwnershipState::Owned
+                            || ty.assoc == OwnershipState::PartiallyOwned
+                    })
+                {
+                    return OwnershipState::PartiallyOwned;
+                }
+                return OwnershipState::Owned;
+            }
             TrackedTy::Array(ty) => ty.assoc,
             TrackedTy::Struct(ty) => match ty {
-                GStructTy::Field(ty) => ty.assoc,
-                GStructTy::Tuple(ty) => ty.assoc,
+                GStructTy::Field(ty) => {
+                    if ty.assoc == OwnershipState::Moved
+                        || ty.assoc == OwnershipState::PartiallyOwned
+                    {
+                        return ty.assoc;
+                    }
+                    if ty
+                        .fields
+                        .iter()
+                        .map(|field_def| field_def.ty.ownership_state())
+                        .any(|state| {
+                            ty.assoc == OwnershipState::Owned
+                                || ty.assoc == OwnershipState::PartiallyOwned
+                        })
+                    {
+                        return OwnershipState::PartiallyOwned;
+                    }
+                    return OwnershipState::Owned;
+                }
+                GStructTy::Tuple(ty) => {
+                    if ty.assoc == OwnershipState::Moved
+                        || ty.assoc == OwnershipState::PartiallyOwned
+                    {
+                        return ty.assoc;
+                    }
+                    if ty
+                        .fields
+                        .tuple
+                        .iter()
+                        .map(TrackedTy::ownership_state)
+                        .any(|state| {
+                            state == OwnershipState::Owned
+                                || state == OwnershipState::PartiallyOwned
+                        })
+                    {
+                        return OwnershipState::PartiallyOwned;
+                    }
+                    return OwnershipState::Owned;
+                }
             },
             TrackedTy::Reference(ty) => ty.assoc,
         }

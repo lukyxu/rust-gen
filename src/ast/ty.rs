@@ -22,7 +22,7 @@ pub enum GTy<A> {
     Reference(GReferenceTy<A>),
 }
 
-impl <A> GTy<A> {
+impl<A> GTy<A> {
     /// Returns whether a given type is a primitive integer.
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
@@ -403,7 +403,7 @@ pub struct GTupleTy<A> {
     pub assoc: A,
 }
 
-impl <A> GTupleTy<A> {
+impl<A> GTupleTy<A> {
     /// Returns the depth of a tuple.
     pub fn tuple_depth(&self) -> usize {
         1 + self
@@ -523,13 +523,13 @@ pub struct GArrayTy<A> {
     pub assoc: A,
 }
 
-impl <A: Clone> GArrayTy<A> {
-    pub fn iter(&self) -> impl Iterator<Item=GTy<A>> {
+impl<A: Clone> GArrayTy<A> {
+    pub fn iter(&self) -> impl Iterator<Item = GTy<A>> {
         std::iter::repeat(*self.base_ty.clone()).take(self.len)
     }
 }
 
-impl <A> GArrayTy<A> {
+impl<A> GArrayTy<A> {
     pub fn array_depth(&self) -> usize {
         return 1 + self.base_ty.array_depth();
     }
@@ -619,7 +619,7 @@ pub enum GStructTy<A> {
     Tuple(GTupleStructTy<A>),
 }
 
-impl <A> GStructTy<A> {
+impl<A> GStructTy<A> {
     pub fn struct_depth(&self) -> usize {
         1 + match self {
             GStructTy::Field(field_struct) => field_struct
@@ -724,7 +724,7 @@ pub struct GFieldStructTy<A> {
     pub assoc: A,
 }
 
-impl <A> GFieldStructTy<A> {
+impl<A> GFieldStructTy<A> {
     pub fn is_copy(&self) -> bool {
         assert!(!self.is_copy || self.fields.iter().all(|f| f.ty.is_copy()));
         self.is_copy
@@ -825,7 +825,7 @@ pub struct GTupleStructTy<A> {
     pub assoc: A,
 }
 
-impl <A> GTupleStructTy<A> {
+impl<A> GTupleStructTy<A> {
     pub fn is_copy(&self) -> bool {
         assert!(!self.is_copy || self.fields.is_copy());
         self.is_copy
@@ -928,7 +928,7 @@ pub struct GReferenceTy<A> {
     pub assoc: A,
 }
 
-impl <A> GReferenceTy<A> {
+impl<A> GReferenceTy<A> {
     pub fn require_lifetime(&self) -> bool {
         true
     }

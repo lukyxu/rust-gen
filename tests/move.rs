@@ -1,5 +1,6 @@
 use rust_gen::ast::expr::{
-    AssignExpr, BlockExpr, Expr, FieldExpr, IdentExpr, IfExpr, LitExpr, Member, PlaceExpr, TupleExpr, TupleStructExpr,
+    AssignExpr, BlockExpr, Expr, FieldExpr, IdentExpr, IfExpr, LitExpr, Member, PlaceExpr,
+    TupleExpr, TupleStructExpr,
 };
 use rust_gen::ast::file::RustFile;
 use rust_gen::ast::function::Function;

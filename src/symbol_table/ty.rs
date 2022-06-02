@@ -60,16 +60,19 @@ impl TypeSymbolTable {
             Expr::Field(expr) => {
                 let ty = self.get_tracked_ty(&expr.base)?;
                 return match (ty, &expr.member) {
-                    (TrackedTy::Tuple(ty), Member::Unnamed(index)) => {
-                        Some(&mut ty.tuple[*index])
-                    }
+                    (TrackedTy::Tuple(ty), Member::Unnamed(index)) => Some(&mut ty.tuple[*index]),
                     (TrackedTy::Struct(TrackedStructTy::Tuple(ty)), Member::Unnamed(index)) => {
                         Some(&mut ty.fields.tuple[*index])
                     }
-                    (TrackedTy::Struct(TrackedStructTy::Field(ty)), Member::Named(name)) => {
-                        Some(&mut ty.fields.iter_mut().find(|field_def| &field_def.name == name).unwrap().ty)
-                    }
-                    _ => None
+                    (TrackedTy::Struct(TrackedStructTy::Field(ty)), Member::Named(name)) => Some(
+                        &mut ty
+                            .fields
+                            .iter_mut()
+                            .find(|field_def| &field_def.name == name)
+                            .unwrap()
+                            .ty,
+                    ),
+                    _ => None,
                 };
             }
             Expr::Ident(expr) => {
@@ -110,7 +113,7 @@ impl TypeSymbolTable {
                     if !ty.movable() {
                         return false;
                     }
-                    ty.set_ownership_state(OwnershipState::Owned)
+                    ty.set_ownership_state(OwnershipState::Moved)
                 };
                 true
             }
@@ -124,7 +127,11 @@ impl TypeSymbolTable {
         let ty = self.get_tracked_ty(&place.clone().into());
         if let Some(ty) = ty {
             let ownership = ty.ownership_state();
-            assert!(ownership == OwnershipState::Moved || ownership == OwnershipState::NotApplicable || ownership == OwnershipState::PartiallyOwned);
+            assert!(
+                ownership == OwnershipState::Moved
+                    || ownership == OwnershipState::NotApplicable
+                    || ownership == OwnershipState::PartiallyOwned
+            );
             if matches!(ty.ownership_state(), OwnershipState::NotApplicable) {
                 return;
             }

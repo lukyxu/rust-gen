@@ -1,23 +1,19 @@
 use crate::ast::expr::LitIntTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr,
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr,
+    LitIntExpr, LitIntTy, Member, PlaceExpr,
 };
-
 
 use std::collections::BTreeSet;
 
 use crate::ast::function::Function;
 
-
-use crate::ast::op::{BinaryOp};
-use crate::ast::stmt::{
-    CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
-};
+use crate::ast::op::BinaryOp;
+use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{PrimTy, UIntTy};
-use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
+use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
-use crate::visitor::base_visitor::{Visitor};
+use crate::visitor::base_visitor::Visitor;
 
 type LocalTypeSymbolTable = BTreeSet<String>;
 
@@ -163,7 +159,7 @@ impl Visitor for ChecksumGenVisitor {
     fn visit_expr(&mut self, expr: &mut Expr) {
         self.visit_non_move_expr(expr);
         assert!(
-            matches!(expr, Expr::Field(_)) || self.full_type_symbol_table.move_expr(expr),
+            self.full_type_symbol_table.move_expr(expr),
             "Expr {:?} already moved",
             &expr
         )
@@ -203,7 +199,7 @@ impl Visitor for ChecksumGenVisitor {
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
     let mut accumulator = vec![];
-    if !ty.movable() {
+    if ty.ownership_state() == OwnershipState::Owned {
         return vec![];
     }
     match ty {
@@ -266,7 +262,7 @@ fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
 }
 
 fn exprs_from_exprs(expr: Expr, ty: &TrackedTy, accumulator: &mut Vec<Expr>) {
-    if !ty.movable() {
+    if ty.ownership_state() == OwnershipState::Owned {
         return;
     }
     match ty {
