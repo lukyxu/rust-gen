@@ -163,7 +163,11 @@ impl Visitor for ChecksumGenVisitor {
     // fuzz_move_expr
     fn visit_expr(&mut self, expr: &mut Expr) {
         self.visit_non_move_expr(expr);
-        assert!(matches!(expr, Expr::Field(_)) || self.full_type_symbol_table.move_expr(expr), "Expr {:?} already moved", &expr)
+        assert!(
+            matches!(expr, Expr::Field(_)) || self.full_type_symbol_table.move_expr(expr),
+            "Expr {:?} already moved",
+            &expr
+        )
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
