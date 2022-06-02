@@ -1,6 +1,6 @@
-use crate::ast::expr::{Expr, IdentExpr};
-use crate::ast::ty::Ty;
-use crate::symbol_table::tracked_ty::{OwnershipState, TrackedTy};
+use crate::ast::expr::{Expr, IdentExpr, Member, PlaceExpr};
+use crate::ast::ty::{StructTy, Ty};
+use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use std::collections::btree_map::Iter;
 use std::collections::BTreeMap;
 
@@ -39,7 +39,7 @@ impl TypeSymbolTable {
         self.var_type_mapping
             .iter()
             .filter_map(|(name, mapping)| {
-                (Ty::from(&mapping.ty) == *ty && mapping.ty.moveable())
+                (Ty::from(&mapping.ty) == *ty && mapping.ty.movable())
                     .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
@@ -53,6 +53,31 @@ impl TypeSymbolTable {
                     .then(|| IdentExpr { name: name.clone() })
             })
             .collect()
+    }
+
+    pub fn get_tracked_ty(&mut self, expr: &Expr) -> Option<&mut TrackedTy> {
+        match expr {
+            Expr::Field(expr) => {
+                let ty = self.get_tracked_ty(&expr.base)?;
+                return match (ty, &expr.member) {
+                    (TrackedTy::Tuple(ty), Member::Unnamed(index)) => {
+                        Some(&mut ty.tuple[*index])
+                    }
+                    (TrackedTy::Struct(TrackedStructTy::Tuple(ty)), Member::Unnamed(index)) => {
+                        Some(&mut ty.fields.tuple[*index])
+                    }
+                    (TrackedTy::Struct(TrackedStructTy::Field(ty)), Member::Named(name)) => {
+                        Some(&mut ty.fields.iter_mut().find(|field_def| &field_def.name == name).unwrap().ty)
+                    }
+                    _ => None
+                };
+            }
+            Expr::Ident(expr) => {
+                let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
+                Some(&mut mapping.ty)
+            }
+            _ => None,
+        }
     }
 
     pub fn move_expr(&mut self, expr: &Expr) -> bool {
@@ -79,11 +104,15 @@ impl TypeSymbolTable {
                 }
             }
             Expr::Assign(_) => true,
-            Expr::Field(_field_expr) => {
-                // Find ident of original
-                // recursively update chain
-                // field_expr.base
-                false
+            Expr::Field(field_expr) => {
+                let ty = self.get_tracked_ty(&field_expr.clone().into());
+                if let Some(ty) = ty {
+                    if !ty.movable() {
+                        return false;
+                    }
+                    ty.set_ownership_state(OwnershipState::Owned)
+                };
+                true
             }
             Expr::Reference(_) => {
                 unimplemented!()
@@ -91,27 +120,36 @@ impl TypeSymbolTable {
         }
     }
 
-    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TrackedTy> {
-        match place {
-            Expr::Field(expr) => {
-                let ty = self.regain_ownership(&expr.base)?;
-                match ty {
-                    TrackedTy::Tuple(_) => {}
-                    TrackedTy::Struct(_) => {}
-                    _ => {}
-                };
-                None
+    pub fn regain_ownership(&mut self, place: &PlaceExpr) {
+        let ty = self.get_tracked_ty(&place.clone().into());
+        if let Some(ty) = ty {
+            let ownership = ty.ownership_state();
+            assert!(ownership == OwnershipState::Moved || ownership == OwnershipState::NotApplicable || ownership == OwnershipState::PartiallyOwned);
+            if matches!(ty.ownership_state(), OwnershipState::NotApplicable) {
+                return;
             }
-            Expr::Ident(expr) => {
-                let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
-                if matches!(mapping.ty.ownership_state(), OwnershipState::NotApplicable) {
-                    return None;
-                }
-                mapping.ty.set_ownership_state(OwnershipState::Owned);
-                Some(&mut mapping.ty)
-            }
-            _ => None,
+            ty.set_ownership_state(OwnershipState::Owned);
         }
+        // match place {
+        //     Expr::Field(expr) => {
+        //         let ty = self.regain_ownership(&expr.base)?;
+        //         match ty {
+        //             TrackedTy::Tuple(_) => {}
+        //             TrackedTy::Struct(_) => {}
+        //             _ => {}
+        //         };
+        //         None
+        //     }
+        //     Expr::Ident(expr) => {
+        //         let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
+        //         if matches!(mapping.ty.ownership_state(), OwnershipState::NotApplicable) {
+        //             return None;
+        //         }
+        //         mapping.ty.set_ownership_state(OwnershipState::Owned);
+        //         Some(&mut mapping.ty)
+        //     }
+        //     _ => None,
+        // }
     }
 
     pub fn update(&mut self, other: &TypeSymbolTable) {

@@ -22,60 +22,7 @@ pub enum GTy<A> {
     Reference(GReferenceTy<A>),
 }
 
-impl Ty {
-    /// Attempts multiple times given by `ctx.policy.max_ty_attempts` to generate a valid type.
-    pub fn fuzz_type(ctx: &mut Context) -> Option<Ty> {
-        let mut res: Option<Ty> = None;
-        let mut num_failed_attempts = 0;
-        while res.is_none() && num_failed_attempts < ctx.policy.max_ty_attempts {
-            res = Ty::generate_type(ctx);
-            if res.is_none() {
-                num_failed_attempts += 1;
-                ctx.statistics.max_failed_ty_depth =
-                    max(ctx.statistics.max_failed_ty_depth, num_failed_attempts);
-            }
-        }
-        res
-    }
-
-    /// Attempts a single attempt to generate a valid type.
-    pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
-        let ty_kind = ctx.choose_ty_kind();
-        match ty_kind {
-            TyKind::Unit => track_type(TyKind::Unit, Box::new(Ty::generate_unit_internal))(ctx),
-            TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
-            TyKind::Tuple => TupleTy::generate_type(ctx, &None).map(From::from),
-            TyKind::Array => ArrayTy::generate_type(ctx, &None).map(From::from),
-            TyKind::Struct => StructTy::generate_type(ctx, &None).map(From::from),
-            TyKind::Reference => ReferenceTy::generate_type(ctx).map(From::from),
-        }
-    }
-    pub fn generate_copy_type(ctx: &mut Context) -> Option<Ty> {
-        let prev_gen_only_copy_type = ctx.gen_only_copy_type;
-        ctx.gen_only_copy_type = true;
-        let res_type = Ty::generate_type(ctx);
-        ctx.gen_only_copy_type = prev_gen_only_copy_type;
-        res_type
-    }
-
-    fn generate_unit_internal(_ctx: &mut Context) -> Option<Ty> {
-        Some(GTy::Unit)
-    }
-
-    /// Returns whether a given type is the unit type.
-    /// Both `Ty::Unit` and `Ty::Tuple(vec![])` correspond to the unit type.
-    pub fn is_unit(&self) -> bool {
-        match &self {
-            GTy::Unit => true,
-            GTy::Tuple(tuple_ty) => tuple_ty.tuple.is_empty(),
-            _ => false,
-        }
-    }
-
-    pub fn unit_type() -> Ty {
-        GTy::Unit
-    }
-
+impl <A> GTy<A> {
     /// Returns whether a given type is a primitive integer.
     pub fn is_primitive_number(&self) -> bool {
         // TODO: Add floats
@@ -93,6 +40,16 @@ impl Ty {
         match self {
             GTy::Array(array_ty) => 1 + array_ty.base_ty.array_depth(),
             _ => 0,
+        }
+    }
+
+    /// Returns whether a given type is the unit type.
+    /// Both `Ty::Unit` and `Ty::Tuple(vec![])` correspond to the unit type.
+    pub fn is_unit(&self) -> bool {
+        match &self {
+            GTy::Unit => true,
+            GTy::Tuple(tuple_ty) => tuple_ty.tuple.is_empty(),
+            _ => false,
         }
     }
 
@@ -147,6 +104,51 @@ impl Ty {
             GTy::Struct(ty) => ty.is_clone(),
             GTy::Reference(ty) => ty.is_clone(),
         }
+    }
+}
+
+impl Ty {
+    /// Attempts multiple times given by `ctx.policy.max_ty_attempts` to generate a valid type.
+    pub fn fuzz_type(ctx: &mut Context) -> Option<Ty> {
+        let mut res: Option<Ty> = None;
+        let mut num_failed_attempts = 0;
+        while res.is_none() && num_failed_attempts < ctx.policy.max_ty_attempts {
+            res = Ty::generate_type(ctx);
+            if res.is_none() {
+                num_failed_attempts += 1;
+                ctx.statistics.max_failed_ty_depth =
+                    max(ctx.statistics.max_failed_ty_depth, num_failed_attempts);
+            }
+        }
+        res
+    }
+
+    /// Attempts a single attempt to generate a valid type.
+    pub fn generate_type(ctx: &mut Context) -> Option<Ty> {
+        let ty_kind = ctx.choose_ty_kind();
+        match ty_kind {
+            TyKind::Unit => track_type(TyKind::Unit, Box::new(Ty::generate_unit_internal))(ctx),
+            TyKind::Prim => PrimTy::generate_type(ctx).map(From::from),
+            TyKind::Tuple => TupleTy::generate_type(ctx, &None).map(From::from),
+            TyKind::Array => ArrayTy::generate_type(ctx, &None).map(From::from),
+            TyKind::Struct => StructTy::generate_type(ctx, &None).map(From::from),
+            TyKind::Reference => ReferenceTy::generate_type(ctx).map(From::from),
+        }
+    }
+    pub fn generate_copy_type(ctx: &mut Context) -> Option<Ty> {
+        let prev_gen_only_copy_type = ctx.gen_only_copy_type;
+        ctx.gen_only_copy_type = true;
+        let res_type = Ty::generate_type(ctx);
+        ctx.gen_only_copy_type = prev_gen_only_copy_type;
+        res_type
+    }
+
+    fn generate_unit_internal(_ctx: &mut Context) -> Option<Ty> {
+        Some(GTy::Unit)
+    }
+
+    pub fn unit_type() -> Ty {
+        GTy::Unit
     }
 }
 
@@ -401,6 +403,30 @@ pub struct GTupleTy<A> {
     pub assoc: A,
 }
 
+impl <A> GTupleTy<A> {
+    /// Returns the depth of a tuple.
+    pub fn tuple_depth(&self) -> usize {
+        1 + self
+            .tuple
+            .iter()
+            .map(GTy::tuple_depth)
+            .max()
+            .unwrap_or_default()
+    }
+
+    pub fn require_lifetime(&self) -> bool {
+        self.tuple.iter().any(GTy::require_lifetime)
+    }
+
+    pub fn is_copy(&self) -> bool {
+        self.tuple.iter().all(GTy::is_copy)
+    }
+
+    pub fn is_clone(&self) -> bool {
+        self.tuple.iter().all(GTy::is_clone)
+    }
+}
+
 pub type TupleTy = GTupleTy<()>;
 
 impl From<TupleTy> for Ty {
@@ -412,20 +438,6 @@ impl From<TupleTy> for Ty {
 impl TupleTy {
     pub fn new(tuple: Vec<Ty>) -> TupleTy {
         GTupleTy { tuple, assoc: () }
-    }
-
-    /// Returns the depth of a tuple.
-    pub fn tuple_depth(&self) -> usize {
-        1 + self
-            .tuple
-            .iter()
-            .map(Ty::tuple_depth)
-            .max()
-            .unwrap_or_default()
-    }
-
-    pub fn require_lifetime(&self) -> bool {
-        self.tuple.iter().any(Ty::require_lifetime)
     }
 }
 
@@ -500,14 +512,6 @@ impl TupleTy {
         }
         Some(tuple_type)
     }
-
-    pub fn is_copy(&self) -> bool {
-        self.tuple.iter().all(Ty::is_copy)
-    }
-
-    pub fn is_clone(&self) -> bool {
-        self.tuple.iter().all(Ty::is_clone)
-    }
 }
 
 pub type ArrayTy = GArrayTy<()>;
@@ -517,6 +521,30 @@ pub struct GArrayTy<A> {
     pub base_ty: Box<GTy<A>>,
     pub len: usize,
     pub assoc: A,
+}
+
+impl <A: Clone> GArrayTy<A> {
+    pub fn iter(&self) -> impl Iterator<Item=GTy<A>> {
+        std::iter::repeat(*self.base_ty.clone()).take(self.len)
+    }
+}
+
+impl <A> GArrayTy<A> {
+    pub fn array_depth(&self) -> usize {
+        return 1 + self.base_ty.array_depth();
+    }
+
+    pub fn require_lifetime(&self) -> bool {
+        self.base_ty.require_lifetime()
+    }
+
+    pub fn is_copy(&self) -> bool {
+        self.base_ty.is_copy()
+    }
+
+    pub fn is_clone(&self) -> bool {
+        self.base_ty.is_clone()
+    }
 }
 
 impl From<ArrayTy> for Ty {
@@ -538,10 +566,6 @@ impl ArrayTy {
             len,
             assoc: (),
         }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = Ty> {
-        std::iter::repeat(*self.base_ty.clone()).take(self.len)
     }
 
     pub fn generate_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
@@ -585,22 +609,6 @@ impl ArrayTy {
         }
         Some(array_type)
     }
-
-    pub fn array_depth(&self) -> usize {
-        return 1 + self.base_ty.array_depth();
-    }
-
-    pub fn require_lifetime(&self) -> bool {
-        self.base_ty.require_lifetime()
-    }
-
-    pub fn is_copy(&self) -> bool {
-        self.base_ty.is_copy()
-    }
-
-    pub fn is_clone(&self) -> bool {
-        self.base_ty.is_clone()
-    }
 }
 
 pub type StructTy = GStructTy<()>;
@@ -609,6 +617,54 @@ pub type StructTy = GStructTy<()>;
 pub enum GStructTy<A> {
     Field(GFieldStructTy<A>),
     Tuple(GTupleStructTy<A>),
+}
+
+impl <A> GStructTy<A> {
+    pub fn struct_depth(&self) -> usize {
+        1 + match self {
+            GStructTy::Field(field_struct) => field_struct
+                .fields
+                .iter()
+                .map(|f| f.ty.struct_depth())
+                .max()
+                .unwrap_or_default(),
+            GStructTy::Tuple(tuple_struct) => tuple_struct
+                .fields
+                .tuple
+                .iter()
+                .map(GTy::struct_depth)
+                .max()
+                .unwrap_or_default(),
+        }
+    }
+
+    pub fn require_lifetime(&self) -> bool {
+        match self {
+            GStructTy::Field(struct_ty) => struct_ty.fields.iter().any(|x| x.ty.require_lifetime()),
+            GStructTy::Tuple(struct_ty) => struct_ty.fields.require_lifetime(),
+        }
+    }
+
+    pub fn lifetimes(&self) -> &BTreeSet<Lifetime> {
+        match self {
+            GStructTy::Field(struct_ty) => &struct_ty.lifetimes,
+            GStructTy::Tuple(struct_ty) => &struct_ty.lifetimes,
+        }
+    }
+
+    pub fn is_copy(&self) -> bool {
+        match self {
+            GStructTy::Field(struct_ty) => struct_ty.is_copy(),
+            GStructTy::Tuple(struct_ty) => struct_ty.is_copy(),
+        }
+    }
+
+    pub fn is_clone(&self) -> bool {
+        match self {
+            GStructTy::Field(struct_ty) => struct_ty.is_clone(),
+            GStructTy::Tuple(struct_ty) => struct_ty.is_clone(),
+        }
+    }
 }
 
 impl From<StructTy> for Ty {
@@ -627,14 +683,6 @@ impl ToString for StructTy {
 }
 
 impl StructTy {
-    pub fn is_field_struct(&self) -> bool {
-        matches!(self, StructTy::Field(_))
-    }
-
-    pub fn is_tuple_struct(&self) -> bool {
-        matches!(self, StructTy::Tuple(_))
-    }
-
     pub fn generate_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<StructTy> {
         let res = StructTy::generate_type_internal(ctx, ty);
         increment_counter(
@@ -662,52 +710,6 @@ impl StructTy {
             TupleStructTy::generate_new_type(ctx, &None).map(From::from)
         }
     }
-
-    pub fn struct_depth(&self) -> usize {
-        1 + match self {
-            StructTy::Field(field_struct) => field_struct
-                .fields
-                .iter()
-                .map(|f| f.ty.struct_depth())
-                .max()
-                .unwrap_or_default(),
-            StructTy::Tuple(tuple_struct) => tuple_struct
-                .fields
-                .tuple
-                .iter()
-                .map(Ty::struct_depth)
-                .max()
-                .unwrap_or_default(),
-        }
-    }
-
-    pub fn require_lifetime(&self) -> bool {
-        match self {
-            StructTy::Field(struct_ty) => struct_ty.fields.iter().any(|x| x.ty.require_lifetime()),
-            StructTy::Tuple(struct_ty) => struct_ty.fields.require_lifetime(),
-        }
-    }
-
-    pub fn lifetimes(&self) -> &BTreeSet<Lifetime> {
-        match self {
-            StructTy::Field(struct_ty) => &struct_ty.lifetimes,
-            StructTy::Tuple(struct_ty) => &struct_ty.lifetimes,
-        }
-    }
-
-    pub fn is_copy(&self) -> bool {
-        match self {
-            StructTy::Field(struct_ty) => struct_ty.is_copy(),
-            StructTy::Tuple(struct_ty) => struct_ty.is_copy(),
-        }
-    }
-
-    pub fn is_clone(&self) -> bool {
-        match self {
-            StructTy::Field(struct_ty) => struct_ty.is_clone(),
-            StructTy::Tuple(struct_ty) => struct_ty.is_clone(),
-        }
-    }
 }
 
 pub type FieldStructTy = GFieldStructTy<()>;
@@ -720,6 +722,18 @@ pub struct GFieldStructTy<A> {
     pub fields: Vec<GFieldDef<A>>,
     pub lifetimes: BTreeSet<Lifetime>,
     pub assoc: A,
+}
+
+impl <A> GFieldStructTy<A> {
+    pub fn is_copy(&self) -> bool {
+        assert!(!self.is_copy || self.fields.iter().all(|f| f.ty.is_copy()));
+        self.is_copy
+    }
+
+    pub fn is_clone(&self) -> bool {
+        assert!(!self.is_clone || self.fields.iter().all(|f| f.ty.is_clone()));
+        self.is_clone
+    }
 }
 
 impl ToString for FieldStructTy {
@@ -772,16 +786,6 @@ impl FieldStructTy {
             .push((struct_ty.clone().into(), weight));
         return Some(struct_ty);
     }
-
-    pub fn is_copy(&self) -> bool {
-        assert!(!self.is_copy || self.fields.iter().all(|f| f.ty.is_copy()));
-        self.is_copy
-    }
-
-    pub fn is_clone(&self) -> bool {
-        assert!(!self.is_clone || self.fields.iter().all(|f| f.ty.is_clone()));
-        self.is_clone
-    }
 }
 
 pub type FieldDef = GFieldDef<()>;
@@ -819,6 +823,18 @@ pub struct GTupleStructTy<A> {
     pub fields: GTupleTy<A>,
     pub lifetimes: BTreeSet<Lifetime>,
     pub assoc: A,
+}
+
+impl <A> GTupleStructTy<A> {
+    pub fn is_copy(&self) -> bool {
+        assert!(!self.is_copy || self.fields.is_copy());
+        self.is_copy
+    }
+
+    pub fn is_clone(&self) -> bool {
+        assert!(!self.is_clone || self.fields.is_clone());
+        self.is_clone
+    }
 }
 
 impl ToString for TupleStructTy {
@@ -862,16 +878,6 @@ impl TupleStructTy {
         ctx.struct_type_dist
             .push((struct_ty.clone().into(), weight));
         Some(struct_ty)
-    }
-
-    pub fn is_copy(&self) -> bool {
-        assert!(!self.is_copy || self.fields.is_copy());
-        self.is_copy
-    }
-
-    pub fn is_clone(&self) -> bool {
-        assert!(!self.is_clone || self.fields.is_clone());
-        self.is_clone
     }
 }
 
@@ -922,6 +928,20 @@ pub struct GReferenceTy<A> {
     pub assoc: A,
 }
 
+impl <A> GReferenceTy<A> {
+    pub fn require_lifetime(&self) -> bool {
+        true
+    }
+
+    pub fn is_copy(&self) -> bool {
+        !self.mutability
+    }
+
+    pub fn is_clone(&self) -> bool {
+        !self.mutability
+    }
+}
+
 impl ToString for ReferenceTy {
     fn to_string(&self) -> String {
         format!(
@@ -967,18 +987,6 @@ impl ReferenceTy {
         let lifetime = Lifetime::generate_lifetime(ctx);
         let elem = Ty::fuzz_type(ctx)?;
         Some(ReferenceTy::new(elem, false, lifetime))
-    }
-
-    pub fn require_lifetime(&self) -> bool {
-        true
-    }
-
-    pub fn is_copy(&self) -> bool {
-        !self.mutability
-    }
-
-    pub fn is_clone(&self) -> bool {
-        !self.mutability
     }
 }
 

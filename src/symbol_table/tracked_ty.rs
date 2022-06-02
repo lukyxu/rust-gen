@@ -13,7 +13,7 @@ pub enum OwnershipState {
 }
 
 impl OwnershipState {
-    pub fn moveable(self) -> bool {
+    pub fn movable(self) -> bool {
         matches!(self, OwnershipState::NotApplicable | OwnershipState::Owned)
     }
 }
@@ -32,9 +32,12 @@ pub type TrackedTy = GTy<OwnershipState>;
 
 impl TrackedTy {
     pub fn ownership_state(&self) -> OwnershipState {
+        if self.is_copy() {
+            return OwnershipState::NotApplicable
+        }
         match self {
             TrackedTy::Unit | TrackedTy::Prim(_) => OwnershipState::NotApplicable,
-            TrackedTy::Tuple(ty) => ty.assoc,
+            TrackedTy::Tuple(ty) => { ty.assoc },
             TrackedTy::Array(ty) => ty.assoc,
             TrackedTy::Struct(ty) => match ty {
                 GStructTy::Field(ty) => ty.assoc,
@@ -57,8 +60,8 @@ impl TrackedTy {
         }
     }
 
-    pub fn moveable(&self) -> bool {
-        self.ownership_state().moveable()
+    pub fn movable(&self) -> bool {
+        self.ownership_state().movable()
     }
 }
 
@@ -145,12 +148,6 @@ impl ArrayTy {
 impl From<&TrackedArrayTy> for ArrayTy {
     fn from(ty: &TrackedArrayTy) -> ArrayTy {
         ArrayTy::new((&*ty.base_ty).into(), ty.len)
-    }
-}
-
-impl TrackedArrayTy {
-    pub fn iter(&self) -> impl Iterator<Item = TrackedTy> {
-        std::iter::repeat(*self.base_ty.clone()).take(self.len)
     }
 }
 

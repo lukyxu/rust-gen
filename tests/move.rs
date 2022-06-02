@@ -1,11 +1,10 @@
 use rust_gen::ast::expr::{
-    AssignExpr, BlockExpr, Expr, FieldExpr, IdentExpr, IfExpr, LitExpr, Member, PlaceExpr,
-    StructExpr, TupleExpr, TupleStructExpr,
+    AssignExpr, BlockExpr, Expr, FieldExpr, IdentExpr, IfExpr, LitExpr, Member, PlaceExpr, TupleExpr, TupleStructExpr,
 };
 use rust_gen::ast::file::RustFile;
 use rust_gen::ast::function::Function;
 use rust_gen::ast::item::{FunctionItem, Item, StructItem};
-use rust_gen::ast::stmt::{CustomStmt, InitLocalStmt, SemiStmt, Stmt};
+use rust_gen::ast::stmt::{InitLocalStmt, SemiStmt, Stmt};
 use rust_gen::ast::ty::{StructTy, TupleStructTy, TupleTy, UIntTy};
 use rust_gen::visitor::base_visitor::Visitor;
 use rust_gen::visitor::checksum_gen_visitor::ChecksumGenVisitor;
@@ -47,7 +46,7 @@ impl StructTemplate {
             lifetimes: Default::default(),
             assoc: (),
         });
-        let mut file = RustFile {
+        let file = RustFile {
             items: vec![
                 StructItem {
                     struct_ty: struct1.clone(),
