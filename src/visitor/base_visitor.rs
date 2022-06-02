@@ -249,28 +249,28 @@ fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockE
     visitor.exit_scope();
 }
 
-fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name }: &mut IdentExpr) {
+pub fn walk_ident_expr<V: Visitor>(visitor: &mut V, IdentExpr { name }: &mut IdentExpr) {
     visitor.visit_name(name);
 }
 
-fn walk_tuple_expr<V: Visitor>(visitor: &mut V, TupleExpr { tuple }: &mut TupleExpr) {
+pub fn walk_tuple_expr<V: Visitor>(visitor: &mut V, TupleExpr { tuple }: &mut TupleExpr) {
     for expr in tuple {
         visitor.visit_expr(expr);
     }
 }
 
-fn walk_assign_expr<V: Visitor>(visitor: &mut V, AssignExpr { place, rhs }: &mut AssignExpr) {
+pub fn walk_assign_expr<V: Visitor>(visitor: &mut V, AssignExpr { place, rhs }: &mut AssignExpr) {
     visitor.visit_place_expr(place);
     visitor.visit_expr(rhs);
 }
 
-fn walk_array_expr<V: Visitor>(visitor: &mut V, ArrayExpr { array }: &mut ArrayExpr) {
+pub fn walk_array_expr<V: Visitor>(visitor: &mut V, ArrayExpr { array }: &mut ArrayExpr) {
     for expr in array {
         visitor.visit_expr(expr);
     }
 }
 
-fn walk_field_expr<V: Visitor>(visitor: &mut V, FieldExpr { base, member }: &mut FieldExpr) {
+pub fn walk_field_expr<V: Visitor>(visitor: &mut V, FieldExpr { base, member }: &mut FieldExpr) {
     visitor.visit_expr(base);
     match member {
         Member::Named(name) => visitor.visit_name(name),
@@ -278,19 +278,19 @@ fn walk_field_expr<V: Visitor>(visitor: &mut V, FieldExpr { base, member }: &mut
     }
 }
 
-fn walk_index_expr<V: Visitor>(visitor: &mut V, IndexExpr { index, base }: &mut IndexExpr) {
-    visitor.visit_expr(index);
+pub fn walk_index_expr<V: Visitor>(visitor: &mut V, IndexExpr { index, base }: &mut IndexExpr) {
     visitor.visit_expr(base);
+    visitor.visit_expr(index);
 }
 
-fn walk_struct_expr<V: Visitor>(visitor: &mut V, expr: &mut StructExpr) {
+pub fn walk_struct_expr<V: Visitor>(visitor: &mut V, expr: &mut StructExpr) {
     match expr {
         StructExpr::Tuple(tuple_struct) => visitor.visit_tuple_struct_expr(tuple_struct),
         StructExpr::Field(field_struct) => visitor.visit_field_struct_expr(field_struct),
     }
 }
 
-fn walk_field_struct_expr<V: Visitor>(
+pub fn walk_field_struct_expr<V: Visitor>(
     visitor: &mut V,
     FieldStructExpr {
         struct_name,
@@ -303,7 +303,7 @@ fn walk_field_struct_expr<V: Visitor>(
     }
 }
 
-fn walk_tuple_struct_expr<V: Visitor>(
+pub fn walk_tuple_struct_expr<V: Visitor>(
     visitor: &mut V,
     TupleStructExpr {
         struct_name,
@@ -314,14 +314,14 @@ fn walk_tuple_struct_expr<V: Visitor>(
     visitor.visit_tuple_expr(fields);
 }
 
-fn walk_reference_expr<V: Visitor>(
+pub fn walk_reference_expr<V: Visitor>(
     visitor: &mut V,
     ReferenceExpr { expr, .. }: &mut ReferenceExpr,
 ) {
     visitor.visit_expr(expr);
 }
 
-fn walk_field<V: Visitor>(visitor: &mut V, Field { name, expr }: &mut Field) {
+pub fn walk_field<V: Visitor>(visitor: &mut V, Field { name, expr }: &mut Field) {
     visitor.visit_name(name);
     visitor.visit_expr(expr);
 }

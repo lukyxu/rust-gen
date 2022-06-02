@@ -91,7 +91,7 @@ impl TypeSymbolTable {
         }
     }
 
-    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TrackedTy>{
+    pub fn regain_ownership(&mut self, place: &Expr) -> Option<&mut TrackedTy> {
         match place {
             Expr::Field(expr) => {
                 let ty = self.regain_ownership(&expr.base)?;
@@ -110,9 +110,7 @@ impl TypeSymbolTable {
                 mapping.ty.set_ownership_state(OwnershipState::Owned);
                 Some(&mut mapping.ty)
             }
-            _ => {
-                None
-            }
+            _ => None,
         }
     }
 
@@ -124,12 +122,18 @@ impl TypeSymbolTable {
 
     pub fn update_branch(&mut self, branch1: &TypeSymbolTable, branch2: &Option<TypeSymbolTable>) {
         for (key, v) in self.var_type_mapping.iter_mut() {
+            let prev_ownership = v.ty.ownership_state();
             let branch1_ownership = branch1.get_var_type(key).unwrap().ownership_state();
             let branch2_ownership = if let Some(branch2) = branch2 {
                 branch2.get_var_type(key).unwrap().ownership_state()
             } else {
-                v.ty.ownership_state()
+                prev_ownership
             };
+            if prev_ownership == OwnershipState::NotApplicable {
+                assert_eq!(branch1_ownership, OwnershipState::NotApplicable);
+                assert_eq!(branch2_ownership, OwnershipState::NotApplicable);
+                continue;
+            }
             if matches!(branch1_ownership, OwnershipState::Moved)
                 || matches!(branch2_ownership, OwnershipState::Moved)
             {

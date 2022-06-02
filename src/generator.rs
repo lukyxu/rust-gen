@@ -56,7 +56,7 @@ pub fn run_generator(
         program: emit_visitor.output(),
         statistics: std::mem::take(&mut ctx.statistics.into()),
         expected_checksum: if add_checksum {
-            Some(checksum_eval_visitor.res.unwrap())
+            checksum_eval_visitor.res
         } else {
             None
         },

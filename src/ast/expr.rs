@@ -102,6 +102,7 @@ impl Expr {
     }
 
     pub fn generate_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
+        // TODO: Check if I need snapshot here
         let snapshot = ctx.snapshot();
         let expr = Expr::generate_expr(ctx, res_type)?;
         let moved = ctx.type_symbol_table.move_expr(&expr);
@@ -114,7 +115,6 @@ impl Expr {
     }
 }
 
-#[cfg(test)]
 impl Expr {
     pub fn bool(b: bool) -> Expr {
         Expr::Literal(LitExpr::Bool(b))
@@ -126,6 +126,14 @@ impl Expr {
 
     pub fn u8(u: u8) -> Expr {
         LitIntExpr::new(u as u128, UIntTy::U8.into()).into()
+    }
+
+    pub fn u32(u: u32) -> Expr {
+        LitIntExpr::new(u as u128, UIntTy::U32.into()).into()
+    }
+
+    pub fn u128(u: u128) -> Expr {
+        LitIntExpr::new(u, UIntTy::U128.into()).into()
     }
 }
 
@@ -601,7 +609,7 @@ impl TryFrom<Expr> for PlaceExpr {
             Expr::Ident(expr) => Ok(expr.into()),
             Expr::Index(expr) => Ok(expr.into()),
             Expr::Field(expr) => Ok(expr.into()),
-            _ => Err("Cannot convert expr to place expr")
+            _ => Err("Cannot convert expr to place expr"),
         }
     }
 }
@@ -649,11 +657,9 @@ impl AssignExpr {
         // let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
         let place = PlaceExpr::generate_expr(ctx, &ty)?;
         let rhs = Box::new(Expr::fuzz_move_expr(ctx, &ty)?);
-        ctx.type_symbol_table.regain_ownership(&place.clone().into());
-        Some(AssignExpr {
-            place,
-            rhs,
-        })
+        ctx.type_symbol_table
+            .regain_ownership(&place.clone().into());
+        Some(AssignExpr { place, rhs })
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
@@ -731,7 +737,7 @@ impl FieldExpr {
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
-        let base = Box::new(Expr::fuzz_move_expr(ctx, &tuple.clone().into())?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
             .enumerate()
@@ -744,7 +750,7 @@ impl FieldExpr {
 
     pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, &Some(res_type.clone()))?;
-        let base = Box::new(Expr::fuzz_move_expr(ctx, &struct_ty.clone().into())?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
                 field_struct
@@ -879,6 +885,12 @@ pub struct TupleStructExpr {
 impl From<TupleStructExpr> for StructExpr {
     fn from(expr: TupleStructExpr) -> StructExpr {
         StructExpr::Tuple(expr)
+    }
+}
+
+impl From<TupleStructExpr> for Expr {
+    fn from(expr: TupleStructExpr) -> Expr {
+        Expr::Struct(StructExpr::Tuple(expr))
     }
 }
 
