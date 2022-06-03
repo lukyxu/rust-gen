@@ -2,7 +2,8 @@ use crate::generator::{run_generator, GeneratorOutput};
 use crate::policy::Policy;
 use crate::runtime::config::{OptLevel, RustVersion};
 use crate::runtime::error::{
-    CompilationError, DifferingChecksumError, RunError, RunnerError, UnexpectedChecksumError,
+    CompilationError, DifferingChecksumError, RunError, RunnerError, RustFmtError,
+    UnexpectedChecksumError,
 };
 use crate::utils::write_as_ron;
 use std::fs;
@@ -19,6 +20,7 @@ pub struct Runner {
     pub base_name: String,
     pub opts: Vec<OptLevel>,
     pub versions: Vec<RustVersion>,
+    pub rustfmt: bool,
 }
 
 impl Runner {
@@ -73,6 +75,13 @@ impl Runner {
                 checksums: runs,
             }
             .into());
+        }
+
+        // Run rustfmt
+        if self.rustfmt {
+            if let Err(err) = run_rustfmt(&rust_file, &files) {
+                return Err(err.into());
+            }
         }
 
         Ok(files)
@@ -163,4 +172,15 @@ fn run_program(rust_file: &str, executable: &str) -> Result<u128, RunError> {
             .trim_end(),
     )
     .expect("Unexpected execution output"))
+}
+
+fn run_rustfmt(rust_file: &str, files: &Vec<String>) -> Result<(), RustFmtError> {
+    let output = Command::new(format!("rustfmt"))
+        .arg(rust_file)
+        .output()
+        .expect("Failed to execute runtime process");
+    if !output.status.success() {
+        return Err(RustFmtError::new(output, files.clone()));
+    }
+    Ok(())
 }

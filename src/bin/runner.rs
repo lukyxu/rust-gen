@@ -49,6 +49,8 @@ struct Args {
         help = "Option to not runtime differential testing with different versions."
     )]
     no_version: bool,
+    #[clap(long, help = "Run rustfmt on generated output.")]
+    rustfmt: bool,
 }
 
 pub fn main() {
@@ -80,6 +82,7 @@ pub fn main() {
         base_name,
         opts,
         versions,
+        rustfmt: args.rustfmt,
     };
 
     for i in 0..num_rums {

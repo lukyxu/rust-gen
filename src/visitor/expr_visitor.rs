@@ -172,7 +172,7 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
-        let mut lhs = self.safe_expr_visit(&mut expr.lhs);
+        let lhs = self.safe_expr_visit(&mut expr.lhs);
         if expr.op.short_circuit_rhs(&lhs) {
             // Need to visit expression to make sure that there are no errors in the rhs
             self.enter_scope();
@@ -181,11 +181,11 @@ impl Visitor for ExprVisitor {
             self.exit_scope();
             return;
         }
-        let mut rhs = self.safe_expr_visit(&mut expr.rhs);
+        let rhs = self.safe_expr_visit(&mut expr.rhs);
         let mut res = expr.op.apply(&lhs, &rhs);
         for _ in 0..self.max_attempt_fix {
             if let Err(err) = &res {
-                expr.fix(*err, &mut lhs, &mut rhs);
+                expr.fix(*err);
                 res = expr.op.apply(&lhs, &rhs);
             } else {
                 break;

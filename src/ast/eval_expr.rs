@@ -15,7 +15,7 @@ use num_traits::{
     AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingShl, WrappingShr,
     WrappingSub,
 };
-use std::mem::swap;
+
 use std::{i128, i32, i64, u128, u16, u64};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -221,13 +221,7 @@ impl LitExpr {
 }
 
 impl BinaryExpr {
-    pub fn fix(&mut self, error: EvalExprError, lhs: &mut EvalExpr, rhs: &mut EvalExpr) {
-        if let EvalExprError::UnsignedOverflow = error {
-            if self.op == BinaryOp::Sub {
-                swap(&mut self.lhs, &mut self.rhs);
-                swap(lhs, rhs);
-            }
-        }
+    pub fn fix(&mut self, error: EvalExprError) {
         self.op = self.replacement_op(error);
     }
 
@@ -236,7 +230,7 @@ impl BinaryExpr {
             BinaryOp::Add => BinaryOp::Sub,
             BinaryOp::Sub => match error {
                 SignedOverflow => BinaryOp::Add,
-                UnsignedOverflow => BinaryOp::Sub,
+                UnsignedOverflow => BinaryOp::WrappingSub,
                 _ => panic!(),
             },
             BinaryOp::Mul => {
