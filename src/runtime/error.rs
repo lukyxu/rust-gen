@@ -2,7 +2,7 @@ use crate::generator::GeneratorError;
 use crate::runtime::run::ChecksumMapping;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Output;
 
 #[derive(Debug)]
