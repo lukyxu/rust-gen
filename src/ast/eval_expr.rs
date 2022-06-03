@@ -15,7 +15,7 @@ use num_traits::{
     AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingShl, WrappingShr,
     WrappingSub,
 };
-use std::mem::swap;
+
 use std::{i128, i32, i64, u128, u16, u64};
 
 #[derive(Debug, Clone, PartialEq)]
