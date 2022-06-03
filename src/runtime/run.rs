@@ -90,16 +90,16 @@ impl Runner {
         Ok(files)
     }
 
-    pub fn save_and_clean_up(
+    pub fn save_and_clean_up<P: AsRef<Path>>(
         output: &RunOutput,
         i: u64,
-        output_path: &String,
+        output_path: P,
         save_passing_programs: bool,
         include_binaries: bool,
     ) -> PathBuf {
         match &output {
             Ok(files) => {
-                let directory: PathBuf = PathBuf::from(&format!("{}/pass/{}", output_path, i));
+                let directory = output_path.as_ref().join("pass").join(i.to_string());
                 if save_passing_programs {
                     fs::create_dir_all(&directory).expect("Unable to create directory");
                 }
@@ -114,7 +114,11 @@ impl Runner {
                 directory
             }
             Err(err) => {
-                let directory: PathBuf = PathBuf::from( &format!("{}/fail/{}/{}", &output_path, err.folder_name(), i));
+                let directory = output_path
+                    .as_ref()
+                    .join("fail")
+                    .join(err.folder_name())
+                    .join(i.to_string());
                 fs::create_dir_all(&directory).expect("Unable to create directory");
                 for file in &err.files() {
                     let file_name = &Path::new(file.file_name().unwrap()).to_path_buf();
@@ -128,17 +132,17 @@ impl Runner {
     }
 }
 
-fn is_binary(input_file: &PathBuf) -> bool {
-    let extension = input_file.extension();
+fn is_binary<P: AsRef<Path>>(input_file: P) -> bool {
+    let extension = input_file.as_ref().extension();
     match extension {
         None => true,
         Some(extension) => extension.to_string_lossy().contains('-'),
     }
 }
 
-fn compile_program(
-    input_file: PathBuf,
-    output_file: PathBuf,
+fn compile_program<P: AsRef<Path>, S: AsRef<Path>>(
+    input_file: P,
+    output_file: S,
     opt_level: &OptLevel,
     version: &RustVersion,
 ) -> Result<(), CompilationError> {
@@ -149,25 +153,37 @@ fn compile_program(
             "warnings",
             "-C",
             &format!("opt-level={}", opt_level.to_string()),
-            input_file.to_str().unwrap(),
+            input_file.as_ref().to_str().unwrap(),
             "-o",
-            output_file.to_str().unwrap(),
+            output_file.as_ref().to_str().unwrap(),
         ])
         .output()
         .expect("Failed to execute compile process");
 
     if !output.status.success() {
-        return Err(CompilationError::new(input_file, &output));
+        return Err(CompilationError::new(
+            input_file.as_ref().to_path_buf(),
+            &output,
+        ));
     }
     Ok(())
 }
 
-fn run_program(rust_file: PathBuf, executable: PathBuf) -> Result<u128, RunError> {
+fn run_program<P: AsRef<Path>, S: AsRef<Path>>(
+    rust_file: P,
+    executable: S,
+) -> Result<u128, RunError> {
+    let rust_file = rust_file.as_ref();
+    let executable = executable.as_ref();
     let output = Command::new(executable.to_str().unwrap())
         .output()
         .expect("Failed to execute runtime process");
     if !output.status.success() {
-        return Err(RunError::new(rust_file, executable, &output));
+        return Err(RunError::new(
+            rust_file.to_path_buf(),
+            executable.to_path_buf(),
+            &output,
+        ));
     }
     Ok(u128::from_str(
         String::from_utf8(output.stdout)
@@ -177,9 +193,9 @@ fn run_program(rust_file: PathBuf, executable: PathBuf) -> Result<u128, RunError
     .expect("Unexpected execution output"))
 }
 
-fn run_rustfmt(rust_file: PathBuf, files: &Vec<PathBuf>) -> Result<(), RustFmtError> {
+fn run_rustfmt<P: AsRef<Path>>(rust_file: P, files: &Vec<PathBuf>) -> Result<(), RustFmtError> {
     let output = Command::new(format!("rustfmt"))
-        .arg(rust_file)
+        .arg(rust_file.as_ref())
         .output()
         .expect("Failed to execute runtime process");
     if !output.status.success() {

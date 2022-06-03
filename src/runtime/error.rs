@@ -81,7 +81,11 @@ impl Error for CompilationError {}
 
 impl Display for CompilationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Failed to compile {}", self.rust_file_path.to_str().unwrap())?;
+        writeln!(
+            f,
+            "Failed to compile {}",
+            self.rust_file_path.to_str().unwrap()
+        )?;
         writeln!(f, "Status code {}", self.status_code)?;
         writeln!(f, "Standard error")?;
         writeln!(f, "{}", self.std_err)
