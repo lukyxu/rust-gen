@@ -64,16 +64,13 @@ impl ToString for BinaryOp {
 
 impl BinaryOp {
     pub fn is_function_call(&self) -> bool {
-        match self {
-            BinaryOp::WrappingAdd
+        matches!(self, BinaryOp::WrappingAdd
             | BinaryOp::WrappingSub
             | BinaryOp::WrappingMul
             | BinaryOp::WrappingDiv
             | BinaryOp::WrappingRem
             | BinaryOp::WrappingShl
-            | BinaryOp::WrappingShr => true,
-            _ => false,
-        }
+            | BinaryOp::WrappingShr)
     }
 
     pub fn get_compatible_return_types(&self, ctx: &Context) -> Vec<Ty> {

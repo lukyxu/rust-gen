@@ -101,7 +101,7 @@ impl LocalStmt {
             mutable,
         }));
         ctx.type_symbol_table
-            .add_var(name, res_type.clone(), mutable);
+            .add_var(name, res_type, mutable);
         res
     }
 }

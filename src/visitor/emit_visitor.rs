@@ -73,10 +73,10 @@ impl Visitor for EmitVisitor {
         // TODO: Remove this
         let mut derives = vec!["PartialEq"];
         if item.struct_ty.is_copy() {
-            derives.push("Copy")
+            derives.push("Copy");
         }
         if item.struct_ty.is_clone() {
-            derives.push("Clone")
+            derives.push("Clone");
         }
         self.output
             .push_str(&format!("#[derive({})]\n", derives.join(", ")));

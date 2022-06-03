@@ -346,8 +346,10 @@ impl Policy {
 
     pub fn reassign_ownership_transfer_debug() -> Self {
         let mut policy = Policy::default_with_name("rot_debug");
-        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 2);
+        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 3);
         policy.item_dist = vec![(ItemKind::Struct, 1.0)];
+        policy.tuple_struct_copy_prob = 0.0;
+        policy.field_struct_copy_prob = 0.0;
         policy
     }
 }

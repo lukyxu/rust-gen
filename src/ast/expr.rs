@@ -106,11 +106,11 @@ impl Expr {
         let snapshot = ctx.snapshot();
         let expr = Expr::generate_expr(ctx, res_type)?;
         let moved = ctx.type_symbol_table.move_expr(&expr);
-        if !moved {
+        if moved {
+            Some(expr)
+        } else {
             ctx.restore_snapshot(snapshot);
             None
-        } else {
-            Some(expr)
         }
     }
 }
@@ -191,7 +191,7 @@ impl LitExpr {
             GTy::Reference(reference_ty) => {
                 ReferenceExpr::generate_expr(ctx, reference_ty).map(From::from)
             }
-            _ => panic!(
+            GTy::Prim(_) => panic!(
                 "Literal type for {} not supported yet",
                 res_type.to_string()
             ),
@@ -200,12 +200,10 @@ impl LitExpr {
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
         match res_type {
-            Ty::Unit => true,
-            Ty::Prim(_) => true,
+            Ty::Unit | Ty::Prim(_) | Ty::Reference(_) => true,
             Ty::Tuple(_) => ctx.policy.new_tuple_prob > 0.0 || !ctx.tuple_type_dist.is_empty(),
             Ty::Array(_) => ctx.policy.new_array_prob > 0.0 || !ctx.array_type_dist.is_empty(),
             Ty::Struct(_) => !ctx.struct_type_dist.is_empty(),
-            Ty::Reference(_) => true,
         }
     }
 }
@@ -295,10 +293,7 @@ impl BinaryExpr {
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
         ctx.expr_depth <= ctx.policy.max_expr_depth
-            && match res_type {
-                Ty::Prim(_) => true,
-                _ => false,
-            }
+            && matches!(res_type, Ty::Prim(_))
     }
 }
 
@@ -344,10 +339,7 @@ impl UnaryExpr {
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
         ctx.expr_depth <= ctx.policy.max_expr_depth
-            && match res_type {
-                Ty::Prim(PrimTy::Bool | PrimTy::Int(_)) => true,
-                _ => false,
-            }
+            && matches!(res_type, Ty::Prim(PrimTy::Bool | PrimTy::Int(_)))
     }
 }
 
@@ -387,10 +379,7 @@ impl CastExpr {
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
         ctx.expr_depth <= ctx.policy.max_expr_depth
-            && match res_type {
-                Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)) => true,
-                _ => false,
-            }
+            && matches!(res_type, Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
     }
 }
 
@@ -420,7 +409,7 @@ impl IfExpr {
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IfExpr> {
         // let outer_symbol_table = ctx.type_symbol_table.clone();
         let cond = Expr::fuzz_expr(ctx, &PrimTy::Bool.into());
-        let if_expr = (|| match cond {
+        (|| match cond {
             None => None,
             Some(cond) => {
                 let (then, then_sym_t) = BlockExpr::generate_block_expr_internal(ctx, res_type)?;
@@ -440,9 +429,7 @@ impl IfExpr {
                     otherwise,
                 })
             }
-        })();
-        // ctx.type_symbol_table = outer_symbol_table;
-        if_expr
+        })()
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
@@ -654,11 +641,11 @@ impl AssignExpr {
         };
         let ty = Ty::generate_type(ctx)?;
 
-        // let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
-        let place = PlaceExpr::generate_expr(ctx, &ty)?;
+        // Order is important here
         let rhs = Box::new(Expr::fuzz_move_expr(ctx, &ty)?);
+        let place = PlaceExpr::generate_expr(ctx, &ty)?;
         ctx.type_symbol_table
-            .regain_ownership(&place.clone().into());
+            .regain_ownership(&place);
         Some(AssignExpr { place, rhs })
     }
 

@@ -98,7 +98,7 @@ impl ExprVisitor {
             Expr::Ident(expr) => Some(EvalPlaceExpr::Ident(expr.name.clone())),
             _ => {
                 self.visit_expr(expr);
-                return None;
+                None
             }
         }
     }
@@ -107,7 +107,7 @@ impl ExprVisitor {
         match place_expr {
             EvalPlaceExpr::Ident(_) => prev_expr,
             EvalPlaceExpr::Field(place_expr, member) => {
-                let prev_expr: &mut EvalExpr = ExprVisitor::helper(prev_expr, &place_expr);
+                let prev_expr: &mut EvalExpr = ExprVisitor::helper(prev_expr, place_expr);
                 match (prev_expr, member) {
                     (EvalExpr::Tuple(tuple_expr), Member::Unnamed(index)) => {
                         &mut tuple_expr.tuple[*index]
@@ -123,7 +123,7 @@ impl ExprVisitor {
                 }
             }
             EvalPlaceExpr::Index(place_expr, index) => {
-                let prev_expr = ExprVisitor::helper(prev_expr, &place_expr);
+                let prev_expr = ExprVisitor::helper(prev_expr, place_expr);
                 match prev_expr {
                     EvalExpr::Array(array_expr) => &mut array_expr.array[*index],
                     _ => panic!(),
@@ -410,7 +410,7 @@ impl Visitor for ExprVisitor {
 
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
-        self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }))
+        self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }));
     }
 }
 

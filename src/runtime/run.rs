@@ -50,7 +50,7 @@ impl Runner {
                 let output_file =
                     self.base_name.clone() + "-" + &version.to_string() + "-" + &opt.to_string();
                 files.push(output_file.clone());
-                compile_program(&rust_file, &output_file, &opt, &version)?;
+                compile_program(&rust_file, &output_file, opt, version)?;
                 let checksum = run_program(&rust_file, &output_file)?;
                 runs.push(((opt.clone(), version.clone()), checksum));
             }
@@ -120,7 +120,7 @@ fn is_binary(input_file: &String) -> bool {
     let extension = Path::new(input_file).extension();
     match extension {
         None => true,
-        Some(extension) => extension.to_string_lossy().contains("-"),
+        Some(extension) => extension.to_string_lossy().contains('-'),
     }
 }
 

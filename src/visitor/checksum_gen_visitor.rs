@@ -1,24 +1,19 @@
 use crate::ast::expr::LitIntTy::Unsigned;
 use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr,
+    LitIntExpr, LitIntTy, Member, PlaceExpr,
 };
 
-use crate::ast::file::RustFile;
 use std::collections::BTreeSet;
 
 use crate::ast::function::Function;
-use crate::ast::item::{FunctionItem, Item, StructItem};
 
-use crate::ast::op::{BinaryOp, UnaryOp};
-use crate::ast::stmt::{
-    CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
-};
-use crate::ast::ty::{PrimTy, Ty, UIntTy};
-use crate::symbol_table::tracked_ty::{TrackedStructTy, TrackedTy};
+use crate::ast::op::BinaryOp;
+use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
+use crate::ast::ty::{PrimTy, UIntTy};
+use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
-use crate::visitor::base_visitor::{walk_expr, walk_ident_expr, Visitor};
+use crate::visitor::base_visitor::Visitor;
 
 type LocalTypeSymbolTable = BTreeSet<String>;
 
@@ -81,7 +76,7 @@ impl ChecksumGenVisitor {
             if name == self.checksum_name {
                 continue;
             }
-            let ty = self.full_type_symbol_table.get_var_type(&name).unwrap();
+            let ty = self.full_type_symbol_table.get_var_type(name).unwrap();
             let exprs = exprs_from_ident(name, &ty);
             let cast_exprs: Vec<Expr> = exprs
                 .into_iter()
@@ -156,18 +151,19 @@ impl Visitor for ChecksumGenVisitor {
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
         self.local_type_symbol_table.insert(stmt.name.clone());
         self.full_type_symbol_table
-            .add_var(stmt.name.clone(), stmt.ty.clone(), stmt.mutable);
+            .add_var(stmt.name.clone(), &stmt.ty, stmt.mutable);
         self.visit_expr(&mut stmt.rhs);
     }
 
     // fuzz_move_expr
     fn visit_expr(&mut self, expr: &mut Expr) {
         self.visit_non_move_expr(expr);
+        // self.full_type_symbol_table.move_expr(expr);
         assert!(
-            matches!(expr, Expr::Field(_)) || self.full_type_symbol_table.move_expr(expr),
+            self.full_type_symbol_table.move_expr(expr),
             "Expr {:?} already moved",
             &expr
-        )
+        );
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
@@ -177,12 +173,7 @@ impl Visitor for ChecksumGenVisitor {
             PlaceExpr::Index(expr) => self.visit_index_expr(expr),
         }
         self.full_type_symbol_table
-            .regain_ownership(&expr.clone().into());
-    }
-
-    fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
-        let sym_table = self.visit_block_internal(expr);
-        self.full_type_symbol_table.update(&sym_table);
+            .regain_ownership(expr);
     }
 
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
@@ -193,7 +184,12 @@ impl Visitor for ChecksumGenVisitor {
             .as_mut()
             .map(|otherwise| self.visit_block_internal(otherwise));
         self.full_type_symbol_table
-            .update_branch(&then_sym_t, &false_sym_t)
+            .update_branch(&then_sym_t, &false_sym_t);
+    }
+
+    fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
+        let sym_table = self.visit_block_internal(expr);
+        self.full_type_symbol_table.update(&sym_table);
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
@@ -204,7 +200,7 @@ impl Visitor for ChecksumGenVisitor {
 
 fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
     let mut accumulator = vec![];
-    if !ty.moveable() {
+    if ty.ownership_state() == OwnershipState::Moved {
         return vec![];
     }
     match ty {
@@ -267,7 +263,7 @@ fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
 }
 
 fn exprs_from_exprs(expr: Expr, ty: &TrackedTy, accumulator: &mut Vec<Expr>) {
-    if !ty.moveable() {
+    if ty.ownership_state() == OwnershipState::Owned {
         return;
     }
     match ty {
