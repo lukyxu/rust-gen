@@ -641,9 +641,9 @@ impl AssignExpr {
         };
         let ty = Ty::generate_type(ctx)?;
 
-        // let place: PlaceExpr = PlaceExpr::generate_expr(ctx, &ty)?;
-        let place = PlaceExpr::generate_expr(ctx, &ty)?;
+        // Order is important here
         let rhs = Box::new(Expr::fuzz_move_expr(ctx, &ty)?);
+        let place = PlaceExpr::generate_expr(ctx, &ty)?;
         ctx.type_symbol_table
             .regain_ownership(&place);
         Some(AssignExpr { place, rhs })
