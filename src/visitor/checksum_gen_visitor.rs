@@ -1,16 +1,21 @@
 use crate::ast::expr::LitIntTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr,
-    LitIntExpr, LitIntTy, Member, PlaceExpr,
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
 
+use crate::ast::file::RustFile;
 use std::collections::BTreeSet;
 
 use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
 
-use crate::ast::op::BinaryOp;
-use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
-use crate::ast::ty::{PrimTy, UIntTy};
+use crate::ast::op::{BinaryOp, UnaryOp};
+use crate::ast::stmt::{
+    CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
+};
+use crate::ast::ty::{PrimTy, Ty, UIntTy};
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
@@ -172,8 +177,7 @@ impl Visitor for ChecksumGenVisitor {
             PlaceExpr::Ident(_expr) => {}
             PlaceExpr::Index(expr) => self.visit_index_expr(expr),
         }
-        self.full_type_symbol_table
-            .regain_ownership(expr);
+        self.full_type_symbol_table.regain_ownership(expr);
     }
 
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
@@ -190,6 +194,20 @@ impl Visitor for ChecksumGenVisitor {
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
         let sym_table = self.visit_block_internal(expr);
         self.full_type_symbol_table.update(&sym_table);
+    }
+
+    fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
+        self.visit_expr(&mut expr.lhs);
+        if expr.op == BinaryOp::Or {
+            // Or statement short circuit
+            let mut symbol_table = self.full_type_symbol_table.clone();
+            self.visit_expr(&mut expr.rhs);
+            std::mem::swap(&mut symbol_table, &mut self.full_type_symbol_table);
+            self.full_type_symbol_table
+                .update_branch(&symbol_table, &None);
+        } else {
+            self.visit_expr(&mut expr.rhs);
+        }
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {
