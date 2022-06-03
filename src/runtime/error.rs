@@ -11,6 +11,7 @@ pub enum RunnerError {
     Run(RunError),
     DifferingChecksum(DifferingChecksumError),
     UnexpectedChecksum(UnexpectedChecksumError),
+    RustFmt(RustFmtError),
 }
 
 impl RunnerError {
@@ -21,6 +22,7 @@ impl RunnerError {
             RunnerError::Run(_) => "run_error",
             RunnerError::DifferingChecksum(_) => "differing_checksum_error",
             RunnerError::UnexpectedChecksum(_) => "unexpected_checksum_error",
+            RunnerError::RustFmt(_) => "rustfmt_error",
         }
     }
 
@@ -31,6 +33,7 @@ impl RunnerError {
             RunnerError::Run(err) => err.files(),
             RunnerError::DifferingChecksum(err) => err.files(),
             RunnerError::UnexpectedChecksum(err) => err.files(),
+            RunnerError::RustFmt(err) => err.files(),
         }
     }
 }
@@ -45,6 +48,7 @@ impl Display for RunnerError {
             RunnerError::Run(err) => Display::fmt(err, f),
             RunnerError::DifferingChecksum(err) => Display::fmt(err, f),
             RunnerError::UnexpectedChecksum(err) => Display::fmt(err, f),
+            RunnerError::RustFmt(err) => Display::fmt(err, f),
         }
     }
 }
@@ -118,7 +122,7 @@ impl Error for RunError {}
 
 impl Display for RunError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Failed to runtime {}", self.rust_file_path)?;
+        writeln!(f, "Failed to run {}", self.rust_file_path)?;
         writeln!(f, "Status code {}", self.status_code)?;
         writeln!(f, "Standard error")?;
         writeln!(f, "{}", self.std_err)
@@ -184,5 +188,45 @@ impl Display for UnexpectedChecksumError {
 impl From<UnexpectedChecksumError> for RunnerError {
     fn from(err: UnexpectedChecksumError) -> RunnerError {
         RunnerError::UnexpectedChecksum(err)
+    }
+}
+
+#[derive(Debug)]
+pub struct RustFmtError {
+    pub files: Vec<String>,
+    pub status_code: i32,
+    pub std_err: String,
+}
+
+impl RustFmtError {
+    pub fn new(output: Output, files: Vec<String>) -> RustFmtError {
+        return RustFmtError {
+            files,
+            status_code: output.status.code().unwrap_or(-1),
+            std_err: String::from_utf8_lossy(output.stderr.as_ref())
+                .parse()
+                .unwrap(),
+        };
+    }
+
+    pub fn files(&self) -> Vec<String> {
+        self.files.clone()
+    }
+}
+
+impl Error for RustFmtError {}
+
+impl Display for RustFmtError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Failed to run rustfmt")?;
+        writeln!(f, "Status code {}", self.status_code)?;
+        writeln!(f, "Standard error")?;
+        writeln!(f, "{}", self.std_err)
+    }
+}
+
+impl From<RustFmtError> for RunnerError {
+    fn from(err: RustFmtError) -> RunnerError {
+        RunnerError::RustFmt(err)
     }
 }

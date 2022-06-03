@@ -1,19 +1,15 @@
 use crate::ast::expr::LitIntTy::Unsigned;
 use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr, LitIntExpr, LitIntTy, Member,
-    PlaceExpr,
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IfExpr, IndexExpr,
+    LitIntExpr, LitIntTy, Member, PlaceExpr,
 };
-
 
 use std::collections::BTreeSet;
 
 use crate::ast::function::Function;
 
-
-use crate::ast::op::{BinaryOp};
-use crate::ast::stmt::{
-    CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt,
-};
+use crate::ast::op::BinaryOp;
+use crate::ast::stmt::{CustomStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{PrimTy, UIntTy};
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
