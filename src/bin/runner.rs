@@ -9,7 +9,7 @@ use rust_gen::runtime::run::Runner;
 use rust_gen::utils::write_as_ron;
 use std::fs;
 use std::fs::File;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 #[derive(Parser, Debug)]
@@ -35,7 +35,7 @@ struct Args {
     )]
     base_name: String,
     #[clap(short, long, help = "Output path", default_value = "output")]
-    output_path: String,
+    output_path: PathBuf,
     #[clap(short, long, help = "Store passing programs in output path.")]
     save_passing_programs: bool,
     #[clap(short, long, help = "Include binaries from output.")]
@@ -89,12 +89,19 @@ pub fn main() {
     std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
     let mut runner = Runner {
         policy: Policy::default(),
-        directory: tmp_dir.clone(),
+        tmp_dir: tmp_dir.clone(),
         base_name,
         opts,
         versions,
         rustfmt: args.rustfmt,
     };
+
+    fs::create_dir_all(&output_path).expect("Unable to create directory");
+    if args.policy.is_some() {
+        let file = File::create(output_path.join("policy.txt"))
+            .expect("Unable to create file");
+        write_as_ron(file, Policy::parse_policy_args(&args.policy));
+    }
 
     for i in 0..num_rums {
         runner.policy = Policy::parse_policy_args_or_random(&args.policy);

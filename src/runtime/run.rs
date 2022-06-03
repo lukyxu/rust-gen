@@ -18,7 +18,7 @@ pub type ChecksumMapping = Vec<((OptLevel, RustVersion), u128)>;
 pub struct Runner {
     pub policy: Policy,
     pub base_name: String,
-    pub directory: PathBuf,
+    pub tmp_dir: PathBuf,
     pub opts: Vec<OptLevel>,
     pub versions: Vec<RustVersion>,
     pub rustfmt: bool,
@@ -33,13 +33,13 @@ impl Runner {
             expected_checksum,
         } = run_generator(seed, &self.policy, true).map_err(RunnerError::Generator)?;
         let expected_checksum = expected_checksum.unwrap();
-        let rust_file = self.directory.join(self.base_name.clone() + ".rs");
+        let rust_file = self.tmp_dir.join(self.base_name.clone() + ".rs");
 
         // Save program
         fs::write(&rust_file, program).expect("Unable to write file");
 
         // Write statistics
-        let stats_file = self.directory.join("statistics.txt");
+        let stats_file = self.tmp_dir.join("statistics.txt");
         write_as_ron(
             fs::File::create(&stats_file).expect("Unable to create file"),
             statistics,
@@ -53,7 +53,7 @@ impl Runner {
             for opt in &self.opts {
                 let output_file_name =
                     self.base_name.clone() + "-" + &version.to_string() + "-" + &opt.to_string();
-                let output_file = self.directory.join(output_file_name);
+                let output_file = self.tmp_dir.join(output_file_name);
                 files.push(output_file.clone());
                 compile_program(rust_file.clone(), output_file.clone(), opt, version)?;
                 let checksum = run_program(rust_file.clone(), output_file.clone())?;

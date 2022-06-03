@@ -113,11 +113,11 @@ impl Policy {
                 .choose(&mut rand::thread_rng())
                 .cloned()
                 .unwrap(),
-            Some(policy) => Policy::parse_policy_args(Some(policy.clone())),
+            Some(_) => Policy::parse_policy_args(policy),
         }
     }
 
-    pub fn parse_policy_args(policy: Option<String>) -> Policy {
+    pub fn parse_policy_args(policy: &Option<String>) -> Policy {
         let policy = if let Some(policy) = policy {
             Policy::get_policy(&policy)
         } else {
