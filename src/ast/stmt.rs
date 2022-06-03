@@ -186,7 +186,7 @@ pub struct CustomStmt {
     pub stmt: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum StmtKind {
     Local,

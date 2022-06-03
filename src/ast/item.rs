@@ -88,7 +88,7 @@ impl StructItem {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ItemKind {
     Struct,

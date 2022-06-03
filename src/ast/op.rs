@@ -2,7 +2,7 @@ use crate::ast::ty::{GTy, PrimTy, ReferenceTy, Ty, UIntTy};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 /// Represents a binary operation between two arguments of a valid type.
 pub enum BinaryOp {
@@ -145,7 +145,7 @@ impl BinaryOp {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum UnaryOp {
     // TODO: Deref when adding pointer types
     #[allow(dead_code)]
