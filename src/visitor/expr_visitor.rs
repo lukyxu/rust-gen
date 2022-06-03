@@ -185,7 +185,7 @@ impl Visitor for ExprVisitor {
         let mut res = expr.op.apply(&lhs, &rhs);
         for _ in 0..self.max_attempt_fix {
             if let Err(err) = &res {
-                expr.fix(*err, &mut lhs, &mut rhs);
+                expr.fix(*err);
                 res = expr.op.apply(&lhs, &rhs);
             } else {
                 break;
