@@ -286,14 +286,23 @@ impl BinaryExpr {
             .cloned()
             .unwrap();
         let lhs = Box::new(Expr::fuzz_move_expr(ctx, &lhs_arg_ty)?);
-        let rhs = Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?);
+        let rhs = if op == BinaryOp::Or {
+            // Or statement short circuit
+            let mut symbol_table = ctx.type_symbol_table.clone();
+            let expr = Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?);
+            std::mem::swap(&mut symbol_table, &mut ctx.type_symbol_table);
+            ctx.type_symbol_table.update_branch(&symbol_table, &None);
+            expr
+        } else {
+            Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?)
+        };
+
         *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth
-            && matches!(res_type, Ty::Prim(_))
+        ctx.expr_depth <= ctx.policy.max_expr_depth && matches!(res_type, Ty::Prim(_))
     }
 }
 
@@ -458,6 +467,12 @@ impl BlockExpr {
         )(ctx, res_type)
     }
 
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
+        let (block, sym_table) = BlockExpr::generate_block_expr_internal(ctx, res_type)?;
+        ctx.type_symbol_table.update(&sym_table);
+        Some(block)
+    }
+
     fn generate_block_expr_internal(
         ctx: &mut Context,
         res_type: &Ty,
@@ -480,12 +495,6 @@ impl BlockExpr {
         })();
         std::mem::swap(&mut outer_symbol_table, &mut ctx.type_symbol_table);
         block_expr.map(|block_expr| (block_expr, outer_symbol_table))
-    }
-
-    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
-        let (block, sym_table) = BlockExpr::generate_block_expr_internal(ctx, res_type)?;
-        ctx.type_symbol_table.update(&sym_table);
-        Some(block)
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
@@ -644,8 +653,7 @@ impl AssignExpr {
         // Order is important here
         let rhs = Box::new(Expr::fuzz_move_expr(ctx, &ty)?);
         let place = PlaceExpr::generate_expr(ctx, &ty)?;
-        ctx.type_symbol_table
-            .regain_ownership(&place);
+        ctx.type_symbol_table.regain_ownership(&place);
         Some(AssignExpr { place, rhs })
     }
 

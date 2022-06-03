@@ -100,8 +100,7 @@ impl LocalStmt {
             rhs: Expr::fuzz_move_expr(ctx, res_type)?,
             mutable,
         }));
-        ctx.type_symbol_table
-            .add_var(name, res_type, mutable);
+        ctx.type_symbol_table.add_var(name, res_type, mutable);
         res
     }
 }
