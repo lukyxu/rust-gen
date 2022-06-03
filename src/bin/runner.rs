@@ -10,6 +10,7 @@ use rust_gen::utils::write_as_ron;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
+use uuid::Uuid;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -51,10 +52,17 @@ struct Args {
     no_version: bool,
     #[clap(long, help = "Run rustfmt on generated output.")]
     rustfmt: bool,
+    #[clap(long, help = "Removes unremoved temp output files in tmp directory.")]
+    clean: bool,
 }
 
 pub fn main() {
     let args: Args = Args::parse();
+    if args.clean {
+        clean_tmp_files();
+        return;
+    }
+
     let num_rums = args.num_runs.unwrap_or(u64::MAX);
     let output_path = args.output_path;
     let base_name = args.base_name;
@@ -77,8 +85,11 @@ pub fn main() {
         RustVersion::supported_rust_versions()
     };
 
+    let tmp_dir = std::env::temp_dir().join(format!("rust-gen-{}", Uuid::new_v4()));
+    std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
     let mut runner = Runner {
         policy: Policy::default(),
+        directory: tmp_dir.clone(),
         base_name,
         opts,
         versions,
@@ -106,5 +117,26 @@ pub fn main() {
             write_as_ron(file, &runner.policy);
         }
         progress_bar.inc(1);
+    }
+    std::fs::remove_dir_all(tmp_dir.as_path()).expect("Unable to delete directory");
+}
+
+pub fn clean_tmp_files() {
+    let tmp_dir = std::env::temp_dir();
+    let dir = match fs::read_dir(&tmp_dir) {
+        Ok(iter) => iter,
+        Err(err) => {
+            eprintln!("{:?}", err.kind());
+            return;
+        }
+    };
+    for dir_entry in dir {
+        if let Ok(dir_entry) = dir_entry {
+            if let Some(str) = dir_entry.file_name().to_str() {
+                if str.contains("rust-gen") {
+                    std::fs::remove_dir_all(dir_entry.path()).expect("Unable to remove directory")
+                }
+            }
+        }
     }
 }
