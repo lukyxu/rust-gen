@@ -10,6 +10,7 @@ use rust_gen::utils::write_as_ron;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
+use uuid::Uuid;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -77,8 +78,11 @@ pub fn main() {
         RustVersion::supported_rust_versions()
     };
 
+    let tmp_dir = std::env::temp_dir().join(format!("rust-gen-{}", Uuid::new_v4()));
+    std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
     let mut runner = Runner {
         policy: Policy::default(),
+        directory: tmp_dir.clone(),
         base_name,
         opts,
         versions,
@@ -107,4 +111,5 @@ pub fn main() {
         }
         progress_bar.inc(1);
     }
+    std::fs::remove_dir_all(tmp_dir.as_path()).expect("Unable to delete directory");
 }

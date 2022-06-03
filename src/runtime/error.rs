@@ -2,6 +2,7 @@ use crate::generator::GeneratorError;
 use crate::runtime::run::ChecksumMapping;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::path::{Path, PathBuf};
 use std::process::Output;
 
 #[derive(Debug)]
@@ -26,7 +27,7 @@ impl RunnerError {
         }
     }
 
-    pub fn files(&self) -> Vec<String> {
+    pub fn files(&self) -> Vec<PathBuf> {
         match self {
             RunnerError::Generator(_err) => vec![],
             RunnerError::Compilation(err) => err.files(),
@@ -55,13 +56,13 @@ impl Display for RunnerError {
 
 #[derive(Debug)]
 pub struct CompilationError {
-    pub rust_file_path: String,
+    pub rust_file_path: PathBuf,
     pub status_code: i32,
     pub std_err: String,
 }
 
 impl CompilationError {
-    pub fn new(rust_file_path: &str, output: &Output) -> CompilationError {
+    pub fn new(rust_file_path: PathBuf, output: &Output) -> CompilationError {
         return CompilationError {
             rust_file_path: rust_file_path.to_owned(),
             status_code: output.status.code().unwrap_or(-1),
@@ -71,7 +72,7 @@ impl CompilationError {
         };
     }
 
-    pub fn files(&self) -> Vec<String> {
+    pub fn files(&self) -> Vec<PathBuf> {
         return vec![self.rust_file_path.clone()];
     }
 }
@@ -80,7 +81,7 @@ impl Error for CompilationError {}
 
 impl Display for CompilationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Failed to compile {}", self.rust_file_path)?;
+        writeln!(f, "Failed to compile {}", self.rust_file_path.to_str().unwrap())?;
         writeln!(f, "Status code {}", self.status_code)?;
         writeln!(f, "Standard error")?;
         writeln!(f, "{}", self.std_err)
@@ -95,14 +96,14 @@ impl From<CompilationError> for RunnerError {
 
 #[derive(Debug)]
 pub struct RunError {
-    pub rust_file_path: String,
-    pub bin_file_path: String,
+    pub rust_file_path: PathBuf,
+    pub bin_file_path: PathBuf,
     pub status_code: i32,
     pub std_err: String,
 }
 
 impl RunError {
-    pub fn new(rust_file_path: &str, bin_file_path: &str, output: &Output) -> RunError {
+    pub fn new(rust_file_path: PathBuf, bin_file_path: PathBuf, output: &Output) -> RunError {
         return RunError {
             rust_file_path: rust_file_path.to_owned(),
             bin_file_path: bin_file_path.to_owned(),
@@ -113,7 +114,7 @@ impl RunError {
         };
     }
 
-    pub fn files(&self) -> Vec<String> {
+    pub fn files(&self) -> Vec<PathBuf> {
         return vec![self.rust_file_path.clone(), self.bin_file_path.clone()];
     }
 }
@@ -122,7 +123,7 @@ impl Error for RunError {}
 
 impl Display for RunError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Failed to run {}", self.rust_file_path)?;
+        writeln!(f, "Failed to run {}", self.rust_file_path.to_str().unwrap())?;
         writeln!(f, "Status code {}", self.status_code)?;
         writeln!(f, "Standard error")?;
         writeln!(f, "{}", self.std_err)
@@ -137,12 +138,12 @@ impl From<RunError> for RunnerError {
 
 #[derive(Debug)]
 pub struct DifferingChecksumError {
-    pub files: Vec<String>,
+    pub files: Vec<PathBuf>,
     pub checksums: ChecksumMapping,
 }
 
 impl DifferingChecksumError {
-    pub fn files(&self) -> Vec<String> {
+    pub fn files(&self) -> Vec<PathBuf> {
         self.files.clone()
     }
 }
@@ -164,13 +165,13 @@ impl From<DifferingChecksumError> for RunnerError {
 
 #[derive(Debug)]
 pub struct UnexpectedChecksumError {
-    pub files: Vec<String>,
+    pub files: Vec<PathBuf>,
     pub expected_checksum: u128,
     pub checksums: ChecksumMapping,
 }
 
 impl UnexpectedChecksumError {
-    pub fn files(&self) -> Vec<String> {
+    pub fn files(&self) -> Vec<PathBuf> {
         self.files.clone()
     }
 }
@@ -193,13 +194,13 @@ impl From<UnexpectedChecksumError> for RunnerError {
 
 #[derive(Debug)]
 pub struct RustFmtError {
-    pub files: Vec<String>,
+    pub files: Vec<PathBuf>,
     pub status_code: i32,
     pub std_err: String,
 }
 
 impl RustFmtError {
-    pub fn new(output: Output, files: Vec<String>) -> RustFmtError {
+    pub fn new(output: Output, files: Vec<PathBuf>) -> RustFmtError {
         return RustFmtError {
             files,
             status_code: output.status.code().unwrap_or(-1),
@@ -209,7 +210,7 @@ impl RustFmtError {
         };
     }
 
-    pub fn files(&self) -> Vec<String> {
+    pub fn files(&self) -> Vec<PathBuf> {
         self.files.clone()
     }
 }
