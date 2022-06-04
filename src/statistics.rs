@@ -4,7 +4,7 @@ use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::TyKind;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
 pub struct Statistics {

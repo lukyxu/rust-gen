@@ -4,7 +4,7 @@ use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{Ty, TyKind};
 use crate::context::Context;
 use std::cmp::min;
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 use std::hash::Hash;
 
 pub fn revert_ctx_on_failure<T: 'static>(
