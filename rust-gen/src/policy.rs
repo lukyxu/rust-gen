@@ -78,7 +78,7 @@ pub struct Policy {
 impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![
-            // Policy::tuple_debug(),
+            Policy::tuple_debug(),
             // Policy::tuple_field_debug(),
             Policy::my_debug(),
             Policy::simple_debug(),
@@ -141,8 +141,9 @@ impl Policy {
                 TupleTy::new(vec![IntTy::I8.into(), IntTy::I8.into()]),
                 1.0,
             )],
-            tuple_length_dist: Distribution::new_uniform_inclusive(3, 4),
-            max_tuple_depth: 1,
+            tuple_length_dist: Distribution::new_uniform_inclusive(2, 3),
+            max_tuple_depth: 2,
+
             expr_dist: vec![
                 (ExprKind::Literal, 5.0),
                 (ExprKind::Binary, 1.0),
@@ -152,8 +153,9 @@ impl Policy {
             ],
 
             max_if_else_depth: 2,
-            max_block_depth: 2,
+            max_block_depth: 1,
             max_arith_depth: 2,
+            max_expr_depth_in_tuple: 5,
             ..policy
         }
     }
