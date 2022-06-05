@@ -383,6 +383,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust-gen-cloud"
+version = "0.1.0"
+
+[[package]]
+name = "rust-gen-generate"
+version = "0.1.0"
+
+[[package]]
+name = "rust-gen-runner"
+version = "0.1.0"
+
+[[package]]
 name = "serde"
 version = "1.0.137"
 source = "registry+https://github.com/rust-lang/crates.io-index"

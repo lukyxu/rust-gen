@@ -1,0 +1,26 @@
+[package]
+name = "rust-gen"
+version = "0.1.0"
+edition = "2021"
+default-run = "generate"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.0"
+clap = { version = "3.1.8", features = ["derive"] }
+num-traits = "0.2.14"
+lazy_static = "1.4.0"
+indicatif = "0.16.2"
+serde = { version = "1.0.137", features = ["derive"] }
+ron = "0.7.0"
+diesel = { version = "1.4.8", features = ["mysql"] }
+dotenv = "0.15.0"
+
+[dependencies.uuid]
+version = "1.1.1"
+features = [
+    "v4",                # Lets you generate random UUIDs
+    "fast-rng",          # Use a faster (but still sufficiently random) RNG
+    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
+]
