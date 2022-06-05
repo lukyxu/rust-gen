@@ -6,4 +6,3 @@ pub mod item;
 pub mod op;
 pub mod stmt;
 pub mod ty;
-pub mod utils;

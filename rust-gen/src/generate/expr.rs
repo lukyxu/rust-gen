@@ -1,11 +1,25 @@
-use std::cmp::max;
+use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, ExprKind, Field, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use std::cmp::max;
+use std::collections::HashMap;
+
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, ExprKind, Field, FieldExpr,
+    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, Member, PlaceExpr,
+    ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 use crate::ast::op::BinaryOp;
 use crate::ast::stmt::Stmt;
-use crate::ast::ty::{ArrayTy, FieldDef, FieldStructTy, GTy, PrimTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty, UIntTy};
-use crate::ast::utils::{apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct, apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth, limit_if_else_depth, revert_ctx_on_failure, track_expr};
+use crate::ast::ty::{
+    ArrayTy, FieldDef, FieldStructTy, GTy, PrimTy, ReferenceTy, StructTy, TupleStructTy, TupleTy,
+    Ty, UIntTy,
+};
 use crate::context::Context;
+use crate::generate::utils::{
+    apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct,
+    apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth,
+    limit_if_else_depth, revert_ctx_on_failure, track_expr,
+};
 use crate::symbol_table::ty::TypeSymbolTable;
 
 impl Expr {
@@ -569,4 +583,21 @@ impl ReferenceExpr {
             expr: Box::new(Expr::fuzz_expr(ctx, &res_type.elem)?),
         })
     }
+}
+
+lazy_static! {
+    pub static ref GENERABLE_EXPR_FNS: HashMap<ExprKind, fn(&mut Context, &Ty) -> bool> = {
+        let mut map: HashMap<ExprKind, fn(&mut Context, &Ty) -> bool> = HashMap::new();
+        map.insert(ExprKind::Literal, LitExpr::can_generate);
+        map.insert(ExprKind::Binary, BinaryExpr::can_generate);
+        map.insert(ExprKind::Unary, UnaryExpr::can_generate);
+        map.insert(ExprKind::Cast, CastExpr::can_generate);
+        map.insert(ExprKind::If, IfExpr::can_generate);
+        map.insert(ExprKind::Block, BlockExpr::can_generate);
+        map.insert(ExprKind::Ident, IdentExpr::can_generate);
+        map.insert(ExprKind::Assign, AssignExpr::can_generate);
+        map.insert(ExprKind::Index, IndexExpr::can_generate);
+        map.insert(ExprKind::Field, FieldExpr::can_generate);
+        map
+    };
 }
