@@ -7,6 +7,7 @@ extern crate diesel;
 use crate::model::{PolicyInfo, RunInfo};
 use diesel::{Connection, MysqlConnection};
 use dotenv::dotenv;
+use rand::Rng;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::Runner;
@@ -28,14 +29,18 @@ pub fn main() {
         policy: Policy::default(),
         tmp_dir: tmp_dir.clone(),
         base_name: "base".to_owned(),
-        opts: vec![OptLevel::no_opt()],
-        versions: vec![RustVersion::stable()],
+        opts: OptLevel::all_opt_levels(),
+        versions: RustVersion::supported_rust_versions(),
         rustfmt: false,
     };
-    for i in 0..100 {
+    for i in 0..100000 {
         runner.policy = Policy::parse_policy_args_or_random(&None);
-        println!("Running policy {} seed {}", runner.policy.name, i);
-        let output = runner.run(Some(i));
+        let seed = rand::thread_rng().gen();
+        println!(
+            "Running policy {} seed {} run {}",
+            runner.policy.name, seed, i
+        );
+        let output = runner.run(Some(seed));
         let files = match &output {
             Ok(files) => files.clone(),
             Err(err) => err.files(),
@@ -51,7 +56,7 @@ pub fn main() {
             }
         };
 
-        RunInfo::new(i, output, new_policy_id).insert_new(&connection);
+        RunInfo::new(seed, output, new_policy_id).insert_new(&connection);
 
         for file in files {
             std::fs::remove_file(&file).unwrap();

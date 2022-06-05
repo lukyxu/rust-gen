@@ -78,7 +78,7 @@ pub struct Policy {
 impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![
-            Policy::tuple_debug(),
+            // Policy::tuple_debug(),
             // Policy::tuple_field_debug(),
             Policy::my_debug(),
             Policy::simple_debug(),
