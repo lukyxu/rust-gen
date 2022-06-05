@@ -39,7 +39,6 @@ pub struct FullStatistics {
     pub total_failed_exprs: usize,
     pub total_failed_tys: usize,
 
-    #[serde(flatten)]
     pub statistics: Statistics,
 }
 

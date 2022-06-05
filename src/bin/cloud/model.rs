@@ -1,12 +1,14 @@
-use diesel::{EqAll, insert_into, MysqlConnection, QueryDsl, RunQueryDsl};
 use diesel::result::Error;
+use diesel::{insert_into, EqAll, MysqlConnection, QueryDsl, RunQueryDsl};
 use ron::ser::PrettyConfig;
 use rust_gen::policy::Policy;
+use rust_gen::runtime::error::RunnerError;
 use rust_gen::runtime::run::RunResult;
-use rust_gen::schema::policies::dsl::policies as policy_table;
 use rust_gen::schema::policies;
+use rust_gen::schema::policies::dsl::policies as policy_table;
 use rust_gen::schema::policies::policy_info;
 use rust_gen::schema::runs;
+use rust_gen::schema::runs::dsl::runs as run_table;
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
@@ -20,16 +22,47 @@ pub struct RunInfo {
     pub seed: u64,
     pub success: bool,
     pub policy_id: i32,
-    pub statistics: String,
-    pub error: String,
+    pub statistics: Option<String>,
+    pub error: Option<String>,
 }
 
-// impl RunInfo {
-//     pub fn new(run_output: RunResult) -> RunInfo {
-//
-//     }
-// }
+impl RunInfo {
+    pub fn new(seed: u64, run_output: RunResult, policy_id: i32) -> RunInfo {
+        let files = match &run_output {
+            Ok(files) => files.clone(),
+            Err(error) => error.files(),
+        };
+        RunInfo {
+            run_id: None,
+            git_hash: env!("GIT_HASH").to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            hostname: env!("HOSTNAME").to_string(),
+            seed,
+            success: run_output.is_ok(),
+            policy_id,
+            statistics: files
+                .iter()
+                .filter_map(|path| {
+                    let path = path.to_string_lossy().to_string();
+                    path.contains("statistics.txt").then(|| {
+                        String::from_utf8(
+                            std::fs::read(path).expect("Unable to read statistics.txt"),
+                        )
+                        .expect("Unable to read utf-8")
+                    })
+                })
+                .next(),
+            error: run_output.err().as_ref().map(RunnerError::to_string),
+        }
+    }
 
+    pub fn insert_new(&self, connection: &MysqlConnection) {
+        insert_into(run_table)
+            .values(self.clone())
+            .execute(connection)
+            .unwrap();
+    }
+}
 
 #[derive(Insertable, Queryable, Clone)]
 #[diesel(primary_key(policy_id))]
@@ -42,20 +75,22 @@ pub struct PolicyInfo {
 }
 
 impl PolicyInfo {
-    pub fn insert_new(new: &PolicyInfo, connection: &MysqlConnection) {
-        insert_into(policy_table).values(new.clone()).execute(connection).unwrap();
+    pub fn insert_new(&self, connection: &MysqlConnection) {
+        insert_into(policy_table)
+            .values(self.clone())
+            .execute(connection)
+            .unwrap();
     }
 
-    pub fn query(other: &PolicyInfo, connection: &MysqlConnection) -> Option<PolicyInfo> {
+    pub fn query(&self, connection: &MysqlConnection) -> Option<PolicyInfo> {
         let res = policy_table
-            .filter(policy_info.eq_all(other.policy_info.clone()))
+            .filter(policy_info.eq_all(self.policy_info.clone()))
             .first::<PolicyInfo>(connection);
-        res.map_err(|err|{
-            match err {
-                Error::NotFound => Error::NotFound,
-                _ => panic!()
-            }
-        }).ok()
+        res.map_err(|err| match err {
+            Error::NotFound => Error::NotFound,
+            _ => panic!(),
+        })
+        .ok()
     }
 }
 

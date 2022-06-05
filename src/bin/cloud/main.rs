@@ -3,13 +3,12 @@ mod model;
 #[macro_use]
 extern crate diesel;
 
-use crate::model::PolicyInfo;
-use diesel::{Connection, insert_into, MysqlConnection, RunQueryDsl};
+use crate::model::{PolicyInfo, RunInfo};
+use diesel::{Connection, MysqlConnection};
 use dotenv::dotenv;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::Runner;
-use rust_gen::schema::policies::dsl::{policies};
 use uuid::Uuid;
 
 pub fn establish_connection() -> MysqlConnection {
@@ -22,36 +21,36 @@ pub fn establish_connection() -> MysqlConnection {
 
 pub fn main() {
     let tmp_dir = std::env::temp_dir().join(format!("rust-gen-{}", Uuid::new_v4()));
-    println!("{}", tmp_dir.file_name().unwrap().to_str().unwrap());
     std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
     let connection = establish_connection();
     let mut runner = Runner {
         policy: Policy::default(),
         tmp_dir: tmp_dir.clone(),
         base_name: "base".to_owned(),
-        opts: OptLevel::all_opt_levels(),
-        versions: RustVersion::supported_rust_versions(),
+        opts: vec![OptLevel::no_opt()],
+        versions: vec![RustVersion::stable()],
         rustfmt: false,
     };
     for i in 0..100 {
         runner.policy = Policy::parse_policy_args_or_random(&None);
+        println!("Running policy {} seed {}", runner.policy.name, i);
         let output = runner.run(Some(i));
-        let files = match output {
-            Ok(files) => files,
+        let files = match &output {
+            Ok(files) => files.clone(),
             Err(err) => err.files(),
         };
 
         let new_policy: PolicyInfo = runner.policy.into();
         let previous_policy = PolicyInfo::query(&new_policy, &connection);
         let new_policy_id = match previous_policy {
-            Some(policy) => {
-                policy.policy_id.unwrap()
-            }
+            Some(policy) => policy.policy_id.unwrap(),
             None => {
-                PolicyInfo::insert_new(&new_policy, &connection);
-                PolicyInfo::query(&new_policy, &connection).unwrap().policy_id.unwrap()
+                new_policy.insert_new(&connection);
+                new_policy.query(&connection).unwrap().policy_id.unwrap()
             }
         };
+
+        RunInfo::new(i, output, new_policy_id).insert_new(&connection);
 
         for file in files {
             std::fs::remove_file(&file).unwrap();
