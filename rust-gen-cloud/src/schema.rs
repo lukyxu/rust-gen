@@ -20,4 +20,7 @@ table! {
     }
 }
 
-allow_tables_to_appear_in_same_query!(policies, runs,);
+allow_tables_to_appear_in_same_query!(
+    policies,
+    runs,
+);
