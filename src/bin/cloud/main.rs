@@ -4,13 +4,12 @@ mod model;
 extern crate diesel;
 
 use crate::model::PolicyInfo;
-use diesel::{Connection, EqAll, insert_into, MysqlConnection, QueryDsl, RunQueryDsl};
-use diesel::result::Error;
+use diesel::{Connection, insert_into, MysqlConnection, RunQueryDsl};
 use dotenv::dotenv;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::Runner;
-use rust_gen::schema::policies::dsl::{policies, policy_info};
+use rust_gen::schema::policies::dsl::{policies};
 use uuid::Uuid;
 
 pub fn establish_connection() -> MysqlConnection {
@@ -49,7 +48,7 @@ pub fn main() {
                 policy.policy_id.unwrap()
             }
             None => {
-                insert_into(policies).values(new_policy.clone()).execute(&connection).unwrap();
+                PolicyInfo::insert_new(&new_policy, &connection);
                 PolicyInfo::query(&new_policy, &connection).unwrap().policy_id.unwrap()
             }
         };

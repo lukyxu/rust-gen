@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
 
-type RunOutput = Result<Vec<PathBuf>, RunnerError>;
+pub type RunResult = Result<Vec<PathBuf>, RunnerError>;
 
 pub type ChecksumMapping = Vec<((OptLevel, RustVersion), u128)>;
 
@@ -25,7 +25,7 @@ pub struct Runner {
 }
 
 impl Runner {
-    pub fn run(&self, seed: Option<u64>) -> RunOutput {
+    pub fn run(&self, seed: Option<u64>) -> RunResult {
         // Generate program
         let GeneratorOutput {
             program,
@@ -91,7 +91,7 @@ impl Runner {
     }
 
     pub fn save_and_clean_up<P: AsRef<Path>>(
-        output: &RunOutput,
+        output: &RunResult,
         i: u64,
         output_path: P,
         save_passing_programs: bool,

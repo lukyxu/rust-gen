@@ -11,6 +11,7 @@ table! {
         run_id -> Integer,
         git_hash -> Varchar,
         version -> Varchar,
+        hostname -> Varchar,
         seed -> Unsigned<Bigint>,
         success -> Bool,
         policy_id -> Integer,

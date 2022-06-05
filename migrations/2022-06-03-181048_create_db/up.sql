@@ -2,6 +2,7 @@ CREATE TABLE runs (
     run_id INTEGER AUTO_INCREMENT,
     git_hash VARCHAR(255) NOT NULL,
     version VARCHAR(255) NOT NULL,
+    hostname VARCHAR(255) NOT NULL,
     seed BIGINT UNSIGNED NOT NULL,
     success BOOLEAN NOT NULL,
     policy_id INTEGER NOT NULL,

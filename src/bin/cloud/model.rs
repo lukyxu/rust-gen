@@ -1,7 +1,8 @@
-use diesel::{EqAll, MysqlConnection, QueryDsl, RunQueryDsl};
+use diesel::{EqAll, insert_into, MysqlConnection, QueryDsl, RunQueryDsl};
 use diesel::result::Error;
 use ron::ser::PrettyConfig;
 use rust_gen::policy::Policy;
+use rust_gen::runtime::run::RunResult;
 use rust_gen::schema::policies::dsl::policies as policy_table;
 use rust_gen::schema::policies;
 use rust_gen::schema::policies::policy_info;
@@ -15,12 +16,20 @@ pub struct RunInfo {
     pub run_id: Option<i32>,
     pub git_hash: String,
     pub version: String,
+    pub hostname: String,
     pub seed: u64,
     pub success: bool,
     pub policy_id: i32,
     pub statistics: String,
     pub error: String,
 }
+
+// impl RunInfo {
+//     pub fn new(run_output: RunResult) -> RunInfo {
+//
+//     }
+// }
+
 
 #[derive(Insertable, Queryable, Clone)]
 #[diesel(primary_key(policy_id))]
@@ -33,6 +42,10 @@ pub struct PolicyInfo {
 }
 
 impl PolicyInfo {
+    pub fn insert_new(new: &PolicyInfo, connection: &MysqlConnection) {
+        insert_into(policy_table).values(new.clone()).execute(connection).unwrap();
+    }
+
     pub fn query(other: &PolicyInfo, connection: &MysqlConnection) -> Option<PolicyInfo> {
         let res = policy_table
             .filter(policy_info.eq_all(other.policy_info.clone()))
