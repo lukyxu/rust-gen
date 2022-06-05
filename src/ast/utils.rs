@@ -4,7 +4,7 @@ use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{Ty, TyKind};
 use crate::context::Context;
 use std::cmp::min;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::hash::Hash;
 
 pub fn revert_ctx_on_failure<T: 'static>(
@@ -107,11 +107,11 @@ apply_limit_ty_depth_function!(apply_limit_tuple_ty, max_tuple_depth, gen_new_tu
 apply_limit_ty_depth_function!(apply_limit_array_ty, max_array_depth, gen_new_array_types);
 
 /// Increments statistic counters.
-pub fn increment_counter<T, K: Eq + Hash, S: ::std::hash::BuildHasher>(
+pub fn increment_counter<T, K: Eq + Hash + Ord>(
     res: &Option<T>,
     key: K,
-    success_counter: &mut HashMap<K, usize, S>,
-    failed_counter: &mut HashMap<K, usize, S>,
+    success_counter: &mut BTreeMap<K, usize>,
+    failed_counter: &mut BTreeMap<K, usize>,
 ) {
     if res.is_some() {
         *success_counter.entry(key).or_insert(0) += 1;

@@ -79,16 +79,16 @@ impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![
             Policy::tuple_debug(),
-            Policy::tuple_field_debug(),
+            // Policy::tuple_field_debug(),
             Policy::my_debug(),
             Policy::simple_debug(),
             Policy::simple_debug_with_assignments(),
             Policy::simple_debug_with_reference(),
-            Policy::array_debug(),
-            Policy::array_index_debug(),
+            // Policy::array_debug(),
+            // Policy::array_index_debug(),
             Policy::default(),
             Policy::debug(),
-            Policy::fields_stress_test(),
+            // Policy::fields_stress_test(),
             Policy::reassign_ownership_transfer_debug(),
         ]
     }
@@ -113,11 +113,11 @@ impl Policy {
                 .choose(&mut rand::thread_rng())
                 .cloned()
                 .unwrap(),
-            Some(policy) => Policy::parse_policy_args(Some(policy.clone())),
+            Some(_) => Policy::parse_policy_args(policy),
         }
     }
 
-    pub fn parse_policy_args(policy: Option<String>) -> Policy {
+    pub fn parse_policy_args(policy: &Option<String>) -> Policy {
         let policy = if let Some(policy) = policy {
             Policy::get_policy(&policy)
         } else {
@@ -152,7 +152,7 @@ impl Policy {
             ],
 
             max_if_else_depth: 2,
-            max_block_depth: 4,
+            max_block_depth: 2,
             max_arith_depth: 2,
             ..policy
         }
@@ -212,8 +212,9 @@ impl Policy {
         policy.name = "simple_debug_with_assignments";
         policy.expr_dist.push((ExprKind::Assign, 4.0));
         policy.mutability_prob = 1.0;
-        policy.max_if_else_depth = 3;
-        policy.max_arith_depth = 3;
+        policy.max_if_else_depth = 2;
+        policy.max_block_depth = 0;
+        policy.max_arith_depth = 2;
         policy.num_stmt_dist = Distribution::new_uniform_inclusive(2, 5);
         policy
     }

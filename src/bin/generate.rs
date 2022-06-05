@@ -24,7 +24,7 @@ struct GeneratorArgs {
 
 pub fn main() {
     let args: GeneratorArgs = GeneratorArgs::parse();
-    let policy = Policy::parse_policy_args(args.policy);
+    let policy = Policy::parse_policy_args(&args.policy);
     let GeneratorOutput {
         program,
         statistics,

@@ -2,6 +2,8 @@
 //! expected output of the program. It's primary purpose is to find compiler bugs either through
 //! comparing the output of running the test program with the expected output, or through
 //! differential testing.
+#[macro_use]
+extern crate diesel;
 
 pub mod ast;
 pub mod context;
@@ -9,6 +11,7 @@ pub mod distribution;
 pub mod generator;
 pub mod policy;
 pub mod runtime;
+pub mod schema;
 pub mod statistics;
 pub mod symbol_table;
 pub mod utils;
