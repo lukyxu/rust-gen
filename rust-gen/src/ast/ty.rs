@@ -1,6 +1,5 @@
 use crate::ast::expr::LitIntTy;
-use crate::context::{Context};
-
+use crate::context::Context;
 
 use rand::Rng;
 use serde::{Deserialize, Serialize};

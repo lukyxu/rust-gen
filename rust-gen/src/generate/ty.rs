@@ -1,9 +1,14 @@
-use std::cmp::max;
-use rand::Rng;
-use rand::prelude::IteratorRandom;
-use crate::ast::ty::{ArrayTy, FieldDef, FieldStructTy, GReferenceTy, GTy, Lifetime, PrimTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty, TyKind};
+use crate::ast::ty::{
+    ArrayTy, FieldDef, FieldStructTy, GReferenceTy, GTy, Lifetime, PrimTy, ReferenceTy, StructTy,
+    TupleStructTy, TupleTy, Ty, TyKind,
+};
 use crate::context::{Context, StructContext};
-use crate::generate::utils::{apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type};
+use crate::generate::utils::{
+    apply_limit_array_ty, apply_limit_tuple_ty, increment_counter, track_type,
+};
+use rand::prelude::IteratorRandom;
+use rand::Rng;
+use std::cmp::max;
 
 impl Ty {
     /// Attempts multiple times given by `ctx.policy.max_ty_attempts` to generate a valid type.

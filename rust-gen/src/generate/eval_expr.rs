@@ -1,6 +1,3 @@
-use crate::generate::eval_expr::EvalExprError::{
-    MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
-};
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
 use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member};
 use crate::ast::op::{BinaryOp, UnaryOp};
@@ -10,6 +7,9 @@ use crate::ast::ty::IntTy::{ISize, I128, I16, I32, I64, I8};
 use crate::ast::ty::UIntTy;
 use crate::ast::ty::UIntTy::{USize, U128, U16, U32, U64, U8};
 use crate::ast::ty::{GTy, PrimTy, Ty};
+use crate::generate::eval_expr::EvalExprError::{
+    MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
+};
 use crate::wrapping::{WrappingDiv, WrappingRem};
 use num_traits::{
     AsPrimitive, CheckedRem, PrimInt, WrappingAdd, WrappingMul, WrappingShl, WrappingShr,
@@ -346,17 +346,17 @@ impl BinaryOp {
             (
                 Int(lhs),
                 Int(LitIntExpr {
-                        ty: LitIntTy::Unsigned(UIntTy::U32),
-                        value,
-                    }),
+                    ty: LitIntTy::Unsigned(UIntTy::U32),
+                    value,
+                }),
                 BinaryOp::WrappingShl,
             ) => self.apply_wrapping_shl(lhs, *value as u32),
             (
                 Int(lhs),
                 Int(LitIntExpr {
-                        ty: LitIntTy::Unsigned(UIntTy::U32),
-                        value,
-                    }),
+                    ty: LitIntTy::Unsigned(UIntTy::U32),
+                    value,
+                }),
                 BinaryOp::WrappingShr,
             ) => {
                 // self.apply_wrapping_shr
@@ -424,11 +424,11 @@ impl BinaryOp {
 
 trait Literal<
     T: PrimInt
-    + Copy
-    + AsPrimitive<u128>
-    + WrappingAdd<Output = T>
-    + ByLitIntTy<T>
-    + CheckedRem<Output = T>,
+        + Copy
+        + AsPrimitive<u128>
+        + WrappingAdd<Output = T>
+        + ByLitIntTy<T>
+        + CheckedRem<Output = T>,
 >
 {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
@@ -466,19 +466,19 @@ macro_rules! by_lit_expr_ty_impl {
 }
 
 impl<
-    T: PrimInt
-    + Copy
-    + AsPrimitive<u128>
-    + WrappingAdd<Output = T>
-    + WrappingSub<Output = T>
-    + WrappingMul<Output = T>
-    + WrappingDiv<Output = T>
-    + WrappingRem<Output = T>
-    + WrappingShl<Output = T>
-    + WrappingShr<Output = T>
-    + ByLitIntTy<T>
-    + CheckedRem<Output = T>,
-> Literal<T> for T
+        T: PrimInt
+            + Copy
+            + AsPrimitive<u128>
+            + WrappingAdd<Output = T>
+            + WrappingSub<Output = T>
+            + WrappingMul<Output = T>
+            + WrappingDiv<Output = T>
+            + WrappingRem<Output = T>
+            + WrappingShl<Output = T>
+            + WrappingShr<Output = T>
+            + ByLitIntTy<T>
+            + CheckedRem<Output = T>,
+    > Literal<T> for T
 {
     fn expr_add(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
         if let Some(res) = lhs.checked_add(&rhs) {
@@ -504,7 +504,7 @@ impl<
 
             if is_signed
                 && (((lhs == T::min_value()) && rhs.wrapping_add(&T::one()) == T::zero())
-                || (rhs == T::min_value() && lhs.wrapping_add(&T::one()) == T::zero()))
+                    || (rhs == T::min_value() && lhs.wrapping_add(&T::one()) == T::zero()))
             {
                 Err(MinMulOverflow)
             } else {
@@ -636,9 +636,9 @@ impl UnaryOp {
             UnaryOp::Neg => {
                 // LitExpr::Int(u128, ty @ Signed(int_type))
                 if let EvalExpr::Literal(LitExpr::Int(LitIntExpr {
-                                                          value: u128,
-                                                          ty: ty @ Signed(int_type),
-                                                      })) = expr
+                    value: u128,
+                    ty: ty @ Signed(int_type),
+                })) = expr
                 {
                     let (u128, ty) = (*u128, *ty);
                     match int_type {
@@ -675,14 +675,14 @@ impl UnaryOp {
 
 #[cfg(test)]
 mod tests {
-    use crate::generate::eval_expr::EvalExprError::{
-        MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
-    };
-    use crate::generate::eval_expr::{EvalExpr, EvalExprError};
     use crate::ast::expr::LitIntTy::Unsigned;
     use crate::ast::expr::*;
     use crate::ast::op::{BinaryOp, UnaryOp};
     use crate::ast::ty::{IntTy, UIntTy};
+    use crate::generate::eval_expr::EvalExprError::{
+        MinMulOverflow, SignedOverflow, UnsignedOverflow, ZeroDiv,
+    };
+    use crate::generate::eval_expr::{EvalExpr, EvalExprError};
 
     #[test]
     fn unary_expr_ok_not() {

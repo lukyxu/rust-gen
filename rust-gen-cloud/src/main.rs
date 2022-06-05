@@ -36,7 +36,10 @@ pub fn main() {
     for i in 0..100000 {
         runner.policy = Policy::parse_policy_args_or_random(&None);
         let seed = rand::thread_rng().gen();
-        println!("Running policy {} seed {} run {}", runner.policy.name, seed, i);
+        println!(
+            "Running policy {} seed {} run {}",
+            runner.policy.name, seed, i
+        );
         let output = runner.run(Some(seed));
         let files = match &output {
             Ok(files) => files.clone(),

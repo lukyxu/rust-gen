@@ -8,6 +8,7 @@ use diesel::{insert_into, EqAll, MysqlConnection, QueryDsl, RunQueryDsl};
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
 use rust_gen::runtime::run::RunResult;
+use rust_gen::utils::to_ron_string;
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
@@ -98,8 +99,7 @@ impl From<Policy> for PolicyInfo {
         PolicyInfo {
             policy_id: None,
             policy_name: policy.name.to_string(),
-            // ron::ser::to_string_pretty(&policy, PrettyConfig::new()).unwrap()
-            policy_info: "no".to_string(),
+            policy_info: to_ron_string(policy),
         }
     }
 }

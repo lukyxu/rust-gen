@@ -1,6 +1,6 @@
-use crate::generate::eval_expr::EvalExpr;
 use crate::ast::expr::{LitExpr, LitIntExpr, LitIntTy};
 use crate::ast::function::Function;
+use crate::generate::eval_expr::EvalExpr;
 
 use crate::ast::ty::UIntTy;
 use crate::visitor::base_visitor::Visitor;
