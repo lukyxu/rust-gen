@@ -1,14 +1,13 @@
 use diesel::result::Error;
 use diesel::{insert_into, EqAll, MysqlConnection, QueryDsl, RunQueryDsl};
-use ron::ser::PrettyConfig;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
 use rust_gen::runtime::run::RunResult;
-use rust_gen::schema::policies;
-use rust_gen::schema::policies::dsl::policies as policy_table;
-use rust_gen::schema::policies::policy_info;
-use rust_gen::schema::runs;
-use rust_gen::schema::runs::dsl::runs as run_table;
+use crate::schema::policies;
+use crate::schema::policies::dsl::policies as policy_table;
+use crate::schema::policies::policy_info;
+use crate::schema::runs;
+use crate::schema::runs::dsl::runs as run_table;
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
@@ -99,7 +98,8 @@ impl From<Policy> for PolicyInfo {
         PolicyInfo {
             policy_id: None,
             policy_name: policy.name.to_string(),
-            policy_info: ron::ser::to_string_pretty(&policy, PrettyConfig::new()).unwrap(),
+            // ron::ser::to_string_pretty(&policy, PrettyConfig::new()).unwrap()
+            policy_info: "no".to_string(),
         }
     }
 }

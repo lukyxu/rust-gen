@@ -4,5 +4,6 @@ members = [
     "rust-gen",
     "rust-gen-generate",
     "rust-gen-cloud",
-    "rust-gen-runner"
+    "rust-gen-runner",
+    "rust-gen-installer"
 ]

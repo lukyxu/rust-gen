@@ -370,10 +370,6 @@ dependencies = [
 name = "rust-gen"
 version = "0.1.0"
 dependencies = [
- "clap",
- "diesel",
- "dotenv",
- "indicatif",
  "lazy_static",
  "num-traits",
  "rand",
@@ -385,14 +381,37 @@ dependencies = [
 [[package]]
 name = "rust-gen-cloud"
 version = "0.1.0"
+dependencies = [
+ "diesel",
+ "dotenv",
+ "rust-gen",
+ "uuid",
+]
 
 [[package]]
 name = "rust-gen-generate"
 version = "0.1.0"
+dependencies = [
+ "clap",
+ "rust-gen",
+]
+
+[[package]]
+name = "rust-gen-installer"
+version = "0.1.0"
+dependencies = [
+ "rust-gen",
+]
 
 [[package]]
 name = "rust-gen-runner"
 version = "0.1.0"
+dependencies = [
+ "clap",
+ "indicatif",
+ "rust-gen",
+ "uuid",
+]
 
 [[package]]
 name = "serde"
