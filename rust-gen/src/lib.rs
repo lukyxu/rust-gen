@@ -5,6 +5,7 @@
 pub mod ast;
 pub mod context;
 pub mod distribution;
+pub mod generate;
 pub mod generator;
 pub mod policy;
 pub mod runtime;

@@ -1,13 +1,13 @@
-use diesel::result::Error;
-use diesel::{insert_into, EqAll, MysqlConnection, QueryDsl, RunQueryDsl};
-use rust_gen::policy::Policy;
-use rust_gen::runtime::error::RunnerError;
-use rust_gen::runtime::run::RunResult;
 use crate::schema::policies;
 use crate::schema::policies::dsl::policies as policy_table;
 use crate::schema::policies::policy_info;
 use crate::schema::runs;
 use crate::schema::runs::dsl::runs as run_table;
+use diesel::result::Error;
+use diesel::{insert_into, EqAll, MysqlConnection, QueryDsl, RunQueryDsl};
+use rust_gen::policy::Policy;
+use rust_gen::runtime::error::RunnerError;
+use rust_gen::runtime::run::RunResult;
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]

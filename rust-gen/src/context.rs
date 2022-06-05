@@ -1,4 +1,4 @@
-use crate::ast::expr::{ExprKind, IdentExpr, GENERABLE_EXPR_FNS};
+use crate::ast::expr::{ExprKind, IdentExpr};
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
@@ -7,6 +7,7 @@ use crate::policy::Policy;
 use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
 
+use crate::generate::expr::GENERABLE_EXPR_FNS;
 use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
 use std::collections::BTreeSet;
