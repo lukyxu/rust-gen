@@ -1,16 +1,9 @@
-[package]
-name = "rust-gen"
-version = "0.1.0"
-edition = "2021"
-default-run = "generate"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-rand = "0.8.0"
-clap = { version = "3.1.8", features = ["derive"] }
-num-traits = "0.2.14"
-lazy_static = "1.4.0"
-indicatif = "0.16.2"
-serde = { version = "1.0.137", features = ["derive"] }
-ron = "0.7.0"
+members = [
+    "rust-gen",
+    "rust-gen-generate",
+    "rust-gen-cloud",
+    "rust-gen-runner",
+    "rust-gen-installer"
+]
