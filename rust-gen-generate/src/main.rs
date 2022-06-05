@@ -1,5 +1,3 @@
-extern crate core;
-
 use clap::Parser;
 use rust_gen::generator::{run_generator, GeneratorOutput};
 use rust_gen::policy::Policy;
