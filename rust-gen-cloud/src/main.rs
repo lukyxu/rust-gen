@@ -29,8 +29,8 @@ pub fn main() {
         policy: Policy::default(),
         tmp_dir: tmp_dir.clone(),
         base_name: "base".to_owned(),
-        opts: vec![OptLevel::no_opt()],
-        versions: vec![RustVersion::stable()],
+        opts: OptLevel::all_opt_levels(),
+        versions: RustVersion::supported_rust_versions(),
         rustfmt: false,
     };
     for i in 0..100000 {
