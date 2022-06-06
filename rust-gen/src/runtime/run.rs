@@ -19,6 +19,7 @@ pub struct Runner {
     pub policy: Policy,
     pub base_name: String,
     pub tmp_dir: PathBuf,
+    pub no_compile: bool,
     pub opts: Vec<OptLevel>,
     pub versions: Vec<RustVersion>,
     pub rustfmt: bool,
@@ -45,9 +46,14 @@ impl Runner {
             statistics,
         );
 
+        let mut files: Vec<PathBuf> = vec![rust_file.clone(), stats_file];
+
+        if self.no_compile {
+            return Ok(files)
+        }
+
         // Compile program (with multiple optimizations)
         let mut runs: ChecksumMapping = vec![];
-        let mut files: Vec<PathBuf> = vec![rust_file.clone(), stats_file];
 
         for version in &self.versions {
             for opt in &self.opts {
