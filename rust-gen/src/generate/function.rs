@@ -8,7 +8,7 @@ impl Function {
     pub fn fuzz_main_fn(ctx: &mut Context) -> Option<Function> {
         let mut res: Option<Function> = None;
         let mut num_failed_attempts = 0;
-        while res.is_none() && num_failed_attempts < ctx.policy.max_main_fn_attempts {
+        while res.is_none() && num_failed_attempts < ctx.policy.max_fn_attempts {
             res = Function::generate_main_fn(ctx);
             if res.is_none() {
                 num_failed_attempts += 1;
