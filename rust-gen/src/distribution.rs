@@ -9,6 +9,7 @@ pub enum Distribution {
 
 impl Distribution {
     pub fn new_uniform_inclusive(low: usize, high: usize) -> Distribution {
+        assert!(low <= high);
         Distribution::Uniform(low, high)
     }
 
@@ -18,5 +19,9 @@ impl Distribution {
                 rng.sample(distributions::Uniform::new_inclusive(*low, *high))
             }
         }
+    }
+
+    pub fn none() -> Distribution {
+        Distribution::Uniform(0, 0)
     }
 }
