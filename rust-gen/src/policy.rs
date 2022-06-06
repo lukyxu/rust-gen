@@ -149,7 +149,7 @@ impl Policy {
 
             // Policy::debug(),
             // Policy::fields_stress_test(),
-            // Policy::reassign_ownership_transfer_debug(),
+            Policy::reassign_ownership_transfer_debug(),
         ]
     }
 
@@ -409,10 +409,12 @@ impl Policy {
 
     pub fn reassign_ownership_transfer_debug() -> Self {
         let mut policy = Policy::default_with_name("rot_debug");
-        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 3);
+        policy.num_item_dist = Distribution::new_uniform_inclusive(4, 4);
         policy.item_dist = vec![(ItemKind::Struct, 1.0)];
         policy.tuple_struct_copy_prob = 0.0;
         policy.field_struct_copy_prob = 0.0;
+        policy.max_if_else_depth = 0;
+        policy.max_block_depth = 3;
         policy
     }
 }
@@ -430,7 +432,13 @@ impl Policy {
             .num_stmt_dist(Distribution::Uniform(500, 500))
             .num_item_dist(Distribution::none())
             .type_dist(vec![(TyKind::Prim, 1.0)])
-            .expr_dist(vec![(ExprKind::Binary, 5.0), (ExprKind::Ident, 1.0), (ExprKind::Cast, 3.0), (ExprKind::Unary, 3.0), (ExprKind::Literal, 1.0)])
+            .expr_dist(vec![
+                (ExprKind::Binary, 5.0),
+                (ExprKind::Ident, 1.0),
+                (ExprKind::Cast, 3.0),
+                (ExprKind::Unary, 3.0),
+                (ExprKind::Literal, 1.0),
+            ])
             .max_expr_depth(10)
             .max_expr_attempts(100)
             .build()
@@ -456,7 +464,7 @@ impl Policy {
                 (ExprKind::If, 1.0),
                 (ExprKind::Binary, 2.0),
                 (ExprKind::Ident, 2.0),
-                (ExprKind::Block, 0.0),
+                (ExprKind::Block, 2.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
                 (ExprKind::Assign, 1.0),
