@@ -40,10 +40,7 @@ struct Args {
     save_passing_programs: bool,
     #[clap(short, long, help = "Include binaries from output.")]
     include_binaries: bool,
-    #[clap(
-    long,
-    help = "Option to not compile any of the generated programs"
-    )]
+    #[clap(long, help = "Option to not compile any of the generated programs")]
     no_compile: bool,
     #[clap(
         long,

@@ -49,7 +49,7 @@ impl Runner {
         let mut files: Vec<PathBuf> = vec![rust_file.clone(), stats_file];
 
         if self.no_compile {
-            return Ok(files)
+            return Ok(files);
         }
 
         // Compile program (with multiple optimizations)

@@ -158,12 +158,11 @@ impl StructTemplate {
                 IdentExpr {
                     name: name.to_string(),
                 }
-                    .into(),
+                .into(),
             ),
             member: Member::Unnamed(index),
         }
-            .into()
-
+        .into()
     }
 }
 
@@ -389,6 +388,6 @@ fn partial_struct_move() {
         .into(),
     );
     let output = generate_checksum_and_emit(&mut template.2);
-    assert!(output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
-    assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+    assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
 }
