@@ -71,14 +71,11 @@ impl Expr {
     }
 
     pub fn generate_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        // TODO: Check if I need snapshot here
-        let snapshot = ctx.snapshot();
         let expr = Expr::generate_expr(ctx, res_type)?;
         let moved = ctx.type_symbol_table.move_expr(&expr);
         if moved {
             Some(expr)
         } else {
-            ctx.restore_snapshot(snapshot);
             None
         }
     }

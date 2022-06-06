@@ -134,18 +134,22 @@ pub struct Policy {
 impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![
-            Policy::tuple_debug(),
+            Policy::default(),
+            Policy::heavy_basic_arithmetic(),
+            // Policy::nested_heavy_basic_arithmetic(),
+
+            // Policy::tuple_debug(),
             // Policy::tuple_field_debug(),
-            Policy::my_debug(),
-            Policy::simple_debug(),
-            Policy::simple_debug_with_assignments(),
-            Policy::simple_debug_with_reference(),
+            // Policy::my_debug(),
+            // Policy::simple_debug(),
+            // Policy::simple_debug_with_assignments(),
+            // Policy::simple_debug_with_reference(),
             // Policy::array_debug(),
             // Policy::array_index_debug(),
-            Policy::default(),
-            Policy::debug(),
+
+            // Policy::debug(),
             // Policy::fields_stress_test(),
-            Policy::reassign_ownership_transfer_debug(),
+            // Policy::reassign_ownership_transfer_debug(),
         ]
     }
 
@@ -420,7 +424,21 @@ impl Default for Policy {
 }
 
 impl Policy {
-    // TODO: Add assertions in policy after
+    pub fn heavy_basic_arithmetic() -> Policy {
+        PolicyBuilder::from_policy(Policy::default())
+            .name("heavy_basic_arithmetics")
+            .num_stmt_dist(Distribution::Uniform(500, 500))
+            .num_item_dist(Distribution::none())
+            .type_dist(vec![(TyKind::Prim, 1.0)])
+            .expr_dist(vec![(ExprKind::Binary, 5.0), (ExprKind::Ident, 1.0), (ExprKind::Cast, 3.0), (ExprKind::Unary, 3.0), (ExprKind::Literal, 1.0)])
+            .max_expr_depth(10)
+            .max_expr_attempts(100)
+            .build()
+            .unwrap()
+    }
+}
+
+impl Policy {
     fn default_with_name(name: &'static str) -> Self {
         Policy {
             name,
@@ -541,6 +559,22 @@ impl Policy {
 }
 
 impl PolicyBuilder {
+    pub fn build(&self) -> Result<Policy, PolicyBuilderError> {
+        let policy = self.fallible_build().unwrap();
+        if policy.max_file_attempts == 0
+            || policy.max_item_attempts == 0
+            || policy.max_fn_attempts == 0
+            || policy.max_ty_attempts == 0
+            || policy.max_stmt_attempts == 0
+            || policy.max_expr_attempts == 0
+        {
+            return Err(PolicyBuilderError::ValidationError(
+                "Max file/item/fn/ty/stmt/expr attempts must be greater than 0.".to_string(),
+            ));
+        };
+        Ok(policy)
+    }
+
     pub fn from_policy(policy: Policy) -> PolicyBuilder {
         PolicyBuilder {
             name: Some(policy.name),
@@ -586,5 +620,18 @@ impl PolicyBuilder {
             new_lifetime_prob: Some(policy.new_lifetime_prob),
             disable_lifetime: Some(policy.disable_lifetime),
         }
+    }
+
+    pub fn no_assignments(&mut self) -> &mut Self {
+        self.expr_dist
+            .as_mut()
+            .unwrap()
+            .retain(|(kind, _)| !matches!(kind, ExprKind::Assign));
+        self
+    }
+
+    pub fn no_items(&mut self) -> &mut Self {
+        self.num_item_dist = Some(Distribution::none());
+        self
     }
 }
