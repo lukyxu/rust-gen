@@ -276,7 +276,7 @@ fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
 }
 
 fn exprs_from_exprs(expr: Expr, ty: &TrackedTy, accumulator: &mut Vec<Expr>) {
-    if ty.ownership_state() == OwnershipState::Owned {
+    if ty.ownership_state() == OwnershipState::Moved {
         return;
     }
     match ty {

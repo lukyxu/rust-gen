@@ -185,6 +185,24 @@ fn generate_checksum_and_emit(file: &mut RustFile) -> String {
 //
 // fn main() {
 //     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
+// }
+
+#[test]
+fn default_struct() {
+    let mut template = StructTemplate::default();
+    let output = generate_checksum_and_emit(&mut template.2);
+    assert!(output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+}
+
+// #[derive(PartialEq, Clone)]
+// struct Struct1(u32);
+//
+// #[derive(PartialEq, Clone)]
+// struct Struct2(Struct1, Struct1);
+//
+// fn main() {
+//     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
 //     s2;
 // }
 
@@ -279,7 +297,7 @@ fn struct_block_partial_move() {
     template.add_stmt(StructTemplate::block_stmt(block_stmts));
     let output = generate_checksum_and_emit(&mut template.2);
     assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
-    assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+    assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
 }
 
 // fn main() {
