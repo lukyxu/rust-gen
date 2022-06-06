@@ -1,8 +1,8 @@
-use archery::{RcK};
-use rpds::map::red_black_tree_map::Iter;
 use crate::ast::expr::{Expr, IdentExpr, Member, PlaceExpr};
 use crate::ast::ty::Ty;
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
+use archery::RcK;
+use rpds::map::red_black_tree_map::Iter;
 use rpds::RedBlackTreeMap;
 
 #[derive(Debug, Clone)]
@@ -137,42 +137,30 @@ impl TypeSymbolTable {
     pub fn update(&mut self, other: &TypeSymbolTable) {
         let keys: Vec<String> = self.var_type_mapping.keys().cloned().collect();
         for key in &keys {
-            self.var_type_mapping.get_mut(key).unwrap().ty.set_ownership_state(other.get_var_type(key).unwrap().ownership_state());
+            self.var_type_mapping
+                .get_mut(key)
+                .unwrap()
+                .ty
+                .update(&other.get_var_type(key).unwrap(), None, false)
         }
     }
 
     pub fn update_branch(&mut self, branch1: &TypeSymbolTable, branch2: &Option<TypeSymbolTable>) {
         let keys: Vec<String> = self.var_type_mapping.keys().cloned().collect();
         for key in &keys {
-            let prev_ownership = self.var_type_mapping.get_mut(key).unwrap().ty.ownership_state();
-            let branch1_ownership = branch1.get_var_type(key).unwrap().ownership_state();
-            let branch2_ownership = if let Some(branch2) = branch2 {
-                branch2.get_var_type(key).unwrap().ownership_state()
-            } else {
-                prev_ownership
-            };
-            if prev_ownership == OwnershipState::NotApplicable {
-                assert_eq!(branch1_ownership, OwnershipState::NotApplicable);
-                assert_eq!(branch2_ownership, OwnershipState::NotApplicable);
-                continue;
-            }
-            if matches!(branch1_ownership, OwnershipState::Moved)
-                || matches!(branch2_ownership, OwnershipState::Moved)
-            {
-                self.var_type_mapping.get_mut(key).unwrap().ty.set_ownership_state(OwnershipState::Moved);
-            }
-            if matches!(
-                (branch1_ownership, branch2_ownership),
-                (OwnershipState::Owned, OwnershipState::Owned)
-            ) {
-                self.var_type_mapping.get_mut(key).unwrap().ty.set_ownership_state(OwnershipState::Owned);
-            }
+            self.var_type_mapping.get_mut(key).unwrap().ty.update(
+                &branch1.get_var_type(key).unwrap(),
+                branch2
+                    .as_ref()
+                    .map(|branch2| branch2.get_var_type(key).unwrap())
+                    .as_ref(),
+                true
+            )
         }
     }
 }
 
 impl<'a> IntoIterator for &'a TypeSymbolTable {
-
     type Item = (&'a String, &'a TypeMapping);
     type IntoIter = Iter<'a, String, TypeMapping, RcK>;
 
