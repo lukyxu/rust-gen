@@ -336,9 +336,12 @@ impl IdentExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        !ctx.type_symbol_table
-            .get_ident_exprs_by_type(res_type)
-            .is_empty()
+        // Time tradeoff
+        // TODO: Manual search is slow
+        // !ctx.type_symbol_table
+        //     .get_ident_exprs_by_type(res_type)
+        //     .is_empty()
+        true
     }
 }
 

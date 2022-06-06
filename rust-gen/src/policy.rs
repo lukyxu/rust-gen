@@ -429,7 +429,7 @@ impl Policy {
     pub fn heavy_basic_arithmetic() -> Policy {
         PolicyBuilder::from_policy(Policy::default())
             .name("heavy_basic_arithmetics")
-            .num_stmt_dist(Distribution::Uniform(500, 500))
+            .num_stmt_dist(Distribution::Uniform(1000, 1000))
             .num_item_dist(Distribution::none())
             .type_dist(vec![(TyKind::Prim, 1.0)])
             .expr_dist(vec![
