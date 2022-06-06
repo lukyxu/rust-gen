@@ -175,6 +175,20 @@ impl Visitor for ChecksumGenVisitor {
         self.full_type_symbol_table.regain_ownership(expr);
     }
 
+    fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
+        self.visit_expr(&mut expr.lhs);
+        if expr.op == BinaryOp::Or {
+            // Or statement short circuit
+            let mut symbol_table = self.full_type_symbol_table.clone();
+            self.visit_expr(&mut expr.rhs);
+            std::mem::swap(&mut symbol_table, &mut self.full_type_symbol_table);
+            self.full_type_symbol_table
+                .update_branch(&symbol_table, &None);
+        } else {
+            self.visit_expr(&mut expr.rhs);
+        }
+    }
+
     fn visit_if_expr(&mut self, expr: &mut IfExpr) {
         self.visit_expr(&mut expr.condition);
         let then_sym_t = self.visit_block_internal(&mut expr.then);
@@ -189,20 +203,6 @@ impl Visitor for ChecksumGenVisitor {
     fn visit_block_expr(&mut self, expr: &mut BlockExpr) {
         let sym_table = self.visit_block_internal(expr);
         self.full_type_symbol_table.update(&sym_table);
-    }
-
-    fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
-        self.visit_expr(&mut expr.lhs);
-        if expr.op == BinaryOp::Or {
-            // Or statement short circuit
-            let mut symbol_table = self.full_type_symbol_table.clone();
-            self.visit_expr(&mut expr.rhs);
-            std::mem::swap(&mut symbol_table, &mut self.full_type_symbol_table);
-            self.full_type_symbol_table
-                .update_branch(&symbol_table, &None);
-        } else {
-            self.visit_expr(&mut expr.rhs);
-        }
     }
 
     fn visit_assign_expr(&mut self, expr: &mut AssignExpr) {

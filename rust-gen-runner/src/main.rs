@@ -41,6 +41,11 @@ struct Args {
     #[clap(short, long, help = "Include binaries from output.")]
     include_binaries: bool,
     #[clap(
+    long,
+    help = "Option to not compile any of the generated programs"
+    )]
+    no_compile: bool,
+    #[clap(
         long,
         help = "Option to not runtime differential testing with different optimizations."
     )]
@@ -90,6 +95,7 @@ pub fn main() {
     let mut runner = Runner {
         policy: Policy::default(),
         tmp_dir: tmp_dir.clone(),
+        no_compile: args.no_compile,
         base_name,
         opts,
         versions,
