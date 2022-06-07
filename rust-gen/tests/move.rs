@@ -151,6 +151,47 @@ impl StructTemplate {
         }
         .into()
     }
+
+    fn tuple_field_expr(name: &str, index: usize) -> FieldExpr {
+        FieldExpr {
+            base: Box::new(
+                IdentExpr {
+                    name: name.to_string(),
+                }
+                .into(),
+            ),
+            member: Member::Unnamed(index),
+        }
+        .into()
+    }
+}
+
+fn generate_checksum_and_emit(file: &mut RustFile) -> String {
+    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true);
+    checksum_gen_visitor.visit_file(file);
+    let mut emit_visitor = EmitVisitor::default();
+    emit_visitor.visit_file(file);
+    let output = emit_visitor.output();
+    println!("{}", output);
+    output
+}
+
+// #[derive(PartialEq, Clone)]
+// struct Struct1(u32);
+//
+// #[derive(PartialEq, Clone)]
+// struct Struct2(Struct1, Struct1);
+//
+// fn main() {
+//     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
+// }
+
+#[test]
+fn default_struct() {
+    let mut template = StructTemplate::default();
+    let output = generate_checksum_and_emit(&mut template.2);
+    assert!(output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
 }
 
 // #[derive(PartialEq, Clone)]
@@ -163,16 +204,6 @@ impl StructTemplate {
 //     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
 //     s2;
 // }
-
-fn generate_checksum_and_emit(file: &mut RustFile) -> String {
-    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true);
-    checksum_gen_visitor.visit_file(file);
-    let mut emit_visitor = EmitVisitor::default();
-    emit_visitor.visit_file(file);
-    let output = emit_visitor.output();
-    println!("{}", output);
-    output
-}
 
 #[test]
 fn struct_move() {
@@ -241,6 +272,57 @@ fn struct_block_move() {
 }
 
 // fn main() {
+//     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
+//     {
+//         s2.0;
+//     };
+// }
+#[test]
+fn struct_block_partial_move() {
+    let mut template = StructTemplate::default();
+    let block_stmts = vec![SemiStmt {
+        expr: FieldExpr {
+            base: Box::new(
+                IdentExpr {
+                    name: "s2".to_string(),
+                }
+                .into(),
+            ),
+            member: Member::Unnamed(0),
+        }
+        .into(),
+    }
+    .into()];
+    template.add_stmt(StructTemplate::block_stmt(block_stmts));
+    let output = generate_checksum_and_emit(&mut template.2);
+    assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+}
+
+// fn main() {
+//     let s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
+//     s2;
+//     {
+//         s2.0 = Struct1(3_32),;
+//     };
+// }
+#[test]
+fn struct_block_partial_reassign() {
+    let mut template = StructTemplate::default();
+    template.add_stmt(StructTemplate::struct_ident_stmt("s2"));
+    // let block_stmts = vec![Stmt::Semi(SemiStmt {
+    //     expr: AssignExpr {
+    //         place: StructTemplate::tuple_field_expr("s2", 0).into(),
+    //         rhs: Box::new(StructTemplate::struct1_expr(3))
+    //     }.into()
+    // })];
+    // template.add_stmt(StructTemplate::block_stmt(block_stmts));
+    let output = generate_checksum_and_emit(&mut template.2);
+    assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+}
+
+// fn main() {
 //     let mut s2: Struct2 = Struct2(Struct1(1_u32,), Struct1(2_u32,));
 //     s2;
 //     if (false) {
@@ -301,20 +383,11 @@ fn partial_struct_move() {
     let mut template = StructTemplate::default();
     template.add_stmt(
         SemiStmt {
-            expr: FieldExpr {
-                base: Box::new(
-                    IdentExpr {
-                        name: "s2".to_string(),
-                    }
-                    .into(),
-                ),
-                member: Member::Unnamed(0),
-            }
-            .into(),
+            expr: StructTemplate::tuple_field_expr("s2", 0).into(),
         }
         .into(),
     );
     let output = generate_checksum_and_emit(&mut template.2);
-    assert!(output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
-    assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
+    assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
+    assert!(output.contains("checksum = (checksum + (((s2.1).0) as u128));"));
 }

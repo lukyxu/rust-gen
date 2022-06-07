@@ -2,13 +2,14 @@ use rand::distributions;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Distribution {
     Uniform(usize, usize),
 }
 
 impl Distribution {
     pub fn new_uniform_inclusive(low: usize, high: usize) -> Distribution {
+        assert!(low <= high);
         Distribution::Uniform(low, high)
     }
 
@@ -18,5 +19,9 @@ impl Distribution {
                 rng.sample(distributions::Uniform::new_inclusive(*low, *high))
             }
         }
+    }
+
+    pub fn none() -> Distribution {
+        Distribution::Uniform(0, 0)
     }
 }

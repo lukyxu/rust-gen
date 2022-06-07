@@ -86,7 +86,7 @@ impl TrackedTy {
                         .iter()
                         .map(TrackedTy::ownership_state)
                         .any(|state| {
-                            state == OwnershipState::Owned
+                            state == OwnershipState::Moved
                                 || state == OwnershipState::PartiallyOwned
                         })
                     {
@@ -109,6 +109,101 @@ impl TrackedTy {
             TrackedTy::Reference(_) => {
                 unimplemented!()
             }
+        }
+    }
+
+    pub fn update(&mut self, other1: &TrackedTy, other2: Option<&TrackedTy>, if_stmt: bool) {
+        let prev_ownership = self.ownership_state();
+        let other1_ownership = other1.ownership_state();
+        let other2_ownership = if let Some(other2) = other2 {
+            other2.ownership_state()
+        } else {
+            if if_stmt {
+                prev_ownership
+            } else {
+                other1_ownership
+            }
+        };
+        if prev_ownership == OwnershipState::NotApplicable {
+            assert_eq!(other1_ownership, OwnershipState::NotApplicable);
+            assert_eq!(other2_ownership, OwnershipState::NotApplicable);
+            return;
+        }
+        if matches!(other1_ownership, OwnershipState::Moved)
+            || matches!(other2_ownership, OwnershipState::Moved)
+        {
+            self.set_ownership_state(OwnershipState::Moved);
+            return;
+        }
+        if matches!(
+            (other1_ownership, other2_ownership),
+            (OwnershipState::Owned, OwnershipState::Owned)
+        ) {
+            self.set_ownership_state(OwnershipState::Owned);
+            return;
+        }
+        match self {
+            TrackedTy::Tuple(ty_self) => {
+                let ty_1 = match other1 {
+                    TrackedTy::Tuple(ty_1) => &ty_1.tuple,
+                    _ => panic!(),
+                };
+                let ty_2 = match other2 {
+                    Some(TrackedTy::Tuple(ty_2)) => Some(&ty_2.tuple),
+                    None => None,
+                    _ => panic!(),
+                };
+                ty_self
+                    .tuple
+                    .iter_mut()
+                    .enumerate()
+                    .for_each(|(i, ty)| ty.update(&ty_1[i], ty_2.map(|tys| &tys[i]), if_stmt));
+            }
+            TrackedTy::Struct(ty_self) => match ty_self {
+                TrackedStructTy::Field(ty_self) => {
+                    let ty_1: &Vec<GFieldDef<OwnershipState>> = match other1 {
+                        TrackedTy::Struct(TrackedStructTy::Field(ty_1)) => &ty_1.fields,
+                        _ => panic!(),
+                    };
+                    let ty_2: Option<&Vec<GFieldDef<OwnershipState>>> = match other2 {
+                        Some(TrackedTy::Struct(TrackedStructTy::Field(ty_2))) => Some(&ty_2.fields),
+                        None => None,
+                        _ => panic!(),
+                    };
+                    ty_self
+                        .fields
+                        .iter_mut()
+                        .enumerate()
+                        .for_each(|(i, field)| {
+                            field
+                                .ty
+                                .update(&ty_1[i].ty, ty_2.map(|fields| &*fields[i].ty), if_stmt)
+                        })
+                }
+                TrackedStructTy::Tuple(ty_self) => {
+                    let ty_1 = match other1 {
+                        TrackedTy::Struct(TrackedStructTy::Tuple(ty_1)) => &ty_1.fields.tuple,
+                        _ => panic!(),
+                    };
+                    let ty_2 = match other2 {
+                        Some(TrackedTy::Struct(TrackedStructTy::Tuple(ty_2))) => {
+                            Some(&ty_2.fields.tuple)
+                        }
+                        None => None,
+                        _ => panic!(),
+                    };
+                    ty_self
+                        .fields
+                        .tuple
+                        .iter_mut()
+                        .enumerate()
+                        .for_each(|(i, ty)| ty.update(&ty_1[i], ty_2.map(|tys| &tys[i]), if_stmt));
+                }
+            },
+            TrackedTy::Reference(_reference_ty) => {
+                panic!()
+            }
+            _ => {}
         }
     }
 

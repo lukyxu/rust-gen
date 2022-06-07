@@ -4,62 +4,118 @@ use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, IntTy, PrimTy, StructTy, TupleTy, TyKind, UIntTy};
 use crate::distribution::Distribution;
+use derive_builder::Builder;
 use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Builder, Serialize, Deserialize)]
+#[builder(custom_constructor, build_fn(private, name = "fallible_build"))]
 pub struct Policy {
-    pub name: &'static str,
+    /// Unique identifier for policy.
+    pub name: String,
+
+    // Max generation attempts
+    /// Max attempts for fuzzing a file.
+    pub max_file_attempts: usize,
+    /// Max attempts for fuzzing an item.
+    pub max_item_attempts: usize,
+    /// Max attempts for fuzzing a function.
+    pub max_fn_attempts: usize,
+    /// Max attempts for fuzzing a type.
+    pub max_ty_attempts: usize,
+    /// Max attempts for fuzzing a statement.
+    pub max_stmt_attempts: usize,
+    /// Max attempts for fuzzing an expression.
+    pub max_expr_attempts: usize,
+
+    // Items
+    /// Distribution of the number of items in a file.
     pub num_item_dist: Distribution,
+    /// Distribution of item kinds.
     pub item_dist: Vec<(ItemKind, f64)>,
-    pub num_stmt_dist: Distribution,
-    pub stmt_dist: Vec<(StmtKind, f64)>,
-    pub expr_dist: Vec<(ExprKind, f64)>,
+
+    // Types
+    /// Distribution of type kinds.
     pub type_dist: Vec<(TyKind, f64)>,
-
+    /// Distribution of primitive types.
     pub prim_type_dist: Vec<(PrimTy, f64)>,
-    pub default_array_type_dist: Vec<(ArrayTy, f64)>,
-    pub default_tuple_type_dist: Vec<(TupleTy, f64)>,
-    pub default_struct_type_dist: Vec<(StructTy, f64)>,
 
-    pub new_array_prob: f64,
-    pub array_length_dist: Distribution,
-    pub max_array_depth: usize,
-    pub max_expr_depth_in_array: usize,
-
-    pub new_tuple_prob: f64,
-    pub tuple_length_dist: Distribution,
-    pub max_tuple_depth: usize,
-    pub max_expr_depth_in_tuple: usize,
-
-    pub field_struct_prob: f64,
-    pub struct_length_dist: Distribution,
-    pub max_struct_depth: usize,
-    pub max_expr_depth_in_struct: usize,
-
-    pub binary_op_dist: Vec<(BinaryOp, f64)>,
-    pub unary_op_dist: Vec<(UnaryOp, f64)>,
-    pub otherwise_if_stmt_prob: f64,
-    pub bool_true_prob: f64,
+    // Stmt distribution
+    /// Distribution of the number of statements in a file.
+    pub num_stmt_dist: Distribution,
+    /// Distribution of statement kinds.
+    pub stmt_dist: Vec<(StmtKind, f64)>,
+    /// Probability of an local let statement binding a mutable variable.
     pub mutability_prob: f64,
 
-    pub new_lifetime_prob: f64,
-    pub disable_lifetime: bool,
-
+    // Expression distribution
+    /// Distribution of expression kinds.
+    pub expr_dist: Vec<(ExprKind, f64)>,
+    /// Probability of the base boolean primitive generating the value true.
+    pub bool_true_prob: f64,
+    /// Probability of an if expression, which evaluates to the unit type, of having a else branch.
+    /// If expression which evaluate to a value which is not the unit type are excluded as they must have an else expression of the same type.
+    pub otherwise_if_stmt_prob: f64,
+    /// Maximum nested depth of an if/else expression.
     pub max_if_else_depth: usize,
+    /// Maximum nested depth of a block expression.
     pub max_block_depth: usize,
+    /// Maximum nested depth of a arithmetic expression.
     pub max_arith_depth: usize,
+    /// Maximum nested depth of a expression.
     pub max_expr_depth: usize,
 
-    pub max_file_attempts: usize,
-    pub max_main_fn_attempts: usize,
-    pub max_item_attempts: usize,
-    pub max_stmt_attempts: usize,
-    pub max_expr_attempts: usize,
-    pub max_ty_attempts: usize,
+    // Array distribution
+    /// Distribution of the number of elements in a generated array.
+    pub array_length_dist: Distribution,
+    /// Distribution of the array types which are available at the start of the program.
+    pub default_array_type_dist: Vec<(ArrayTy, f64)>,
+    /// Probability of generating a new array type.
+    pub new_array_prob: f64,
+    /// Maximum nested depth of an array.
+    pub max_array_depth: usize,
+    /// Maximum expression depth within an array.
+    pub max_expr_depth_in_array: usize,
 
-    pub tuple_struct_copy_prob: f64,
+    // Tuple distribution
+    /// Distribution of the number of elements in a generated tuple.
+    pub tuple_length_dist: Distribution,
+    /// Distribution of the tuple types which are available at the start of the program.
+    pub default_tuple_type_dist: Vec<(TupleTy, f64)>,
+    /// Probability of generating a new tuple type.
+    pub new_tuple_prob: f64,
+    /// Maximum nested depth of an tuple.
+    pub max_tuple_depth: usize,
+    /// Maximum expression depth within a tuple.
+    pub max_expr_depth_in_tuple: usize,
+
+    // Struct distribution
+    /// Distribution of the number of fields in a generated struct.
+    pub struct_length_dist: Distribution,
+    /// Distribution of the struct types which are available at the start of the program.
+    pub default_struct_type_dist: Vec<(StructTy, f64)>,
+    /// Probability of a newly generated struct type being a field struct.
+    pub field_struct_prob: f64,
+    /// Probability of a newly generated field struct type, having the copy trait.
     pub field_struct_copy_prob: f64,
+    /// Probability of a newly generated tuple struct type, having the copy trait.
+    pub tuple_struct_copy_prob: f64,
+    /// Maximum nested depth of a struct.
+    pub max_struct_depth: usize,
+    /// Maximum expression depth within a struct.
+    pub max_expr_depth_in_struct: usize,
+
+    // Operation distribution
+    /// Distribution of binary operators.
+    pub binary_op_dist: Vec<(BinaryOp, f64)>,
+    /// Distribution of unary operators.
+    pub unary_op_dist: Vec<(UnaryOp, f64)>,
+
+    // Lifetimes
+    /// Probability of generating a new lifetime.
+    pub new_lifetime_prob: f64,
+    /// Option to disable lifetime generation.
+    pub disable_lifetime: bool,
 }
 
 // vec![
@@ -78,26 +134,30 @@ pub struct Policy {
 impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![
+            Policy::default(),
+            Policy::heavy_basic_arithmetic(),
+            // Policy::nested_heavy_basic_arithmetic(),
+
             // Policy::tuple_debug(),
             // Policy::tuple_field_debug(),
-            Policy::my_debug(),
-            Policy::simple_debug(),
-            Policy::simple_debug_with_assignments(),
-            Policy::simple_debug_with_reference(),
+            // Policy::my_debug(),
+            // Policy::simple_debug(),
+            // Policy::simple_debug_with_assignments(),
+            // Policy::simple_debug_with_reference(),
             // Policy::array_debug(),
             // Policy::array_index_debug(),
-            Policy::default(),
-            Policy::debug(),
+
+            // Policy::debug(),
             // Policy::fields_stress_test(),
             Policy::reassign_ownership_transfer_debug(),
         ]
     }
 
-    pub fn get_policy_names() -> Vec<&'static str> {
+    pub fn get_policy_names() -> Vec<String> {
         Policy::get_policies()
             .iter()
-            .map(|p| p.name)
-            .collect::<Vec<&str>>()
+            .map(|p| p.name.clone())
+            .collect::<Vec<String>>()
     }
 
     pub fn get_policy(name: &str) -> Option<Policy> {
@@ -141,8 +201,9 @@ impl Policy {
                 TupleTy::new(vec![IntTy::I8.into(), IntTy::I8.into()]),
                 1.0,
             )],
-            tuple_length_dist: Distribution::new_uniform_inclusive(3, 4),
-            max_tuple_depth: 1,
+            tuple_length_dist: Distribution::new_uniform_inclusive(2, 3),
+            max_tuple_depth: 2,
+
             expr_dist: vec![
                 (ExprKind::Literal, 5.0),
                 (ExprKind::Binary, 1.0),
@@ -152,22 +213,23 @@ impl Policy {
             ],
 
             max_if_else_depth: 2,
-            max_block_depth: 2,
+            max_block_depth: 1,
             max_arith_depth: 2,
+            max_expr_depth_in_tuple: 5,
             ..policy
         }
     }
 
     pub fn tuple_field_debug() -> Self {
         let mut policy = Policy::tuple_debug();
-        policy.name = "tuple_field_debug";
+        policy.name = "tuple_field_debug".to_string();
         policy.expr_dist.push((ExprKind::Field, 0.5));
         policy
     }
 
     pub fn debug() -> Self {
         Policy {
-            name: "debug",
+            name: "debug".to_string(),
             binary_op_dist: vec![
                 (BinaryOp::Eq, 1.0),
                 (BinaryOp::Ne, 1.0),
@@ -209,7 +271,7 @@ impl Policy {
 
     pub fn simple_debug_with_assignments() -> Self {
         let mut policy = Policy::simple_debug();
-        policy.name = "simple_debug_with_assignments";
+        policy.name = "simple_debug_with_assignments".to_string();
         policy.expr_dist.push((ExprKind::Assign, 4.0));
         policy.mutability_prob = 1.0;
         policy.max_if_else_depth = 2;
@@ -221,7 +283,7 @@ impl Policy {
 
     pub fn simple_debug_with_reference() -> Self {
         let mut policy = Policy::simple_debug();
-        policy.name = "simple_debug_with_reference";
+        policy.name = "simple_debug_with_reference".to_string();
         policy.max_arith_depth = 1;
         policy.type_dist = vec![
             (TyKind::Unit, 1.0),
@@ -281,7 +343,7 @@ impl Policy {
 
     pub fn array_index_debug() -> Self {
         let mut policy = Policy::array_debug();
-        policy.name = "array_index_debug";
+        policy.name = "array_index_debug".to_string();
         policy.expr_dist.push((ExprKind::Index, 0.5));
         policy
     }
@@ -303,7 +365,7 @@ impl Policy {
 
     pub fn my_debug() -> Self {
         let mut policy = Policy::simple_debug();
-        policy.name = "my_debug";
+        policy.name = "my_debug".to_string();
         policy.max_arith_depth = 3;
         policy.max_if_else_depth = 1;
         policy.type_dist = vec![
@@ -347,10 +409,12 @@ impl Policy {
 
     pub fn reassign_ownership_transfer_debug() -> Self {
         let mut policy = Policy::default_with_name("rot_debug");
-        policy.num_item_dist = Distribution::new_uniform_inclusive(2, 3);
+        policy.num_item_dist = Distribution::new_uniform_inclusive(4, 4);
         policy.item_dist = vec![(ItemKind::Struct, 1.0)];
         policy.tuple_struct_copy_prob = 0.0;
         policy.field_struct_copy_prob = 0.0;
+        policy.max_if_else_depth = 0;
+        policy.max_block_depth = 3;
         policy
     }
 }
@@ -362,10 +426,30 @@ impl Default for Policy {
 }
 
 impl Policy {
-    // TODO: Add assertions in policy after
-    fn default_with_name(name: &'static str) -> Self {
+    pub fn heavy_basic_arithmetic() -> Policy {
+        PolicyBuilder::from_policy(Policy::default())
+            .name("heavy_basic_arithmetics".to_string())
+            .num_stmt_dist(Distribution::Uniform(1000, 1000))
+            .num_item_dist(Distribution::none())
+            .type_dist(vec![(TyKind::Prim, 1.0)])
+            .expr_dist(vec![
+                (ExprKind::Binary, 5.0),
+                (ExprKind::Ident, 1.0),
+                (ExprKind::Cast, 3.0),
+                (ExprKind::Unary, 3.0),
+                (ExprKind::Literal, 1.0),
+            ])
+            .max_expr_depth(10)
+            .max_expr_attempts(100)
+            .build()
+            .unwrap()
+    }
+}
+
+impl Policy {
+    fn default_with_name(name: &str) -> Self {
         Policy {
-            name,
+            name: name.to_string(),
             num_item_dist: Distribution::new_uniform_inclusive(2, 10),
             item_dist: vec![(ItemKind::Struct, 1.0), (ItemKind::Function, 1.0)],
 
@@ -380,7 +464,7 @@ impl Policy {
                 (ExprKind::If, 1.0),
                 (ExprKind::Binary, 2.0),
                 (ExprKind::Ident, 2.0),
-                (ExprKind::Block, 0.0),
+                (ExprKind::Block, 2.0),
                 (ExprKind::Unary, 1.0),
                 (ExprKind::Cast, 1.0),
                 (ExprKind::Assign, 1.0),
@@ -470,7 +554,7 @@ impl Policy {
             max_arith_depth: 5,
 
             max_file_attempts: 1,
-            max_main_fn_attempts: 1,
+            max_fn_attempts: 1,
             max_item_attempts: 1,
             max_stmt_attempts: 30,
             max_expr_attempts: 5,
@@ -479,5 +563,83 @@ impl Policy {
             tuple_struct_copy_prob: 0.5,
             field_struct_copy_prob: 0.5,
         }
+    }
+}
+
+impl PolicyBuilder {
+    pub fn build(&self) -> Result<Policy, PolicyBuilderError> {
+        let policy = self.fallible_build().unwrap();
+        if policy.max_file_attempts == 0
+            || policy.max_item_attempts == 0
+            || policy.max_fn_attempts == 0
+            || policy.max_ty_attempts == 0
+            || policy.max_stmt_attempts == 0
+            || policy.max_expr_attempts == 0
+        {
+            return Err(PolicyBuilderError::ValidationError(
+                "Max file/item/fn/ty/stmt/expr attempts must be greater than 0.".to_string(),
+            ));
+        };
+        Ok(policy)
+    }
+
+    pub fn from_policy(policy: Policy) -> PolicyBuilder {
+        PolicyBuilder {
+            name: Some(policy.name),
+            max_file_attempts: Some(policy.max_file_attempts),
+            max_item_attempts: Some(policy.max_item_attempts),
+            max_fn_attempts: Some(policy.max_fn_attempts),
+            max_ty_attempts: Some(policy.max_ty_attempts),
+            max_stmt_attempts: Some(policy.max_stmt_attempts),
+            max_expr_attempts: Some(policy.max_expr_attempts),
+            num_item_dist: Some(policy.num_item_dist),
+            item_dist: Some(policy.item_dist),
+            type_dist: Some(policy.type_dist),
+            prim_type_dist: Some(policy.prim_type_dist),
+            num_stmt_dist: Some(policy.num_stmt_dist),
+            stmt_dist: Some(policy.stmt_dist),
+            mutability_prob: Some(policy.mutability_prob),
+            expr_dist: Some(policy.expr_dist),
+            bool_true_prob: Some(policy.bool_true_prob),
+            otherwise_if_stmt_prob: Some(policy.otherwise_if_stmt_prob),
+            max_if_else_depth: Some(policy.max_if_else_depth),
+            max_block_depth: Some(policy.max_block_depth),
+            max_arith_depth: Some(policy.max_arith_depth),
+            max_expr_depth: Some(policy.max_expr_depth),
+            array_length_dist: Some(policy.array_length_dist),
+            default_array_type_dist: Some(policy.default_array_type_dist),
+            new_array_prob: Some(policy.new_array_prob),
+            max_array_depth: Some(policy.max_array_depth),
+            max_expr_depth_in_array: Some(policy.max_expr_depth_in_array),
+            tuple_length_dist: Some(policy.tuple_length_dist),
+            default_tuple_type_dist: Some(policy.default_tuple_type_dist),
+            new_tuple_prob: Some(policy.new_tuple_prob),
+            max_tuple_depth: Some(policy.max_tuple_depth),
+            max_expr_depth_in_tuple: Some(policy.max_expr_depth_in_tuple),
+            struct_length_dist: Some(policy.struct_length_dist),
+            default_struct_type_dist: Some(policy.default_struct_type_dist),
+            field_struct_prob: Some(policy.field_struct_prob),
+            field_struct_copy_prob: Some(policy.field_struct_copy_prob),
+            tuple_struct_copy_prob: Some(policy.tuple_struct_copy_prob),
+            max_struct_depth: Some(policy.max_struct_depth),
+            max_expr_depth_in_struct: Some(policy.max_expr_depth_in_struct),
+            binary_op_dist: Some(policy.binary_op_dist),
+            unary_op_dist: Some(policy.unary_op_dist),
+            new_lifetime_prob: Some(policy.new_lifetime_prob),
+            disable_lifetime: Some(policy.disable_lifetime),
+        }
+    }
+
+    pub fn no_assignments(&mut self) -> &mut Self {
+        self.expr_dist
+            .as_mut()
+            .unwrap()
+            .retain(|(kind, _)| !matches!(kind, ExprKind::Assign));
+        self
+    }
+
+    pub fn no_items(&mut self) -> &mut Self {
+        self.num_item_dist = Some(Distribution::none());
+        self
     }
 }

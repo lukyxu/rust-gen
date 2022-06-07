@@ -10,6 +10,7 @@ use std::hash::Hash;
 pub fn revert_ctx_on_failure<T: 'static>(
     f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
 ) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
+    // Bottleneck
     Box::new(|ctx, res_type| -> Option<T> {
         let snapshot = ctx.snapshot();
         let res = f(ctx, res_type);

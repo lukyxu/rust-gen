@@ -71,14 +71,11 @@ impl Expr {
     }
 
     pub fn generate_move_expr(ctx: &mut Context, res_type: &Ty) -> Option<Expr> {
-        // TODO: Check if I need snapshot here
-        let snapshot = ctx.snapshot();
         let expr = Expr::generate_expr(ctx, res_type)?;
         let moved = ctx.type_symbol_table.move_expr(&expr);
         if moved {
             Some(expr)
         } else {
-            ctx.restore_snapshot(snapshot);
             None
         }
     }
@@ -338,10 +335,13 @@ impl IdentExpr {
         mut_ident_exprs.choose(&mut ctx.rng).cloned()
     }
 
-    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        !ctx.type_symbol_table
-            .get_ident_exprs_by_type(res_type)
-            .is_empty()
+    pub fn can_generate(_ctx: &mut Context, _res_type: &Ty) -> bool {
+        // Time tradeoff
+        // TODO: Manual search is slow
+        // !ctx.type_symbol_table
+        //     .get_ident_exprs_by_type(res_type)
+        //     .is_empty()
+        true
     }
 }
 
