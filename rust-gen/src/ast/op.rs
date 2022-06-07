@@ -143,6 +143,13 @@ impl BinaryOp {
             _ => vec![lhs_arg.clone()],
         }
     }
+
+    pub fn can_short_circuit(&self) -> bool {
+        match self {
+            BinaryOp::And | BinaryOp::Or => true,
+            _ => false
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]

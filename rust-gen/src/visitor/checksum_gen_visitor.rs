@@ -158,7 +158,6 @@ impl Visitor for ChecksumGenVisitor {
     // fuzz_move_expr
     fn visit_expr(&mut self, expr: &mut Expr) {
         self.visit_non_move_expr(expr);
-        // self.full_type_symbol_table.move_expr(expr);
         assert!(
             self.full_type_symbol_table.move_expr(expr),
             "Expr {:?} already moved",
@@ -177,8 +176,8 @@ impl Visitor for ChecksumGenVisitor {
 
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         self.visit_expr(&mut expr.lhs);
-        if expr.op == BinaryOp::Or {
-            // Or statement short circuit
+        if expr.op.can_short_circuit() {
+            // Statements that can short circuit might not evaluate rhs moves
             let mut symbol_table = self.full_type_symbol_table.clone();
             self.visit_expr(&mut expr.rhs);
             std::mem::swap(&mut symbol_table, &mut self.full_type_symbol_table);
