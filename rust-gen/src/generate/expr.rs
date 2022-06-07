@@ -275,7 +275,7 @@ impl BlockExpr {
         )(ctx, res_type)
     }
 
-    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
+    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
         let (block, sym_table) = BlockExpr::generate_block_expr_internal(ctx, res_type)?;
         ctx.type_symbol_table.update(&sym_table);
         Some(block)
