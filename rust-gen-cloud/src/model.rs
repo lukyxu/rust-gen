@@ -1,13 +1,15 @@
-use chrono::{NaiveDateTime};
-use crate::schema::runs;
 use crate::schema::policies;
+use crate::schema::runs;
+use chrono::NaiveDateTime;
 use diesel::result::Error;
-use diesel::{ExpressionMethods, insert_into, MysqlConnection, Queryable, QueryDsl, QueryResult, RunQueryDsl};
-use sha2::{Sha256, Digest};
+use diesel::{
+    insert_into, ExpressionMethods, MysqlConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl,
+};
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
 use rust_gen::runtime::run::RunResult;
 use rust_gen::utils::{from_ron_string, to_ron_string};
+use sha2::{Digest, Sha256};
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
@@ -26,7 +28,7 @@ pub struct RunInfo {
     #[diesel(deserialize_as = "NaiveDateTime")]
     pub created_at: Option<NaiveDateTime>,
     #[diesel(deserialize_as = "NaiveDateTime")]
-    pub updated_at: Option<NaiveDateTime>
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 impl RunInfo {
@@ -122,7 +124,7 @@ pub struct PolicyInfo {
     #[diesel(deserialize_as = "NaiveDateTime")]
     pub created_at: Option<NaiveDateTime>,
     #[diesel(deserialize_as = "NaiveDateTime")]
-    pub updated_at: Option<NaiveDateTime>
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 impl PolicyInfo {
@@ -136,13 +138,20 @@ impl PolicyInfo {
 
     pub fn query(&self, connection: &MysqlConnection) -> Option<PolicyInfo> {
         use crate::schema::policies::dsl::*;
-        let res: QueryResult<Vec<PolicyInfo>> = policies.filter(policy_sha256.eq(&self.policy_sha256)).load::<PolicyInfo>(connection);
-        res.and_then(|res|res.into_iter().filter(|policy| {
-            Policy::from(self.clone()) == Policy::from(policy.clone())
-        }).next().ok_or(Error::NotFound)).map_err(|err| match err {
+        let res: QueryResult<Vec<PolicyInfo>> = policies
+            .filter(policy_sha256.eq(&self.policy_sha256))
+            .load::<PolicyInfo>(connection);
+        res.and_then(|res| {
+            res.into_iter()
+                .filter(|policy| Policy::from(self.clone()) == Policy::from(policy.clone()))
+                .next()
+                .ok_or(Error::NotFound)
+        })
+        .map_err(|err| match err {
             Error::NotFound => Error::NotFound,
             _ => panic!(),
-        }).ok()
+        })
+        .ok()
     }
 }
 
@@ -243,15 +252,15 @@ impl From<PolicyInfo> for Policy {
             binary_op_dist: from_ron_string(&policy.binary_op_dist),
             unary_op_dist: from_ron_string(&policy.unary_op_dist),
             new_lifetime_prob: policy.new_lifetime_prob,
-            disable_lifetime: policy.disable_lifetime
+            disable_lifetime: policy.disable_lifetime,
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use rust_gen::policy::Policy;
     use crate::PolicyInfo;
+    use rust_gen::policy::Policy;
 
     #[test]
     fn convert_between_policies() {

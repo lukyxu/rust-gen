@@ -147,7 +147,7 @@ impl BinaryOp {
     pub fn can_short_circuit(&self) -> bool {
         match self {
             BinaryOp::And | BinaryOp::Or => true,
-            _ => false
+            _ => false,
         }
     }
 }
