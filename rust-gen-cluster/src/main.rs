@@ -58,6 +58,7 @@ impl Command {
             Command::Update { branch } => vec![
                 "cd ~/rust-gen".to_owned(),
                 "git fetch --all".to_owned(),
+                "git stash".to_owned(),
                 format!("git checkout {}", branch).to_owned(),
                 "git pull".to_owned(),
             ]
