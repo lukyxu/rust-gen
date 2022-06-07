@@ -1,4 +1,4 @@
 /target
 .idea/
 /prog
-/rust-gen-cloud/.env
+.env

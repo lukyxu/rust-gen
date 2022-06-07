@@ -2,8 +2,9 @@
 
 members = [
     "rust-gen",
-    "rust-gen-generate",
     "rust-gen-cloud",
+    "rust-gen-cluster",
+    "rust-gen-generate",
+    "rust-gen-installer",
     "rust-gen-runner",
-    "rust-gen-installer"
 ]
