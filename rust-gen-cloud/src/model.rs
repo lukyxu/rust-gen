@@ -8,7 +8,7 @@ use sha2::{Sha256, Digest};
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
 use rust_gen::runtime::run::RunResult;
-use rust_gen::utils::to_ron_string;
+use rust_gen::utils::{from_ron_string, to_ron_string};
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
@@ -66,7 +66,7 @@ impl RunInfo {
     }
 }
 
-#[derive(Insertable, Queryable, Clone, PartialEq)]
+#[derive(Insertable, Queryable, Debug, Clone, PartialEq)]
 #[diesel(primary_key(policy_id))]
 #[table_name = "policies"]
 pub struct PolicyInfo {
@@ -149,7 +149,7 @@ impl From<Policy> for PolicyInfo {
         PolicyInfo {
             policy_id: None,
             policy_sha256: format!("{:X}", Sha256::digest(to_ron_string(&policy))),
-            name: policy.name.to_string(),
+            name: policy.name,
             max_file_attempts: policy.max_file_attempts as u64,
             max_item_attempts: policy.max_item_attempts as u64,
             max_fn_attempts: policy.max_fn_attempts as u64,
@@ -195,51 +195,67 @@ impl From<Policy> for PolicyInfo {
     }
 }
 
-// impl From<PolicyInfo> for Policy {
-//     fn from(policy: PolicyInfo) -> Policy {
-//         Policy {
-//             name: &*policy.name.to_string(),
-//             max_file_attempts: policy.max_file_attempts as u64,
-//             max_item_attempts: policy.max_item_attempts as u64,
-//             max_fn_attempts: policy.max_fn_attempts as u64,
-//             max_ty_attempts: policy.max_ty_attempts as u64,
-//             max_stmt_attempts: policy.max_stmt_attempts as u64,
-//             max_expr_attempts: policy.max_expr_attempts as u64,
-//             num_item_dist: to_ron_string(policy.num_item_dist),
-//             item_dist: to_ron_string(policy.item_dist),
-//             type_dist: to_ron_string(policy.type_dist),
-//             prim_type_dist: to_ron_string(policy.prim_type_dist),
-//             num_stmt_dist: to_ron_string(policy.num_stmt_dist),
-//             stmt_dist: to_ron_string(policy.stmt_dist),
-//             mutability_prob: policy.mutability_prob,
-//             expr_dist: to_ron_string(policy.expr_dist),
-//             bool_true_prob: policy.bool_true_prob,
-//             otherwise_if_stmt_prob: policy.otherwise_if_stmt_prob,
-//             max_if_else_depth: policy.max_if_else_depth as u64,
-//             max_block_depth: policy.max_block_depth as u64,
-//             max_arith_depth: policy.max_arith_depth as u64,
-//             max_expr_depth: policy.max_expr_depth as u64,
-//             array_length_dist: to_ron_string(policy.array_length_dist),
-//             default_array_type_dist: to_ron_string(policy.default_array_type_dist),
-//             new_array_prob: policy.new_array_prob,
-//             max_array_depth: policy.max_array_depth as u64,
-//             max_expr_depth_in_array: policy.max_expr_depth_in_array as u64,
-//             tuple_length_dist: to_ron_string(policy.tuple_length_dist),
-//             default_tuple_type_dist: to_ron_string(policy.default_tuple_type_dist),
-//             new_tuple_prob: policy.new_tuple_prob,
-//             max_tuple_depth: policy.max_tuple_depth as u64,
-//             max_expr_depth_in_tuple: policy.max_expr_depth_in_tuple as u64,
-//             struct_length_dist: to_ron_string(policy.struct_length_dist),
-//             default_struct_type_dist: to_ron_string(policy.default_struct_type_dist),
-//             field_struct_prob: policy.field_struct_prob,
-//             field_struct_copy_prob: policy.field_struct_copy_prob,
-//             tuple_struct_copy_prob: policy.tuple_struct_copy_prob,
-//             max_struct_depth: policy.max_struct_depth as u64,
-//             max_expr_depth_in_struct: policy.max_expr_depth_in_struct as u64,
-//             binary_op_dist: to_ron_string(policy.binary_op_dist),
-//             unary_op_dist: to_ron_string(policy.unary_op_dist),
-//             new_lifetime_prob: policy.new_lifetime_prob,
-//             disable_lifetime: policy.disable_lifetime
-//         }
-//     }
-// }
+impl From<PolicyInfo> for Policy {
+    fn from(policy: PolicyInfo) -> Policy {
+        Policy {
+            name: policy.name.to_string(),
+            max_file_attempts: policy.max_file_attempts as usize,
+            max_item_attempts: policy.max_item_attempts as usize,
+            max_fn_attempts: policy.max_fn_attempts as usize,
+            max_ty_attempts: policy.max_ty_attempts as usize,
+            max_stmt_attempts: policy.max_stmt_attempts as usize,
+            max_expr_attempts: policy.max_expr_attempts as usize,
+            num_item_dist: from_ron_string(&policy.num_item_dist),
+            item_dist: from_ron_string(&policy.item_dist),
+            type_dist: from_ron_string(&policy.type_dist),
+            prim_type_dist: from_ron_string(&policy.prim_type_dist),
+            num_stmt_dist: from_ron_string(&policy.num_stmt_dist),
+            stmt_dist: from_ron_string(&policy.stmt_dist),
+            mutability_prob: policy.mutability_prob,
+            expr_dist: from_ron_string(&policy.expr_dist),
+            bool_true_prob: policy.bool_true_prob,
+            otherwise_if_stmt_prob: policy.otherwise_if_stmt_prob,
+            max_if_else_depth: policy.max_if_else_depth as usize,
+            max_block_depth: policy.max_block_depth as usize,
+            max_arith_depth: policy.max_arith_depth as usize,
+            max_expr_depth: policy.max_expr_depth as usize,
+            array_length_dist: from_ron_string(&policy.array_length_dist),
+            default_array_type_dist: from_ron_string(&policy.default_array_type_dist),
+            new_array_prob: policy.new_array_prob,
+            max_array_depth: policy.max_array_depth as usize,
+            max_expr_depth_in_array: policy.max_expr_depth_in_array as usize,
+            tuple_length_dist: from_ron_string(&policy.tuple_length_dist),
+            default_tuple_type_dist: from_ron_string(&policy.default_tuple_type_dist),
+            new_tuple_prob: policy.new_tuple_prob,
+            max_tuple_depth: policy.max_tuple_depth as usize,
+            max_expr_depth_in_tuple: policy.max_expr_depth_in_tuple as usize,
+            struct_length_dist: from_ron_string(&policy.struct_length_dist),
+            default_struct_type_dist: from_ron_string(&policy.default_struct_type_dist),
+            field_struct_prob: policy.field_struct_prob,
+            field_struct_copy_prob: policy.field_struct_copy_prob,
+            tuple_struct_copy_prob: policy.tuple_struct_copy_prob,
+            max_struct_depth: policy.max_struct_depth as usize,
+            max_expr_depth_in_struct: policy.max_expr_depth_in_struct as usize,
+            binary_op_dist: from_ron_string(&policy.binary_op_dist),
+            unary_op_dist: from_ron_string(&policy.unary_op_dist),
+            new_lifetime_prob: policy.new_lifetime_prob,
+            disable_lifetime: policy.disable_lifetime
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rust_gen::policy::Policy;
+    use crate::PolicyInfo;
+
+    #[test]
+    fn convert_between_policies() {
+        let original_policy = Policy::default();
+        let original_policy_info: PolicyInfo = original_policy.clone().into();
+        let final_policy: Policy = original_policy_info.clone().into();
+        let final_policy_info: PolicyInfo = final_policy.clone().into();
+        assert_eq!(original_policy, final_policy);
+        assert_eq!(original_policy_info, final_policy_info);
+    }
+}

@@ -2,7 +2,7 @@ use rand::distributions;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Distribution {
     Uniform(usize, usize),
 }

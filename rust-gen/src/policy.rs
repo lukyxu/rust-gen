@@ -8,7 +8,7 @@ use derive_builder::Builder;
 use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Builder, Serialize, Deserialize)]
 #[builder(custom_constructor, build_fn(private, name = "fallible_build"))]
 pub struct Policy {
     /// Unique identifier for policy.
