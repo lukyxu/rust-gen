@@ -4,6 +4,7 @@ use crate::schema::runs;
 use crate::schema::policies;
 use diesel::result::Error;
 use diesel::{ExpressionMethods, insert_into, MysqlConnection, QueryDsl, QueryResult, RunQueryDsl};
+use sha2::{Sha256, Digest};
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
 use rust_gen::runtime::run::RunResult;
@@ -71,7 +72,7 @@ impl RunInfo {
 pub struct PolicyInfo {
     #[diesel(deserialize_as = "i32")]
     pub policy_id: Option<i32>,
-    pub policy_sha256: i64,
+    pub policy_sha256: String,
     pub name: String,
     pub max_file_attempts: u64,
     pub max_item_attempts: u64,
@@ -131,7 +132,7 @@ impl PolicyInfo {
 
     pub fn query(&self, connection: &MysqlConnection) -> Option<PolicyInfo> {
         use crate::schema::policies::dsl::*;
-        let res: QueryResult<Vec<PolicyInfo>> = policies.filter(policy_sha256.eq(self.policy_sha256)).load::<PolicyInfo>(connection);
+        let res: QueryResult<Vec<PolicyInfo>> = policies.filter(policy_sha256.eq(&self.policy_sha256)).load::<PolicyInfo>(connection);
         res.and_then(|res|res.into_iter().filter(|policy| {
             let mut clone = policy.clone();
             clone.policy_id = None;
@@ -147,7 +148,7 @@ impl From<Policy> for PolicyInfo {
     fn from(policy: Policy) -> PolicyInfo {
         PolicyInfo {
             policy_id: None,
-            policy_sha256: 0,
+            policy_sha256: format!("{:X}", Sha256::digest(to_ron_string(&policy))),
             name: policy.name.to_string(),
             max_file_attempts: policy.max_file_attempts as u64,
             max_item_attempts: policy.max_item_attempts as u64,

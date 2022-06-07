@@ -15,7 +15,7 @@ CREATE TABLE runs (
 
 CREATE TABLE policies (
    policy_id INTEGER AUTO_INCREMENT,
-   policy_sha256 BIGINT NOT NULL,
+   policy_sha256 CHAR(64) NOT NULL,
    name VARCHAR(255) NOT NULL,
    max_file_attempts BIGINT UNSIGNED NOT NULL,
    max_item_attempts BIGINT UNSIGNED NOT NULL,
