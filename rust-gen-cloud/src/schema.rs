@@ -44,6 +44,8 @@ table! {
         unary_op_dist -> Text,
         new_lifetime_prob -> Double,
         disable_lifetime -> Bool,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
@@ -58,6 +60,8 @@ table! {
         policy_id -> Integer,
         statistics -> Nullable<Text>,
         error -> Nullable<Varchar>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 

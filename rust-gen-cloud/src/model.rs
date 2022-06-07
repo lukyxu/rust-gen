@@ -1,9 +1,8 @@
-use std::time::SystemTime;
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime};
 use crate::schema::runs;
 use crate::schema::policies;
 use diesel::result::Error;
-use diesel::{ExpressionMethods, insert_into, MysqlConnection, QueryDsl, QueryResult, RunQueryDsl};
+use diesel::{ExpressionMethods, insert_into, MysqlConnection, Queryable, QueryDsl, QueryResult, RunQueryDsl};
 use sha2::{Sha256, Digest};
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
@@ -24,6 +23,10 @@ pub struct RunInfo {
     pub policy_id: i32,
     pub statistics: Option<String>,
     pub error: Option<String>,
+    #[diesel(deserialize_as = "NaiveDateTime")]
+    pub created_at: Option<NaiveDateTime>,
+    #[diesel(deserialize_as = "NaiveDateTime")]
+    pub updated_at: Option<NaiveDateTime>
 }
 
 impl RunInfo {
@@ -53,12 +56,13 @@ impl RunInfo {
                 })
                 .next(),
             error: run_output.err().as_ref().map(RunnerError::to_string),
+            created_at: None,
+            updated_at: None,
         }
     }
 
     pub fn insert_new(&self, connection: &MysqlConnection) {
         use crate::schema::runs::dsl::runs;
-        use crate::schema::runs::dsl::*;
         insert_into(runs)
             .values(self.clone())
             .execute(connection)
@@ -115,10 +119,10 @@ pub struct PolicyInfo {
     pub unary_op_dist: String,
     pub new_lifetime_prob: f64,
     pub disable_lifetime: bool,
-    // #[diesel(deserialize_as = "NaiveDateTime")]
-    // pub created_at: Option<NaiveDateTime>,
-    // #[diesel(deserialize_as = "NaiveDateTime")]
-    // pub updated_at: Option<NaiveDateTime>
+    #[diesel(deserialize_as = "NaiveDateTime")]
+    pub created_at: Option<NaiveDateTime>,
+    #[diesel(deserialize_as = "NaiveDateTime")]
+    pub updated_at: Option<NaiveDateTime>
 }
 
 impl PolicyInfo {
@@ -134,9 +138,7 @@ impl PolicyInfo {
         use crate::schema::policies::dsl::*;
         let res: QueryResult<Vec<PolicyInfo>> = policies.filter(policy_sha256.eq(&self.policy_sha256)).load::<PolicyInfo>(connection);
         res.and_then(|res|res.into_iter().filter(|policy| {
-            let mut clone = policy.clone();
-            clone.policy_id = None;
-            &clone == self
+            Policy::from(self.clone()) == Policy::from(policy.clone())
         }).next().ok_or(Error::NotFound)).map_err(|err| match err {
             Error::NotFound => Error::NotFound,
             _ => panic!(),
@@ -190,7 +192,9 @@ impl From<Policy> for PolicyInfo {
             binary_op_dist: to_ron_string(policy.binary_op_dist),
             unary_op_dist: to_ron_string(policy.unary_op_dist),
             new_lifetime_prob: policy.new_lifetime_prob,
-            disable_lifetime: policy.disable_lifetime
+            disable_lifetime: policy.disable_lifetime,
+            created_at: None,
+            updated_at: None,
         }
     }
 }
