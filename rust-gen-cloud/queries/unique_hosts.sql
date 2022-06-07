@@ -1,0 +1,1 @@
+SELECT DISTINCT hostname FROM rustgen.runs
