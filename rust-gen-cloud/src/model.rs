@@ -192,6 +192,54 @@ impl From<Policy> for PolicyInfo {
             new_lifetime_prob: policy.new_lifetime_prob,
             disable_lifetime: policy.disable_lifetime
         }
-        // panic!()
     }
 }
+
+// impl From<PolicyInfo> for Policy {
+//     fn from(policy: PolicyInfo) -> Policy {
+//         Policy {
+//             name: &*policy.name.to_string(),
+//             max_file_attempts: policy.max_file_attempts as u64,
+//             max_item_attempts: policy.max_item_attempts as u64,
+//             max_fn_attempts: policy.max_fn_attempts as u64,
+//             max_ty_attempts: policy.max_ty_attempts as u64,
+//             max_stmt_attempts: policy.max_stmt_attempts as u64,
+//             max_expr_attempts: policy.max_expr_attempts as u64,
+//             num_item_dist: to_ron_string(policy.num_item_dist),
+//             item_dist: to_ron_string(policy.item_dist),
+//             type_dist: to_ron_string(policy.type_dist),
+//             prim_type_dist: to_ron_string(policy.prim_type_dist),
+//             num_stmt_dist: to_ron_string(policy.num_stmt_dist),
+//             stmt_dist: to_ron_string(policy.stmt_dist),
+//             mutability_prob: policy.mutability_prob,
+//             expr_dist: to_ron_string(policy.expr_dist),
+//             bool_true_prob: policy.bool_true_prob,
+//             otherwise_if_stmt_prob: policy.otherwise_if_stmt_prob,
+//             max_if_else_depth: policy.max_if_else_depth as u64,
+//             max_block_depth: policy.max_block_depth as u64,
+//             max_arith_depth: policy.max_arith_depth as u64,
+//             max_expr_depth: policy.max_expr_depth as u64,
+//             array_length_dist: to_ron_string(policy.array_length_dist),
+//             default_array_type_dist: to_ron_string(policy.default_array_type_dist),
+//             new_array_prob: policy.new_array_prob,
+//             max_array_depth: policy.max_array_depth as u64,
+//             max_expr_depth_in_array: policy.max_expr_depth_in_array as u64,
+//             tuple_length_dist: to_ron_string(policy.tuple_length_dist),
+//             default_tuple_type_dist: to_ron_string(policy.default_tuple_type_dist),
+//             new_tuple_prob: policy.new_tuple_prob,
+//             max_tuple_depth: policy.max_tuple_depth as u64,
+//             max_expr_depth_in_tuple: policy.max_expr_depth_in_tuple as u64,
+//             struct_length_dist: to_ron_string(policy.struct_length_dist),
+//             default_struct_type_dist: to_ron_string(policy.default_struct_type_dist),
+//             field_struct_prob: policy.field_struct_prob,
+//             field_struct_copy_prob: policy.field_struct_copy_prob,
+//             tuple_struct_copy_prob: policy.tuple_struct_copy_prob,
+//             max_struct_depth: policy.max_struct_depth as u64,
+//             max_expr_depth_in_struct: policy.max_expr_depth_in_struct as u64,
+//             binary_op_dist: to_ron_string(policy.binary_op_dist),
+//             unary_op_dist: to_ron_string(policy.unary_op_dist),
+//             new_lifetime_prob: policy.new_lifetime_prob,
+//             disable_lifetime: policy.disable_lifetime
+//         }
+//     }
+// }
