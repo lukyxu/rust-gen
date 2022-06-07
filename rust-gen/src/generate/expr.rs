@@ -148,8 +148,8 @@ impl BinaryExpr {
             .cloned()
             .unwrap();
         let lhs = Box::new(Expr::fuzz_move_expr(ctx, &lhs_arg_ty)?);
-        let rhs = if op == BinaryOp::Or {
-            // Or statement short circuit
+        let rhs = if op.can_short_circuit() {
+            // Statements that can short circuit might not evaluate rhs moves
             let mut symbol_table = ctx.type_symbol_table.clone();
             let expr = Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?);
             std::mem::swap(&mut symbol_table, &mut ctx.type_symbol_table);

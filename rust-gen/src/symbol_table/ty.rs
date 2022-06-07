@@ -137,11 +137,11 @@ impl TypeSymbolTable {
     pub fn update(&mut self, other: &TypeSymbolTable) {
         let keys: Vec<String> = self.var_type_mapping.keys().cloned().collect();
         for key in &keys {
-            self.var_type_mapping
-                .get_mut(key)
-                .unwrap()
-                .ty
-                .update(&other.get_var_type(key).unwrap(), None, false)
+            self.var_type_mapping.get_mut(key).unwrap().ty.update(
+                &other.get_var_type(key).unwrap(),
+                None,
+                false,
+            )
         }
     }
 
@@ -154,7 +154,7 @@ impl TypeSymbolTable {
                     .as_ref()
                     .map(|branch2| branch2.get_var_type(key).unwrap())
                     .as_ref(),
-                true
+                true,
             )
         }
     }

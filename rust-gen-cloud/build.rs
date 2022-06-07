@@ -5,10 +5,12 @@ fn main() {
         .args(&["rev-parse", "HEAD"])
         .output()
         .unwrap();
-    let git_hash = String::from_utf8(output.stdout).unwrap();
+    let git_hash = String::from_utf8(output.stdout).unwrap_or("unknown".to_owned());
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
-    let output = Command::new("hostname").output().unwrap();
-    let git_hash = String::from_utf8(output.stdout).unwrap();
-    println!("cargo:rustc-env=HOSTNAME={}", git_hash);
+    let output = Command::new("hostname").output();
+    let hostname = output
+        .map(|output| String::from_utf8(output.stdout).unwrap())
+        .unwrap_or("unknown".to_owned());
+    println!("cargo:rustc-env=HOSTNAME={}", hostname);
 }
