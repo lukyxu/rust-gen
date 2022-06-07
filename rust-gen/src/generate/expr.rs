@@ -335,7 +335,7 @@ impl IdentExpr {
         mut_ident_exprs.choose(&mut ctx.rng).cloned()
     }
 
-    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+    pub fn can_generate(_ctx: &mut Context, _res_type: &Ty) -> bool {
         // Time tradeoff
         // TODO: Manual search is slow
         // !ctx.type_symbol_table

@@ -8,11 +8,11 @@ use derive_builder::Builder;
 use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Builder, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Builder, Serialize, Deserialize)]
 #[builder(custom_constructor, build_fn(private, name = "fallible_build"))]
 pub struct Policy {
     /// Unique identifier for policy.
-    pub name: &'static str,
+    pub name: String,
 
     // Max generation attempts
     /// Max attempts for fuzzing a file.
@@ -153,11 +153,11 @@ impl Policy {
         ]
     }
 
-    pub fn get_policy_names() -> Vec<&'static str> {
+    pub fn get_policy_names() -> Vec<String> {
         Policy::get_policies()
             .iter()
-            .map(|p| p.name)
-            .collect::<Vec<&str>>()
+            .map(|p| p.name.clone())
+            .collect::<Vec<String>>()
     }
 
     pub fn get_policy(name: &str) -> Option<Policy> {
@@ -222,14 +222,14 @@ impl Policy {
 
     pub fn tuple_field_debug() -> Self {
         let mut policy = Policy::tuple_debug();
-        policy.name = "tuple_field_debug";
+        policy.name = "tuple_field_debug".to_string();
         policy.expr_dist.push((ExprKind::Field, 0.5));
         policy
     }
 
     pub fn debug() -> Self {
         Policy {
-            name: "debug",
+            name: "debug".to_string(),
             binary_op_dist: vec![
                 (BinaryOp::Eq, 1.0),
                 (BinaryOp::Ne, 1.0),
@@ -271,7 +271,7 @@ impl Policy {
 
     pub fn simple_debug_with_assignments() -> Self {
         let mut policy = Policy::simple_debug();
-        policy.name = "simple_debug_with_assignments";
+        policy.name = "simple_debug_with_assignments".to_string();
         policy.expr_dist.push((ExprKind::Assign, 4.0));
         policy.mutability_prob = 1.0;
         policy.max_if_else_depth = 2;
@@ -283,7 +283,7 @@ impl Policy {
 
     pub fn simple_debug_with_reference() -> Self {
         let mut policy = Policy::simple_debug();
-        policy.name = "simple_debug_with_reference";
+        policy.name = "simple_debug_with_reference".to_string();
         policy.max_arith_depth = 1;
         policy.type_dist = vec![
             (TyKind::Unit, 1.0),
@@ -343,7 +343,7 @@ impl Policy {
 
     pub fn array_index_debug() -> Self {
         let mut policy = Policy::array_debug();
-        policy.name = "array_index_debug";
+        policy.name = "array_index_debug".to_string();
         policy.expr_dist.push((ExprKind::Index, 0.5));
         policy
     }
@@ -365,7 +365,7 @@ impl Policy {
 
     pub fn my_debug() -> Self {
         let mut policy = Policy::simple_debug();
-        policy.name = "my_debug";
+        policy.name = "my_debug".to_string();
         policy.max_arith_depth = 3;
         policy.max_if_else_depth = 1;
         policy.type_dist = vec![
@@ -428,7 +428,7 @@ impl Default for Policy {
 impl Policy {
     pub fn heavy_basic_arithmetic() -> Policy {
         PolicyBuilder::from_policy(Policy::default())
-            .name("heavy_basic_arithmetics")
+            .name("heavy_basic_arithmetics".to_string())
             .num_stmt_dist(Distribution::Uniform(1000, 1000))
             .num_item_dist(Distribution::none())
             .type_dist(vec![(TyKind::Prim, 1.0)])
@@ -447,9 +447,9 @@ impl Policy {
 }
 
 impl Policy {
-    fn default_with_name(name: &'static str) -> Self {
+    fn default_with_name(name: &str) -> Self {
         Policy {
-            name,
+            name: name.to_string(),
             num_item_dist: Distribution::new_uniform_inclusive(2, 10),
             item_dist: vec![(ItemKind::Struct, 1.0), (ItemKind::Function, 1.0)],
 

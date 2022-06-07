@@ -28,9 +28,12 @@ pub fn main() {
     let mut runner = Runner {
         policy: Policy::default(),
         tmp_dir: tmp_dir.clone(),
+        no_compile: false,
         base_name: "base".to_owned(),
-        opts: OptLevel::all_opt_levels(),
-        versions: RustVersion::supported_rust_versions(),
+        // opts: OptLevel::all_opt_levels(),
+        opts: vec![OptLevel::no_opt()],
+        // versions: RustVersion::supported_rust_versions(),
+        versions: vec![RustVersion::stable()],
         rustfmt: false,
     };
     for i in 0..100000 {
