@@ -32,7 +32,7 @@ impl Runner {
             program,
             statistics,
             expected_checksum,
-        } = run_generator(seed, &self.policy, true).map_err(RunnerError::Generator)?;
+        } = run_generator(seed, &self.policy, true, false).map_err(RunnerError::Generator)?;
         let expected_checksum = expected_checksum.unwrap();
         let rust_file = self.tmp_dir.join(self.base_name.clone() + ".rs");
 

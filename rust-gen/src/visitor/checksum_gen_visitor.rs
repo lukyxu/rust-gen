@@ -47,7 +47,7 @@ impl ValidationGen for ChecksumGen {
     }
 }
 
-fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
+pub fn exprs_from_ident(name: &str, ty: &TrackedTy) -> Vec<Expr> {
     let mut accumulator = vec![];
     if ty.ownership_state() == OwnershipState::Moved {
         return vec![];

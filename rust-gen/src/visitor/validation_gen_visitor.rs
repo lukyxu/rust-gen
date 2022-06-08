@@ -20,6 +20,7 @@ type LocalTypeSymbolTable = BTreeSet<String>;
 
 pub trait ValidationGen {
     fn add_validation(block_expr: &mut BlockExpr, name: &String, full_type_symbol_table: &TypeSymbolTable, checksum_name: &'static str);
+    fn add_extra_validation_after(_block_expr: &mut BlockExpr, _checksum_name: &'static str) {}
 }
 
 /// Visitor used to generate and insert checksum calculations into the program.
@@ -84,6 +85,7 @@ impl <G: ValidationGen> ValidationGenVisitor<G> {
         for name in &self.local_type_symbol_table {
             G::add_validation(expr, name, &self.full_type_symbol_table, self.checksum_name);
         }
+
         self.visit_stmt((&mut expr.stmts).last_mut().unwrap());
         let res = self.full_type_symbol_table.clone();
         self.exit_scope();
