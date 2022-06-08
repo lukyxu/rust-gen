@@ -1,6 +1,6 @@
-use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
-use crate::ast::op::BinaryOp;
-use crate::ast::stmt::{AssertStmt, CustomStmt, SemiStmt, Stmt};
+use crate::ast::expr::{BlockExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
+
+use crate::ast::stmt::{AssertStmt, CustomStmt, Stmt};
 use crate::ast::ty::{PrimTy, UIntTy};
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;

@@ -4,13 +4,13 @@ use crate::policy::Policy;
 use crate::statistics::FullStatistics;
 use crate::visitor::base_visitor::Visitor;
 use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
-use crate::visitor::validation_gen_visitor::ValidationGenVisitor;
+
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use crate::visitor::assert_gen_visitor::AssertGenVisitor;
-use crate::visitor::checksum_gen_visitor::{ChecksumGen, ChecksumGenVisitor};
+use crate::visitor::checksum_gen_visitor::{ChecksumGenVisitor};
 
 pub struct GeneratorOutput {
     pub program: String,

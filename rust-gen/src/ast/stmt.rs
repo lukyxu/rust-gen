@@ -1,4 +1,4 @@
-use crate::ast::expr::{Expr, LitExpr};
+use crate::ast::expr::{Expr};
 use crate::ast::ty::Ty;
 use serde::{Deserialize, Serialize};
 use crate::generate::eval_expr::EvalExpr;
