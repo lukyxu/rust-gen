@@ -16,7 +16,6 @@ pub type RunResult = Result<Vec<PathBuf>, RunnerError>;
 pub type ChecksumMapping = Vec<((OptLevel, RustVersion), u128)>;
 
 pub struct Runner {
-    pub policy: Policy,
     pub base_name: String,
     pub tmp_dir: PathBuf,
     pub add_assertions: bool,
@@ -27,13 +26,13 @@ pub struct Runner {
 }
 
 impl Runner {
-    pub fn run(&self, seed: Option<u64>) -> RunResult {
+    pub fn run(&self, seed: Option<u64>, policy: &Policy) -> RunResult {
         // Generate program
         let GeneratorOutput {
             program,
             statistics,
             expected_checksum,
-        } = run_generator(seed, &self.policy, true, self.add_assertions).map_err(RunnerError::Generator)?;
+        } = run_generator(seed, policy, true, self.add_assertions).map_err(RunnerError::Generator)?;
         let expected_checksum = expected_checksum.unwrap();
         let rust_file = self.tmp_dir.join(self.base_name.clone() + ".rs");
 
