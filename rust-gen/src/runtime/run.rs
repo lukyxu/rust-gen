@@ -19,6 +19,7 @@ pub struct Runner {
     pub policy: Policy,
     pub base_name: String,
     pub tmp_dir: PathBuf,
+    pub add_assertions: bool,
     pub no_compile: bool,
     pub opts: Vec<OptLevel>,
     pub versions: Vec<RustVersion>,
@@ -32,7 +33,7 @@ impl Runner {
             program,
             statistics,
             expected_checksum,
-        } = run_generator(seed, &self.policy, true, false).map_err(RunnerError::Generator)?;
+        } = run_generator(seed, &self.policy, true, self.add_assertions).map_err(RunnerError::Generator)?;
         let expected_checksum = expected_checksum.unwrap();
         let rust_file = self.tmp_dir.join(self.base_name.clone() + ".rs");
 

@@ -71,7 +71,10 @@ impl <G: ValidationGen> ValidationGenVisitor<G> {
             Expr::Assign(assign_expr) => self.visit_assign_expr(assign_expr),
             Expr::Array(array_expr) => self.visit_array_expr(array_expr),
             Expr::Field(expr) => self.visit_non_move_expr(&mut expr.base),
-            Expr::Index(index_expr) => self.visit_index_expr(index_expr),
+            Expr::Index(index_expr) => {
+                self.visit_non_move_expr(&mut index_expr.base);
+                self.visit_non_move_expr(&mut index_expr.index);
+            },
             Expr::Struct(struct_expr) => self.visit_struct_expr(struct_expr),
             Expr::Reference(reference_expr) => self.visit_reference_expr(reference_expr),
         }
@@ -142,12 +145,12 @@ impl <G: ValidationGen> Visitor for ValidationGenVisitor<G> {
     // fuzz_move_expr
     fn visit_expr(&mut self, expr: &mut Expr) {
         self.visit_non_move_expr(expr);
-        self.full_type_symbol_table.move_expr(expr);
-        // assert!(
-        //     self.full_type_symbol_table.move_expr(expr),
-        //     "Expr {:?} already moved",
-        //     &expr
-        // );
+
+        assert!(
+            self.full_type_symbol_table.move_expr(expr),
+            "Expr {:?} already moved",
+            &expr
+        );
     }
 
     fn visit_place_expr(&mut self, expr: &mut PlaceExpr) {
