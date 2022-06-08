@@ -1,8 +1,8 @@
-use crate::ast::expr::{BlockExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
+use crate::ast::expr::{BlockExpr};
 
 use crate::ast::stmt::{AssertStmt, CustomStmt, Stmt};
-use crate::ast::ty::{PrimTy, UIntTy};
-use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
+
+
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::checksum_gen_visitor::exprs_from_ident;
 use crate::visitor::validation_gen_visitor::{ValidationGen, ValidationGenVisitor};
