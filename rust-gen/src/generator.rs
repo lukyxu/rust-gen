@@ -4,11 +4,13 @@ use crate::policy::Policy;
 use crate::statistics::FullStatistics;
 use crate::visitor::base_visitor::Visitor;
 use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
-use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
+use crate::visitor::validation_gen_visitor::ValidationGenVisitor;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use crate::visitor::assert_gen_visitor::AssertGenVisitor;
+use crate::visitor::checksum_gen_visitor::{ChecksumGen, ChecksumGenVisitor};
 
 pub struct GeneratorOutput {
     pub program: String,
@@ -45,8 +47,10 @@ pub fn run_generator(
     expr_visitor.visit_file(&mut file);
     // Make program compilable
     // _print_program(&mut file);
-    let mut checksum_gen_visitor = ChecksumGenVisitor::new(add_checksum);
+    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true, add_checksum);
     checksum_gen_visitor.visit_file(&mut file);
+    let mut assert_gen_visitor = AssertGenVisitor::new(false, add_checksum);
+    assert_gen_visitor.visit_file(&mut file);
     let mut checksum_eval_visitor = ChecksumEvalVisitor::default();
     checksum_eval_visitor.visit_file(&mut file);
     let mut emit_visitor = EmitVisitor::default();

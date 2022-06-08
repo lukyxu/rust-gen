@@ -1,14 +1,14 @@
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr, TupleExpr,
-    TupleStructExpr, UnaryExpr,
-};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::file::RustFile;
+use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::generate::eval_expr::{
     EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
     EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
 };
 
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
@@ -392,16 +392,17 @@ impl Visitor for ExprVisitor {
             });
         }
         self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(
-            EvalFieldStructExpr { fields },
+            EvalFieldStructExpr { struct_name: expr.struct_name.clone(), fields },
         )));
     }
 
     fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
+        let struct_name = expr.struct_name.clone();
         self.visit_tuple_expr(&mut expr.fields);
-        let tuple_expr = self.expr.clone().unwrap();
-        if let EvalExpr::Tuple(expr) = tuple_expr {
+        let expr = self.expr.clone().unwrap();
+        if let EvalExpr::Tuple(expr) = expr {
             self.expr = Some(EvalExpr::Struct(EvalStructExpr::Tuple(
-                EvalTupleStructExpr { expr },
+                EvalTupleStructExpr { struct_name, expr },
             )));
         } else {
             panic!()
@@ -411,6 +412,15 @@ impl Visitor for ExprVisitor {
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
         self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }));
+    }
+
+    fn visit_custom_stmt(&mut self, stmt: &mut CustomStmt) {
+        match stmt {
+            CustomStmt::Println(_stmt) => {}
+            CustomStmt::Assert(stmt) => {
+                stmt.rhs_expr = Some(self.safe_expr_visit(&mut stmt.lhs_expr));
+            }
+        }
     }
 }
 

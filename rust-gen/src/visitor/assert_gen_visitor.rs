@@ -1,47 +1,26 @@
 use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
 use crate::ast::op::BinaryOp;
-use crate::ast::stmt::{SemiStmt, Stmt};
+use crate::ast::stmt::{AssertStmt, CustomStmt, SemiStmt, Stmt};
 use crate::ast::ty::{PrimTy, UIntTy};
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::validation_gen_visitor::{ValidationGen, ValidationGenVisitor};
 
-pub type ChecksumGenVisitor = ValidationGenVisitor<ChecksumGen>;
+pub type AssertGenVisitor = ValidationGenVisitor<AssertGen>;
 
-pub struct ChecksumGen;
+pub struct AssertGen;
 
-impl ValidationGen for ChecksumGen {
-    fn add_validation(block_expr: &mut BlockExpr, name: &String, full_type_symbol_table: &TypeSymbolTable, checksum_name: &'static str) {
-        if name == checksum_name {
-            return
-        }
+impl ValidationGen for AssertGen {
+    fn add_validation(block_expr: &mut BlockExpr, name: &String, full_type_symbol_table: &TypeSymbolTable, _checksum_name: &'static str) {
         let ty = full_type_symbol_table.get_var_type(name).unwrap();
         let exprs = exprs_from_ident(name, &ty);
-        let cast_exprs: Vec<Expr> = exprs
-            .into_iter()
-            .map(|expr| {
-                Expr::Cast(CastExpr {
-                    expr: Box::new(expr),
-                    ty: UIntTy::U128.into(),
-                })
-            })
-            .collect();
-        for cast_expr in cast_exprs {
-            let stmt = Stmt::Semi(SemiStmt {
-                expr: Expr::Assign(AssignExpr {
-                    place: IdentExpr {
-                        name: checksum_name.to_owned(),
-                    }
-                        .into(),
-                    rhs: Box::new(Expr::Binary(BinaryExpr {
-                        lhs: Box::new(Expr::Ident(IdentExpr {
-                            name: checksum_name.to_owned(),
-                        })),
-                        rhs: Box::new(cast_expr),
-                        op: BinaryOp::Add,
-                    })),
-                }),
-            });
+        for expr in exprs {
+            let stmt = Stmt::Custom(CustomStmt::Assert(
+                AssertStmt {
+                    lhs_expr: expr.clone(),
+                    rhs_expr: None,
+                }
+            ));
             block_expr.stmts.insert(block_expr.stmts.len() - 1, stmt);
         }
     }
