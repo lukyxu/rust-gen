@@ -28,6 +28,7 @@ pub fn main() {
     let mut runner = Runner {
         policy: Policy::default(),
         tmp_dir: tmp_dir.clone(),
+        add_assertions: false,
         no_compile: false,
         base_name: "base".to_owned(),
         // opts: OptLevel::all_opt_levels(),

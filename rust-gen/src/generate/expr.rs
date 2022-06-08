@@ -508,7 +508,7 @@ impl IndexExpr {
         }
 
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
-        let base = Box::new(Expr::fuzz_move_expr(ctx, &array_type.clone().into())?);
+        let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,

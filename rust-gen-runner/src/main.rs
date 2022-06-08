@@ -52,6 +52,8 @@ struct Args {
         help = "Option to not runtime differential testing with different versions."
     )]
     no_version: bool,
+    #[clap(long, help = "Add assertions.")]
+    add_assertions: bool,
     #[clap(long, help = "Run rustfmt on generated output.")]
     rustfmt: bool,
     #[clap(long, help = "Removes unremoved temp output files in tmp directory.")]
@@ -88,10 +90,11 @@ pub fn main() {
     };
 
     let tmp_dir = std::env::temp_dir().join(format!("rust-gen-{}", Uuid::new_v4()));
-    std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
+    fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
     let mut runner = Runner {
         policy: Policy::default(),
         tmp_dir: tmp_dir.clone(),
+        add_assertions: args.add_assertions,
         no_compile: args.no_compile,
         base_name,
         opts,
@@ -127,7 +130,7 @@ pub fn main() {
         }
         progress_bar.inc(1);
     }
-    std::fs::remove_dir_all(tmp_dir.as_path()).expect("Unable to delete directory");
+    fs::remove_dir_all(tmp_dir.as_path()).expect("Unable to delete directory");
 }
 
 pub fn clean_tmp_files() {

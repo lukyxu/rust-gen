@@ -1,5 +1,5 @@
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
-use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member};
+use crate::ast::expr::{ArrayExpr, BinaryExpr, Expr, Field, FieldStructExpr, LitExpr, LitIntExpr, LitIntTy, Member, StructExpr, TupleExpr, TupleStructExpr};
 use crate::ast::op::{BinaryOp, UnaryOp};
 #[cfg(test)]
 use crate::ast::ty::IntTy;
@@ -65,6 +65,19 @@ impl EvalExpr {
     }
 }
 
+impl From<EvalExpr> for Expr {
+    fn from(expr: EvalExpr) -> Self {
+        match expr {
+            EvalExpr::Literal(expr) => Expr::Literal(expr),
+            EvalExpr::Tuple(expr) => Expr::Tuple(expr.into()),
+            EvalExpr::Array(expr) => Expr::Array(expr.into()),
+            EvalExpr::Struct(expr) => Expr::Struct(expr.into()),
+            EvalExpr::Reference(_expr) => unimplemented!(),
+            EvalExpr::Unknown => panic!()
+        }
+    }
+}
+
 impl From<LitExpr> for EvalExpr {
     fn from(expr: LitExpr) -> EvalExpr {
         EvalExpr::Literal(expr)
@@ -108,6 +121,14 @@ pub struct EvalTupleExpr {
     pub tuple: Vec<EvalExpr>,
 }
 
+impl From<EvalTupleExpr> for TupleExpr {
+    fn from(expr: EvalTupleExpr) -> TupleExpr {
+        TupleExpr {
+            tuple: expr.tuple.into_iter().map(|expr|expr.into()).collect()
+        }
+    }
+}
+
 impl From<EvalTupleExpr> for EvalExpr {
     fn from(expr: EvalTupleExpr) -> EvalExpr {
         EvalExpr::Tuple(expr)
@@ -117,6 +138,14 @@ impl From<EvalTupleExpr> for EvalExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalArrayExpr {
     pub array: Vec<EvalExpr>,
+}
+
+impl From<EvalArrayExpr> for ArrayExpr {
+    fn from(expr: EvalArrayExpr) -> ArrayExpr {
+        ArrayExpr {
+            array: expr.array.into_iter().map(|expr|expr.into()).collect()
+        }
+    }
 }
 
 impl From<EvalArrayExpr> for EvalExpr {
@@ -131,6 +160,15 @@ pub enum EvalStructExpr {
     Field(EvalFieldStructExpr),
 }
 
+impl From<EvalStructExpr> for StructExpr {
+    fn from(expr: EvalStructExpr) -> StructExpr {
+        match expr {
+            EvalStructExpr::Tuple(expr) => StructExpr::Tuple(expr.into()),
+            EvalStructExpr::Field(expr) => StructExpr::Field(expr.into()),
+        }
+    }
+}
+
 impl From<EvalStructExpr> for EvalExpr {
     fn from(expr: EvalStructExpr) -> EvalExpr {
         EvalExpr::Struct(expr)
@@ -139,7 +177,14 @@ impl From<EvalStructExpr> for EvalExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalTupleStructExpr {
+    pub struct_name: String,
     pub expr: EvalTupleExpr,
+}
+
+impl From<EvalTupleStructExpr> for TupleStructExpr {
+    fn from(expr: EvalTupleStructExpr) -> TupleStructExpr {
+        TupleStructExpr { struct_name: expr.struct_name, fields: expr.expr.into() }
+    }
 }
 
 impl From<EvalTupleStructExpr> for EvalStructExpr {
@@ -150,7 +195,14 @@ impl From<EvalTupleStructExpr> for EvalStructExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalFieldStructExpr {
+    pub struct_name: String,
     pub fields: Vec<EvalField>,
+}
+
+impl From<EvalFieldStructExpr> for FieldStructExpr {
+    fn from(expr: EvalFieldStructExpr) -> FieldStructExpr {
+        FieldStructExpr { struct_name: expr.struct_name, fields: expr.fields.into_iter().map(|field|field.into()).collect() }
+    }
 }
 
 impl From<EvalFieldStructExpr> for EvalStructExpr {
@@ -170,6 +222,21 @@ impl EvalFieldStructExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct EvalField {
+    pub name: String,
+    pub expr: EvalExpr,
+}
+
+impl From<EvalField> for Field {
+    fn from(expr: EvalField) -> Field {
+        Field {
+            name: expr.name,
+            expr: expr.expr.into()
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct EvalReferenceExpr {
     pub expr: Box<EvalExpr>,
 }
@@ -178,12 +245,6 @@ impl From<EvalReferenceExpr> for EvalExpr {
     fn from(expr: EvalReferenceExpr) -> EvalExpr {
         EvalExpr::Reference(expr)
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct EvalField {
-    pub name: String,
-    pub expr: EvalExpr,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
