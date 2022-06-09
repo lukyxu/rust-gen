@@ -1,17 +1,13 @@
 use crate::ast::expr::LitIntTy::Unsigned;
-use crate::ast::expr::{
-    AssignExpr, BinaryExpr, BlockExpr, Expr, IfExpr,
-    LitIntExpr, PlaceExpr,
-};
+use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, Expr, IfExpr, LitIntExpr, PlaceExpr};
 
 use std::collections::BTreeSet;
 use std::marker::PhantomData;
 
 use crate::ast::function::Function;
 
-
 use crate::ast::stmt::{InitLocalStmt, LocalStmt, PrintlnStmt, Stmt};
-use crate::ast::ty::{UIntTy};
+use crate::ast::ty::UIntTy;
 
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::base_visitor::Visitor;
@@ -19,7 +15,12 @@ use crate::visitor::base_visitor::Visitor;
 type LocalTypeSymbolTable = BTreeSet<String>;
 
 pub trait ValidationGen {
-    fn add_validation(block_expr: &mut BlockExpr, name: &String, full_type_symbol_table: &TypeSymbolTable, checksum_name: &'static str);
+    fn add_validation(
+        block_expr: &mut BlockExpr,
+        name: &String,
+        full_type_symbol_table: &TypeSymbolTable,
+        checksum_name: &'static str,
+    );
     fn add_extra_validation_after(_block_expr: &mut BlockExpr, _checksum_name: &'static str) {}
 }
 
@@ -35,7 +36,7 @@ pub struct ValidationGenVisitor<G: ValidationGen> {
     checksum_name: &'static str,
 }
 
-impl <G: ValidationGen> ValidationGenVisitor<G> {
+impl<G: ValidationGen> ValidationGenVisitor<G> {
     pub fn new(init_checksum: bool, add_validation: bool) -> ValidationGenVisitor<G> {
         ValidationGenVisitor {
             init_checksum,
@@ -50,7 +51,7 @@ impl <G: ValidationGen> ValidationGenVisitor<G> {
     }
 }
 
-impl <G: ValidationGen> ValidationGenVisitor<G> {
+impl<G: ValidationGen> ValidationGenVisitor<G> {
     fn visit_field_place(&mut self, expr: &mut Expr) {
         match expr {
             Expr::Field(expr) => self.visit_field_place(&mut expr.base),
@@ -74,7 +75,7 @@ impl <G: ValidationGen> ValidationGenVisitor<G> {
             Expr::Index(index_expr) => {
                 self.visit_non_move_expr(&mut index_expr.base);
                 self.visit_non_move_expr(&mut index_expr.index);
-            },
+            }
             Expr::Struct(struct_expr) => self.visit_struct_expr(struct_expr),
             Expr::Reference(reference_expr) => self.visit_reference_expr(reference_expr),
         }
@@ -96,7 +97,7 @@ impl <G: ValidationGen> ValidationGenVisitor<G> {
     }
 }
 
-impl <G: ValidationGen> Visitor for ValidationGenVisitor<G> {
+impl<G: ValidationGen> Visitor for ValidationGenVisitor<G> {
     fn enter_scope(&mut self) {
         self.prev_local_type_symbol_tables
             .push(self.local_type_symbol_table.clone());
@@ -124,10 +125,13 @@ impl <G: ValidationGen> Visitor for ValidationGenVisitor<G> {
                     mutable: true,
                 })),
             );
-            function.block.stmts.push(PrintlnStmt {
-                format: "{}".to_owned(),
-                args: vec![self.checksum_name.to_owned()],
-            }.into());
+            function.block.stmts.push(
+                PrintlnStmt {
+                    format: "{}".to_owned(),
+                    args: vec![self.checksum_name.to_owned()],
+                }
+                .into(),
+            );
         }
 
         if self.add_validation {

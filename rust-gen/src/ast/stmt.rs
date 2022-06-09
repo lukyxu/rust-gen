@@ -1,7 +1,7 @@
-use crate::ast::expr::{Expr};
+use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
-use serde::{Deserialize, Serialize};
 use crate::generate::eval_expr::EvalExpr;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]

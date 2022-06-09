@@ -4,9 +4,11 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Output;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub enum RunnerError {
+    GeneratorTimeout(GeneratorTimeoutError),
     Generator(GeneratorError),
     Compilation(CompilationError),
     Run(RunError),
@@ -18,6 +20,7 @@ pub enum RunnerError {
 impl RunnerError {
     pub fn folder_name(&self) -> &'static str {
         match self {
+            RunnerError::GeneratorTimeout(_) => "generator_timeout",
             RunnerError::Generator(_) => "generator_error",
             RunnerError::Compilation(_) => "compilation_error",
             RunnerError::Run(_) => "run_error",
@@ -29,6 +32,7 @@ impl RunnerError {
 
     pub fn files(&self) -> Vec<PathBuf> {
         match self {
+            RunnerError::GeneratorTimeout(_err) => vec![],
             RunnerError::Generator(_err) => vec![],
             RunnerError::Compilation(err) => err.files(),
             RunnerError::Run(err) => err.files(),
@@ -44,6 +48,7 @@ impl Error for RunnerError {}
 impl Display for RunnerError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            RunnerError::GeneratorTimeout(err) => Display::fmt(err, f),
             RunnerError::Generator(err) => Display::fmt(err, f),
             RunnerError::Compilation(err) => Display::fmt(err, f),
             RunnerError::Run(err) => Display::fmt(err, f),
@@ -51,6 +56,35 @@ impl Display for RunnerError {
             RunnerError::UnexpectedChecksum(err) => Display::fmt(err, f),
             RunnerError::RustFmt(err) => Display::fmt(err, f),
         }
+    }
+}
+
+impl Error for GeneratorTimeoutError {}
+
+#[derive(Debug)]
+pub struct GeneratorTimeoutError {
+    pub duration: Duration,
+}
+
+impl GeneratorTimeoutError {
+    pub fn new(duration: Duration) -> GeneratorTimeoutError {
+        GeneratorTimeoutError { duration }
+    }
+}
+
+impl Display for GeneratorTimeoutError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Generator timeout. Timeout of {} seconds exceeded.",
+            self.duration.as_secs()
+        )
+    }
+}
+
+impl From<GeneratorTimeoutError> for RunnerError {
+    fn from(err: GeneratorTimeoutError) -> RunnerError {
+        RunnerError::GeneratorTimeout(err)
     }
 }
 

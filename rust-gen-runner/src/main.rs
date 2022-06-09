@@ -10,6 +10,7 @@ use rust_gen::utils::write_as_ron;
 use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use uuid::Uuid;
 
 #[derive(Parser, Debug)]
@@ -97,6 +98,7 @@ pub fn main() {
         opts,
         versions,
         rustfmt: args.rustfmt,
+        generate_timeout: Duration::from_millis(30),
     };
 
     fs::create_dir_all(&output_path).expect("Unable to create directory");
