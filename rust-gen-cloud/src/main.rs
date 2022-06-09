@@ -37,6 +37,8 @@ pub fn main() {
         versions: vec![RustVersion::stable()],
         rustfmt: false,
         generate_timeout: Duration::from_secs(30),
+        compile_timeout: Duration::from_secs(60),
+        run_timeout: Duration::from_secs(60),
     };
     for i in 0..100000 {
         let policy = Policy::parse_policy_args_or_random(&None);

@@ -41,6 +41,14 @@ struct Args {
     save_passing_programs: bool,
     #[clap(short, long, help = "Include binaries from output.")]
     include_binaries: bool,
+
+    #[clap(long, help = "Timeout in seconds for generating programs.", default_value = "30")]
+    generate_timeout: u64,
+    #[clap(long, help = "Timeout in seconds for compiling programs.", default_value = "60")]
+    compile_timeout: u64,
+    #[clap(long, help = "Timeout in seconds for generating programs.", default_value = "60")]
+    run_timeout: u64,
+
     #[clap(long, help = "Option to not compile any of the generated programs")]
     no_compile: bool,
     #[clap(
@@ -98,7 +106,9 @@ pub fn main() {
         opts,
         versions,
         rustfmt: args.rustfmt,
-        generate_timeout: Duration::from_secs(30),
+        generate_timeout: Duration::from_secs(args.generate_timeout),
+        compile_timeout: Duration::from_secs(args.compile_timeout),
+        run_timeout: Duration::from_secs(args.run_timeout),
     };
 
     fs::create_dir_all(&output_path).expect("Unable to create directory");
@@ -149,7 +159,7 @@ pub fn clean_tmp_files() {
         if let Ok(dir_entry) = dir_entry {
             if let Some(str) = dir_entry.file_name().to_str() {
                 if str.contains("rust-gen") {
-                    std::fs::remove_dir_all(dir_entry.path()).expect("Unable to remove directory")
+                    fs::remove_dir_all(dir_entry.path()).expect("Unable to remove directory")
                 }
             }
         }

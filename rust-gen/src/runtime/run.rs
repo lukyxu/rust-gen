@@ -82,6 +82,8 @@ pub struct Runner {
     pub versions: Vec<RustVersion>,
     pub rustfmt: bool,
     pub generate_timeout: Duration,
+    pub compile_timeout: Duration,
+    pub run_timeout: Duration,
 }
 
 pub struct Timed<T>(Duration, Option<T>);
@@ -113,7 +115,7 @@ impl Runner {
     pub fn run(&self, seed: Option<u64>, policy: &Policy) -> RunResult {
         let mut run_output = RunOutput::default();
         let gen_output = timed_run_generator(
-            Duration::from_millis(200),
+            self.generate_timeout,
             seed,
             policy,
             true,
@@ -275,7 +277,7 @@ impl Runner {
             self.base_name.clone() + "-" + &version.to_string() + "-" + &opt.to_string();
         let output_file = self.tmp_dir.join(output_file_name);
         let compilation_result = timed_compile_program(
-            Duration::from_secs(1),
+            self.compile_timeout,
             &rust_file,
             &output_file,
             opt,
@@ -292,7 +294,7 @@ impl Runner {
                 .map_err(|err| SubRunError::CompilationFailure(err, subrun_output.clone()))?,
         );
         let run_executable_result =
-            timed_run_program(Duration::from_secs(1), &rust_file, &output_file);
+            timed_run_program(self.run_timeout, &rust_file, &output_file);
         subrun_output.run_duration = Some(run_executable_result.0);
         subrun_output.checksum = Some(
             run_executable_result
