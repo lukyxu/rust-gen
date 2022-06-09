@@ -42,11 +42,13 @@ impl RunnerError {
             RunnerError::GeneratorTimeout(_, run_output)
             | RunnerError::Generator(_, run_output)
             | RunnerError::Compilation(_, run_output)
+            | RunnerError::CompilationTimeout(_, run_output)
             | RunnerError::Run(_, run_output)
+            | RunnerError::RunTimeout(_, run_output)
             | RunnerError::DifferingChecksum(_, run_output)
             | RunnerError::UnexpectedChecksum(_, run_output)
-            | RunnerError::RustFmt(_, run_output) => run_output,
-            _ => unimplemented!(),
+            | RunnerError::RustFmt(_, run_output)
+            | RunnerError::RustFmtTimeout(_, run_output) => run_output
         }
     }
 
@@ -73,11 +75,13 @@ impl Display for RunnerError {
             RunnerError::GeneratorTimeout(err, _) => Display::fmt(err, f),
             RunnerError::Generator(err, _) => Display::fmt(err, f),
             RunnerError::Compilation(errors, _) => display_fmt_array(errors, f),
+            RunnerError::CompilationTimeout(errors, _) => display_fmt_array(errors, f),
             RunnerError::Run(errors, _) => display_fmt_array(errors, f),
+            RunnerError::RunTimeout(errors, _) => display_fmt_array(errors, f),
             RunnerError::DifferingChecksum(err, _) => Display::fmt(err, f),
             RunnerError::UnexpectedChecksum(err, _) => Display::fmt(err, f),
             RunnerError::RustFmt(err, _) => Display::fmt(err, f),
-            _ => unimplemented!(),
+            RunnerError::RustFmtTimeout(err, _) => Display::fmt(err, f),
         }
     }
 }
@@ -158,12 +162,14 @@ impl Error for CompilationTimeoutError {}
 
 #[derive(Debug, Clone)]
 pub struct CompilationTimeoutError {
+    pub opt: OptLevel,
+    pub version: RustVersion,
     pub duration: Duration,
 }
 
 impl CompilationTimeoutError {
-    pub fn new(duration: Duration) -> CompilationTimeoutError {
-        CompilationTimeoutError { duration }
+    pub fn new(opt: OptLevel, version: RustVersion, duration: Duration) -> CompilationTimeoutError {
+        CompilationTimeoutError { opt, version,  duration }
     }
 }
 
@@ -171,7 +177,9 @@ impl Display for CompilationTimeoutError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "Compilation timeout. Timeout of {} seconds exceeded.",
+            "Compilation timeout for optimization {:?} and Rust version {:?}. Timeout of {} seconds exceeded.",
+            self.opt,
+            self.version,
             self.duration.as_secs()
         )
     }
@@ -217,12 +225,14 @@ impl Error for RunTimeoutError {}
 
 #[derive(Debug, Clone)]
 pub struct RunTimeoutError {
+    pub opt: OptLevel,
+    pub version: RustVersion,
     pub duration: Duration,
 }
 
 impl RunTimeoutError {
-    pub fn new(duration: Duration) -> RunTimeoutError {
-        RunTimeoutError { duration }
+    pub fn new(opt: OptLevel, version: RustVersion, duration: Duration) -> RunTimeoutError {
+        RunTimeoutError { opt, version,  duration }
     }
 }
 
@@ -230,7 +240,9 @@ impl Display for RunTimeoutError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "Compilation timeout. Timeout of {} seconds exceeded.",
+            "Compilation timeout for optimization {:?} and Rust version {:?}. Timeout of {} seconds exceeded.",
+            self.opt,
+            self.version,
             self.duration.as_secs()
         )
     }

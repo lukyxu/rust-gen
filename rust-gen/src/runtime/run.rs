@@ -97,7 +97,13 @@ impl<T> Timed<T> {
         let (sender, receiver) = mpsc::channel();
         thread::spawn(move || sender.send(f()));
         match receiver.recv_timeout(duration) {
-            Ok(res) => Timed(Instant::now() - now, Some(res)),
+            Ok(res) => {
+                let time_taken = Instant::now() - now;
+                if time_taken >= duration {
+                    return Timed(duration, None)
+                }
+                Timed(time_taken, Some(res))
+            },
             Err(_) => Timed(duration, None),
         }
     }
@@ -280,7 +286,7 @@ impl Runner {
             compilation_result
                 .1
                 .ok_or(SubRunError::CompilationTimeout(
-                    CompilationTimeoutError::new(compilation_result.0),
+                    CompilationTimeoutError::new(opt.clone(), version.clone(), compilation_result.0),
                     subrun_output.clone(),
                 ))?
                 .map_err(|err| SubRunError::CompilationFailure(err, subrun_output.clone()))?,
@@ -292,7 +298,7 @@ impl Runner {
             run_executable_result
                 .1
                 .ok_or(SubRunError::RunTimeout(
-                    RunTimeoutError::new(run_executable_result.0),
+                    RunTimeoutError::new(opt.clone(), version.clone(), run_executable_result.0),
                     subrun_output.clone(),
                 ))?
                 .map_err(|err| SubRunError::RunFailure(err, subrun_output.clone()))?,
