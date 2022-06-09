@@ -167,7 +167,7 @@ impl StructTemplate {
 }
 
 fn generate_checksum_and_emit(file: &mut RustFile) -> String {
-    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true,  true);
+    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true, true);
     checksum_gen_visitor.visit_file(file);
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_file(file);

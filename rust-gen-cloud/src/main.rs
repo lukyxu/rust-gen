@@ -11,6 +11,7 @@ use rand::Rng;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::Runner;
+use std::time::Duration;
 use uuid::Uuid;
 
 pub fn establish_connection() -> MysqlConnection {
@@ -25,8 +26,7 @@ pub fn main() {
     let tmp_dir = std::env::temp_dir().join(format!("rust-gen-{}", Uuid::new_v4()));
     std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
     let connection = establish_connection();
-    let mut runner = Runner {
-        policy: Policy::default(),
+    let runner = Runner {
         tmp_dir: tmp_dir.clone(),
         add_assertions: false,
         no_compile: false,
@@ -36,21 +36,21 @@ pub fn main() {
         // versions: RustVersion::supported_rust_versions(),
         versions: vec![RustVersion::stable()],
         rustfmt: false,
+        generate_timeout: Duration::from_secs(30),
+        compile_timeout: Duration::from_secs(60),
+        run_timeout: Duration::from_secs(60),
     };
     for i in 0..100000 {
-        runner.policy = Policy::parse_policy_args_or_random(&None);
+        let policy = Policy::parse_policy_args_or_random(&None);
         let seed = rand::thread_rng().gen();
-        println!(
-            "Running policy {} seed {} run {}",
-            runner.policy.name, seed, i
-        );
-        let output = runner.run(Some(seed));
+        println!("Running policy {} seed {} run {}", policy.name, seed, i);
+        let output = runner.run(Some(seed), &policy);
         let files = match &output {
-            Ok(files) => files.clone(),
+            Ok(output) => output.files.clone(),
             Err(err) => err.files(),
         };
 
-        let new_policy: PolicyInfo = runner.policy.into();
+        let new_policy: PolicyInfo = policy.into();
         let previous_policy = PolicyInfo::query(&new_policy, &connection);
         let new_policy_id = match previous_policy {
             Some(policy) => policy.policy_id.unwrap(),

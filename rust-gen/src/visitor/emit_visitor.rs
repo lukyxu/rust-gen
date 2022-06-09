@@ -145,14 +145,14 @@ impl Visitor for EmitVisitor {
     fn visit_custom_stmt(&mut self, stmt: &mut CustomStmt) {
         self.output.push_str(&" ".repeat(self.curr_indent));
         match stmt {
-            CustomStmt::Println(stmt) => {
-                self.output.push_str(format!("println!(\"{}\", {})", stmt.format, stmt.args.join(", ")).as_str())
-            }
+            CustomStmt::Println(stmt) => self.output.push_str(
+                format!("println!(\"{}\", {})", stmt.format, stmt.args.join(", ")).as_str(),
+            ),
             CustomStmt::Assert(stmt) => {
                 let lhs = &mut stmt.lhs_expr;
                 let rhs = &mut match &stmt.rhs_expr {
                     None => lhs.clone(),
-                    Some(eval_expr) => eval_expr.clone().into()
+                    Some(eval_expr) => eval_expr.clone().into(),
                 };
                 self.output.push_str("assert_eq!(");
                 self.visit_expr(lhs);

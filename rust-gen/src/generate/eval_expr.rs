@@ -1,5 +1,8 @@
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
-use crate::ast::expr::{ArrayExpr, BinaryExpr, Expr, Field, FieldStructExpr, LitExpr, LitIntExpr, LitIntTy, Member, StructExpr, TupleExpr, TupleStructExpr};
+use crate::ast::expr::{
+    ArrayExpr, BinaryExpr, Expr, Field, FieldStructExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    StructExpr, TupleExpr, TupleStructExpr,
+};
 use crate::ast::op::{BinaryOp, UnaryOp};
 #[cfg(test)]
 use crate::ast::ty::IntTy;
@@ -73,7 +76,7 @@ impl From<EvalExpr> for Expr {
             EvalExpr::Array(expr) => Expr::Array(expr.into()),
             EvalExpr::Struct(expr) => Expr::Struct(expr.into()),
             EvalExpr::Reference(_expr) => unimplemented!(),
-            EvalExpr::Unknown => panic!()
+            EvalExpr::Unknown => panic!(),
         }
     }
 }
@@ -124,7 +127,7 @@ pub struct EvalTupleExpr {
 impl From<EvalTupleExpr> for TupleExpr {
     fn from(expr: EvalTupleExpr) -> TupleExpr {
         TupleExpr {
-            tuple: expr.tuple.into_iter().map(|expr|expr.into()).collect()
+            tuple: expr.tuple.into_iter().map(|expr| expr.into()).collect(),
         }
     }
 }
@@ -143,7 +146,7 @@ pub struct EvalArrayExpr {
 impl From<EvalArrayExpr> for ArrayExpr {
     fn from(expr: EvalArrayExpr) -> ArrayExpr {
         ArrayExpr {
-            array: expr.array.into_iter().map(|expr|expr.into()).collect()
+            array: expr.array.into_iter().map(|expr| expr.into()).collect(),
         }
     }
 }
@@ -183,7 +186,10 @@ pub struct EvalTupleStructExpr {
 
 impl From<EvalTupleStructExpr> for TupleStructExpr {
     fn from(expr: EvalTupleStructExpr) -> TupleStructExpr {
-        TupleStructExpr { struct_name: expr.struct_name, fields: expr.expr.into() }
+        TupleStructExpr {
+            struct_name: expr.struct_name,
+            fields: expr.expr.into(),
+        }
     }
 }
 
@@ -201,7 +207,10 @@ pub struct EvalFieldStructExpr {
 
 impl From<EvalFieldStructExpr> for FieldStructExpr {
     fn from(expr: EvalFieldStructExpr) -> FieldStructExpr {
-        FieldStructExpr { struct_name: expr.struct_name, fields: expr.fields.into_iter().map(|field|field.into()).collect() }
+        FieldStructExpr {
+            struct_name: expr.struct_name,
+            fields: expr.fields.into_iter().map(|field| field.into()).collect(),
+        }
     }
 }
 
@@ -231,7 +240,7 @@ impl From<EvalField> for Field {
     fn from(expr: EvalField) -> Field {
         Field {
             name: expr.name,
-            expr: expr.expr.into()
+            expr: expr.expr.into(),
         }
     }
 }

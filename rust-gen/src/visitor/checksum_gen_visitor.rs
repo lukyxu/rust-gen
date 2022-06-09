@@ -1,4 +1,7 @@
-use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr, LitIntTy, Member};
+use crate::ast::expr::{
+    AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr,
+    LitIntTy, Member,
+};
 use crate::ast::op::BinaryOp;
 use crate::ast::stmt::{SemiStmt, Stmt};
 use crate::ast::ty::{PrimTy, UIntTy};
@@ -11,9 +14,14 @@ pub type ChecksumGenVisitor = ValidationGenVisitor<ChecksumGen>;
 pub struct ChecksumGen;
 
 impl ValidationGen for ChecksumGen {
-    fn add_validation(block_expr: &mut BlockExpr, name: &String, full_type_symbol_table: &TypeSymbolTable, checksum_name: &'static str) {
+    fn add_validation(
+        block_expr: &mut BlockExpr,
+        name: &String,
+        full_type_symbol_table: &TypeSymbolTable,
+        checksum_name: &'static str,
+    ) {
         if name == checksum_name {
-            return
+            return;
         }
         let ty = full_type_symbol_table.get_var_type(name).unwrap();
         let exprs = exprs_from_ident(name, &ty);
@@ -32,7 +40,7 @@ impl ValidationGen for ChecksumGen {
                     place: IdentExpr {
                         name: checksum_name.to_owned(),
                     }
-                        .into(),
+                    .into(),
                     rhs: Box::new(Expr::Binary(BinaryExpr {
                         lhs: Box::new(Expr::Ident(IdentExpr {
                             name: checksum_name.to_owned(),

@@ -5,12 +5,12 @@ use crate::statistics::FullStatistics;
 use crate::visitor::base_visitor::Visitor;
 use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
 
+use crate::visitor::assert_gen_visitor::AssertGenVisitor;
+use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use crate::visitor::assert_gen_visitor::AssertGenVisitor;
-use crate::visitor::checksum_gen_visitor::{ChecksumGenVisitor};
 
 pub struct GeneratorOutput {
     pub program: String,
@@ -18,7 +18,7 @@ pub struct GeneratorOutput {
     pub expected_checksum: Option<u128>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GeneratorError {
     pub statistics: Box<FullStatistics>,
     pub error_message: String,
@@ -32,12 +32,14 @@ impl Display for GeneratorError {
     }
 }
 
+pub type GeneratorResult = Result<GeneratorOutput, GeneratorError>;
+
 pub fn run_generator(
     seed: Option<u64>,
     policy: &Policy,
     add_checksum: bool,
     add_assertions: bool,
-) -> Result<GeneratorOutput, GeneratorError> {
+) -> GeneratorResult {
     let mut ctx = Context::with_policy(seed, policy);
     let mut file = RustFile::generate_file(&mut ctx).ok_or(GeneratorError {
         statistics: Box::new(ctx.statistics.clone().into()),

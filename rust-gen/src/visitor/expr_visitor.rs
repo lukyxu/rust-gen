@@ -1,7 +1,8 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr};
-
-
-
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr, TupleExpr,
+    TupleStructExpr, UnaryExpr,
+};
 
 use crate::generate::eval_expr::{
     EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
@@ -392,7 +393,10 @@ impl Visitor for ExprVisitor {
             });
         }
         self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(
-            EvalFieldStructExpr { struct_name: expr.struct_name.clone(), fields },
+            EvalFieldStructExpr {
+                struct_name: expr.struct_name.clone(),
+                fields,
+            },
         )));
     }
 
