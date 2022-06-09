@@ -6,11 +6,11 @@ use crate::runtime::error::{
     RustFmtError, UnexpectedChecksumError,
 };
 use crate::utils::write_as_ron;
-use std::fs;
-use std::future::Future;
+use std::{fs, thread};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
+use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 pub type RunResult = Result<Vec<PathBuf>, RunnerError>;
@@ -31,45 +31,36 @@ pub struct Runner {
 pub struct Timed<T>(Duration, Option<T>);
 
 impl<T> Timed<T> {
-    fn run_with_timeout<F>(duration: Duration, future: F) -> Timed<F::Output>
-    where
-        F: Future,
+    fn run_with_timeout<F>(duration: Duration, f: F) -> Timed<T>
+    where T: Send + 'static,
+          F: FnOnce() -> T,
+          F: Send + 'static,
     {
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(async {
-                let now = Instant::now();
-                let res = tokio::time::timeout(duration, future).await.ok();
-                let duration = res
-                    .is_none()
-                    .then(|| duration)
-                    .unwrap_or(Instant::now() - now);
-                Timed(duration, res)
-            })
+        let now = Instant::now();
+        let (sender, receiver) = mpsc::channel();
+        thread::spawn(move || {
+            sender.send(f())
+        });
+        match receiver.recv_timeout(duration) {
+            Ok(res) => {Timed(Instant::now() - now, Some(res))}
+            Err(_) => {Timed(duration, None)}
+        }
     }
 }
 
 impl Runner {
     pub fn run(&self, seed: Option<u64>, policy: &Policy) -> RunResult {
-        // let gen_output = Timed::<GeneratorResult>::run_with_timeout(self.generate_timeout, async {
-        //     run_generator(seed, policy, true, self.add_assertions)
-        // });
-        // let GeneratorOutput {
-        //     program,
-        //     statistics,
-        //     expected_checksum,
-        // } = gen_output
-        //     .1
-        //     .ok_or(GeneratorTimeoutError::new(gen_output.0))?
-        //     .map_err(RunnerError::Generator)?;
+        let add_assertions = self.add_assertions;
+        let arc_policy = Arc::new(policy.clone());
 
+        let gen_output = Timed::<GeneratorResult>::run_with_timeout(self.generate_timeout, Box::new(move || run_generator(seed, &arc_policy, true, add_assertions)));
         let GeneratorOutput {
             program,
             statistics,
             expected_checksum,
-        } = run_generator(seed, policy, true, self.add_assertions)
+        } = gen_output
+            .1
+            .ok_or(GeneratorTimeoutError::new(gen_output.0))?
             .map_err(RunnerError::Generator)?;
 
         let expected_checksum = expected_checksum.unwrap();

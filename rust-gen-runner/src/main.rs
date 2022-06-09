@@ -98,7 +98,7 @@ pub fn main() {
         opts,
         versions,
         rustfmt: args.rustfmt,
-        generate_timeout: Duration::from_millis(30),
+        generate_timeout: Duration::from_secs(30),
     };
 
     fs::create_dir_all(&output_path).expect("Unable to create directory");

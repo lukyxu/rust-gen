@@ -36,6 +36,7 @@ pub type GeneratorResult = Result<GeneratorOutput, GeneratorError>;
 
 pub fn run_generator(
     seed: Option<u64>,
+    // policy: &Policy,
     policy: &Policy,
     add_checksum: bool,
     add_assertions: bool,
