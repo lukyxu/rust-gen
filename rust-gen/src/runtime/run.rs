@@ -113,7 +113,7 @@ impl Runner {
     pub fn run(&self, seed: Option<u64>, policy: &Policy) -> RunResult {
         let mut run_output = RunOutput::default();
         let gen_output = timed_run_generator(
-            self.generate_timeout,
+            Duration::from_millis(200),
             seed,
             policy,
             true,
