@@ -3,8 +3,7 @@ use crate::policy::Policy;
 use crate::runtime::config::{OptLevel, RustVersion};
 use crate::runtime::error::{
     CompilationError, CompilationTimeoutError, DifferingChecksumError, GeneratorTimeoutError,
-    RunError, RunTimeoutError, RunnerError, RustFmtError,
-    UnexpectedChecksumError,
+    RunError, RunTimeoutError, RunnerError, RustFmtError, UnexpectedChecksumError,
 };
 use crate::statistics::FullStatistics;
 use crate::utils::write_as_ron;
@@ -23,6 +22,7 @@ pub struct RunOutput {
     pub expected_checksum: Option<u128>,
     pub rust_file_path: Option<PathBuf>,
     pub subruns: Vec<SubRunResult>,
+    pub generation_time: Duration,
 }
 
 pub type SubRunResult = Result<SubRunOutput, SubRunError>;
@@ -106,13 +106,14 @@ impl<T> Timed<T> {
 impl Runner {
     pub fn run(&self, seed: Option<u64>, policy: &Policy) -> RunResult {
         let mut run_output = RunOutput::default();
-        let gen_output = run_timed_generator(
+        let gen_output = timed_run_generator(
             self.generate_timeout,
             seed,
             policy,
             true,
             self.add_assertions,
         );
+        run_output.generation_time = gen_output.0;
         let GeneratorOutput {
             program,
             statistics,
@@ -201,7 +202,8 @@ impl Runner {
 
         // Run rustfmt
         if self.rustfmt {
-            run_rustfmt(rust_file, &run_output).map_err(|err|RunnerError::RustFmt(err, run_output.clone()))?
+            run_rustfmt(rust_file, &run_output)
+                .map_err(|err| RunnerError::RustFmt(err, run_output.clone()))?
         }
 
         Ok(run_output)
@@ -266,19 +268,40 @@ impl Runner {
         let output_file_name =
             self.base_name.clone() + "-" + &version.to_string() + "-" + &opt.to_string();
         let output_file = self.tmp_dir.join(output_file_name);
+        let compilation_result = timed_compile_program(
+            Duration::from_secs(1),
+            &rust_file,
+            &output_file,
+            opt,
+            version,
+        );
+        subrun_output.compilation_duration = Some(compilation_result.0);
         subrun_output.executable_file = Some(
-            compile_program(&rust_file, &output_file, opt, version)
+            compilation_result
+                .1
+                .ok_or(SubRunError::CompilationTimeout(
+                    CompilationTimeoutError::new(compilation_result.0),
+                    subrun_output.clone(),
+                ))?
                 .map_err(|err| SubRunError::CompilationFailure(err, subrun_output.clone()))?,
         );
+        let run_executable_result =
+            timed_run_program(Duration::from_secs(1), &rust_file, &output_file);
+        subrun_output.run_duration = Some(run_executable_result.0);
         subrun_output.checksum = Some(
-            run_program(&rust_file, &output_file)
+            run_executable_result
+                .1
+                .ok_or(SubRunError::RunTimeout(
+                    RunTimeoutError::new(run_executable_result.0),
+                    subrun_output.clone(),
+                ))?
                 .map_err(|err| SubRunError::RunFailure(err, subrun_output.clone()))?,
         );
         Ok(subrun_output)
     }
 }
 
-fn run_timed_generator(
+fn timed_run_generator(
     timeout: Duration,
     seed: Option<u64>,
     policy: &Policy,
@@ -300,12 +323,31 @@ fn is_binary<P: AsRef<Path>>(input_file: P) -> bool {
     }
 }
 
+type CompilationResult = Result<PathBuf, CompilationError>;
+
+fn timed_compile_program<P: AsRef<Path>, S: AsRef<Path>>(
+    timeout: Duration,
+    input_file: P,
+    output_file: S,
+    opt_level: &OptLevel,
+    version: &RustVersion,
+) -> Timed<CompilationResult> {
+    let input_file = Arc::new(input_file.as_ref().to_path_buf());
+    let output_file = Arc::new(output_file.as_ref().to_path_buf());
+    let opt_level = Arc::new(opt_level.clone());
+    let version = Arc::new(version.clone());
+    Timed::<CompilationResult>::run_with_timeout(
+        timeout,
+        Box::new(move || compile_program(&*input_file, &*output_file, &*opt_level, &*version)),
+    )
+}
+
 fn compile_program<P: AsRef<Path>, S: AsRef<Path>>(
     input_file: P,
     output_file: S,
     opt_level: &OptLevel,
     version: &RustVersion,
-) -> Result<PathBuf, CompilationError> {
+) -> CompilationResult {
     let output = Command::new("rustc")
         .args([
             &format!("+{}", version.to_string()),
@@ -331,10 +373,22 @@ fn compile_program<P: AsRef<Path>, S: AsRef<Path>>(
     Ok(output_file.as_ref().to_path_buf())
 }
 
-fn run_program<P: AsRef<Path>, S: AsRef<Path>>(
+type RunExecutableResult = Result<u128, RunError>;
+
+fn timed_run_program<P: AsRef<Path>, S: AsRef<Path>>(
+    timeout: Duration,
     rust_file: P,
     executable: S,
-) -> Result<u128, RunError> {
+) -> Timed<RunExecutableResult> {
+    let input_file = Arc::new(rust_file.as_ref().to_path_buf());
+    let output_file = Arc::new(executable.as_ref().to_path_buf());
+    Timed::<RunExecutableResult>::run_with_timeout(
+        timeout,
+        Box::new(move || run_program(&*input_file, &*output_file)),
+    )
+}
+
+fn run_program<P: AsRef<Path>, S: AsRef<Path>>(rust_file: P, executable: S) -> RunExecutableResult {
     let rust_file = rust_file.as_ref();
     let executable = executable.as_ref();
     let output = Command::new(executable.to_str().unwrap())

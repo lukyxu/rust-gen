@@ -72,12 +72,8 @@ impl Display for RunnerError {
         match self {
             RunnerError::GeneratorTimeout(err, _) => Display::fmt(err, f),
             RunnerError::Generator(err, _) => Display::fmt(err, f),
-            RunnerError::Compilation(errors, _) => {
-                display_fmt_array(errors, f)
-            }
-            RunnerError::Run(errors, _) => {
-                display_fmt_array(errors, f)
-            },
+            RunnerError::Compilation(errors, _) => display_fmt_array(errors, f),
+            RunnerError::Run(errors, _) => display_fmt_array(errors, f),
             RunnerError::DifferingChecksum(err, _) => Display::fmt(err, f),
             RunnerError::UnexpectedChecksum(err, _) => Display::fmt(err, f),
             RunnerError::RustFmt(err, _) => Display::fmt(err, f),
