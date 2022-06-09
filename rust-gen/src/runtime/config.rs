@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OptLevel(char);
 impl OptLevel {
     pub fn no_opt() -> OptLevel {
@@ -28,7 +28,7 @@ static RUST_VERSIONS: [&str; 10] = [
     "nightly",
 ];
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RustVersion(String);
 impl RustVersion {
     pub fn stable() -> RustVersion {

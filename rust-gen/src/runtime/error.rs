@@ -1,67 +1,94 @@
 use crate::generator::GeneratorError;
-use crate::runtime::run::ChecksumMapping;
+use crate::runtime::config::{OptLevel, RustVersion};
+use crate::runtime::run::{RunOutput, SubRunOutput};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::Output;
 use std::time::Duration;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RunnerError {
-    GeneratorTimeout(GeneratorTimeoutError),
-    Generator(GeneratorError),
-    Compilation(CompilationError),
-    Run(RunError),
-    DifferingChecksum(DifferingChecksumError),
-    UnexpectedChecksum(UnexpectedChecksumError),
-    RustFmt(RustFmtError),
+    GeneratorTimeout(GeneratorTimeoutError, RunOutput),
+    Generator(GeneratorError, RunOutput),
+    Compilation(Vec<CompilationError>, RunOutput),
+    CompilationTimeout(Vec<CompilationTimeoutError>, RunOutput),
+    Run(Vec<RunError>, RunOutput),
+    RunTimeout(Vec<RunTimeoutError>, RunOutput),
+    DifferingChecksum(DifferingChecksumError, RunOutput),
+    UnexpectedChecksum(UnexpectedChecksumError, RunOutput),
+    RustFmt(RustFmtError, RunOutput),
+    RustFmtTimeout(RustFmtTimeoutError, RunOutput),
 }
 
 impl RunnerError {
     pub fn folder_name(&self) -> &'static str {
         match self {
-            RunnerError::GeneratorTimeout(_) => "generator_timeout",
-            RunnerError::Generator(_) => "generator_error",
-            RunnerError::Compilation(_) => "compilation_error",
-            RunnerError::Run(_) => "run_error",
-            RunnerError::DifferingChecksum(_) => "differing_checksum_error",
-            RunnerError::UnexpectedChecksum(_) => "unexpected_checksum_error",
-            RunnerError::RustFmt(_) => "rustfmt_error",
+            RunnerError::GeneratorTimeout(_, _) => "generator_timeout",
+            RunnerError::Generator(_, _) => "generator_error",
+            RunnerError::Compilation(_, _) => "compilation_error",
+            RunnerError::CompilationTimeout(_, _) => "compilation_timeout_error",
+            RunnerError::Run(_, _) => "run_error",
+            RunnerError::RunTimeout(_, _) => "run_timeout_error",
+            RunnerError::DifferingChecksum(_, _) => "differing_checksum_error",
+            RunnerError::UnexpectedChecksum(_, _) => "unexpected_checksum_error",
+            RunnerError::RustFmt(_, _) => "rustfmt_error",
+            RunnerError::RustFmtTimeout(_, _) => "rustfmt_timeout_error",
+        }
+    }
+
+    pub fn run_output(&self) -> &RunOutput {
+        match self {
+            RunnerError::GeneratorTimeout(_, run_output)
+            | RunnerError::Generator(_, run_output)
+            | RunnerError::Compilation(_, run_output)
+            | RunnerError::Run(_, run_output)
+            | RunnerError::DifferingChecksum(_, run_output)
+            | RunnerError::UnexpectedChecksum(_, run_output)
+            | RunnerError::RustFmt(_, run_output) => run_output,
+            _ => unimplemented!(),
         }
     }
 
     pub fn files(&self) -> Vec<PathBuf> {
-        match self {
-            RunnerError::GeneratorTimeout(_err) => vec![],
-            RunnerError::Generator(_err) => vec![],
-            RunnerError::Compilation(err) => err.files(),
-            RunnerError::Run(err) => err.files(),
-            RunnerError::DifferingChecksum(err) => err.files(),
-            RunnerError::UnexpectedChecksum(err) => err.files(),
-            RunnerError::RustFmt(err) => err.files(),
-        }
+        self.run_output().files.clone()
     }
 }
 
 impl Error for RunnerError {}
 
+fn display_fmt_array<T: Error>(errors: &Vec<T>, f: &mut Formatter<'_>) -> std::fmt::Result {
+    for (i, err) in errors.iter().enumerate() {
+        if i == errors.len() - 1 {
+            return Display::fmt(err, f);
+        }
+        Display::fmt(err, f)?
+    }
+    panic!()
+}
+
 impl Display for RunnerError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            RunnerError::GeneratorTimeout(err) => Display::fmt(err, f),
-            RunnerError::Generator(err) => Display::fmt(err, f),
-            RunnerError::Compilation(err) => Display::fmt(err, f),
-            RunnerError::Run(err) => Display::fmt(err, f),
-            RunnerError::DifferingChecksum(err) => Display::fmt(err, f),
-            RunnerError::UnexpectedChecksum(err) => Display::fmt(err, f),
-            RunnerError::RustFmt(err) => Display::fmt(err, f),
+            RunnerError::GeneratorTimeout(err, _) => Display::fmt(err, f),
+            RunnerError::Generator(err, _) => Display::fmt(err, f),
+            RunnerError::Compilation(errors, _) => {
+                display_fmt_array(errors, f)
+            }
+            RunnerError::Run(errors, _) => {
+                display_fmt_array(errors, f)
+            },
+            RunnerError::DifferingChecksum(err, _) => Display::fmt(err, f),
+            RunnerError::UnexpectedChecksum(err, _) => Display::fmt(err, f),
+            RunnerError::RustFmt(err, _) => Display::fmt(err, f),
+            _ => unimplemented!(),
         }
     }
 }
 
 impl Error for GeneratorTimeoutError {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GeneratorTimeoutError {
     pub duration: Duration,
 }
@@ -82,23 +109,26 @@ impl Display for GeneratorTimeoutError {
     }
 }
 
-impl From<GeneratorTimeoutError> for RunnerError {
-    fn from(err: GeneratorTimeoutError) -> RunnerError {
-        RunnerError::GeneratorTimeout(err)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CompilationError {
     pub rust_file_path: PathBuf,
+    pub opt: OptLevel,
+    pub version: RustVersion,
     pub status_code: i32,
     pub std_err: String,
 }
 
 impl CompilationError {
-    pub fn new(rust_file_path: PathBuf, output: &Output) -> CompilationError {
+    pub fn new(
+        rust_file_path: PathBuf,
+        output: &Output,
+        opt: OptLevel,
+        version: RustVersion,
+    ) -> CompilationError {
         return CompilationError {
             rust_file_path: rust_file_path.to_owned(),
+            opt,
+            version,
             status_code: output.status.code().unwrap_or(-1),
             std_err: String::from_utf8_lossy(output.stderr.as_ref())
                 .parse()
@@ -117,8 +147,10 @@ impl Display for CompilationError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "Failed to compile {}",
-            self.rust_file_path.to_str().unwrap()
+            "Failed to compile {} with optimization {:?} and Rust version {:?}",
+            self.rust_file_path.to_str().unwrap(),
+            self.opt,
+            self.version
         )?;
         writeln!(f, "Status code {}", self.status_code)?;
         writeln!(f, "Standard error")?;
@@ -126,13 +158,30 @@ impl Display for CompilationError {
     }
 }
 
-impl From<CompilationError> for RunnerError {
-    fn from(err: CompilationError) -> RunnerError {
-        RunnerError::Compilation(err)
+impl Error for CompilationTimeoutError {}
+
+#[derive(Debug, Clone)]
+pub struct CompilationTimeoutError {
+    pub duration: Duration,
+}
+
+impl CompilationTimeoutError {
+    pub fn new(duration: Duration) -> CompilationTimeoutError {
+        CompilationTimeoutError { duration }
     }
 }
 
-#[derive(Debug)]
+impl Display for CompilationTimeoutError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Compilation timeout. Timeout of {} seconds exceeded.",
+            self.duration.as_secs()
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct RunError {
     pub rust_file_path: PathBuf,
     pub bin_file_path: PathBuf,
@@ -168,22 +217,32 @@ impl Display for RunError {
     }
 }
 
-impl From<RunError> for RunnerError {
-    fn from(err: RunError) -> RunnerError {
-        RunnerError::Run(err)
+impl Error for RunTimeoutError {}
+
+#[derive(Debug, Clone)]
+pub struct RunTimeoutError {
+    pub duration: Duration,
+}
+
+impl RunTimeoutError {
+    pub fn new(duration: Duration) -> RunTimeoutError {
+        RunTimeoutError { duration }
     }
 }
 
-#[derive(Debug)]
+impl Display for RunTimeoutError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Compilation timeout. Timeout of {} seconds exceeded.",
+            self.duration.as_secs()
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct DifferingChecksumError {
-    pub files: Vec<PathBuf>,
-    pub checksums: ChecksumMapping,
-}
-
-impl DifferingChecksumError {
-    pub fn files(&self) -> Vec<PathBuf> {
-        self.files.clone()
-    }
+    pub checksums: Vec<SubRunOutput>,
 }
 
 impl Error for DifferingChecksumError {}
@@ -195,23 +254,10 @@ impl Display for DifferingChecksumError {
     }
 }
 
-impl From<DifferingChecksumError> for RunnerError {
-    fn from(err: DifferingChecksumError) -> RunnerError {
-        RunnerError::DifferingChecksum(err)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UnexpectedChecksumError {
-    pub files: Vec<PathBuf>,
     pub expected_checksum: u128,
-    pub checksums: ChecksumMapping,
-}
-
-impl UnexpectedChecksumError {
-    pub fn files(&self) -> Vec<PathBuf> {
-        self.files.clone()
-    }
+    pub checksums: Vec<SubRunOutput>,
 }
 
 impl Error for UnexpectedChecksumError {}
@@ -224,23 +270,17 @@ impl Display for UnexpectedChecksumError {
     }
 }
 
-impl From<UnexpectedChecksumError> for RunnerError {
-    fn from(err: UnexpectedChecksumError) -> RunnerError {
-        RunnerError::UnexpectedChecksum(err)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RustFmtError {
-    pub files: Vec<PathBuf>,
+    pub run_output: RunOutput,
     pub status_code: i32,
     pub std_err: String,
 }
 
 impl RustFmtError {
-    pub fn new(output: Output, files: Vec<PathBuf>) -> RustFmtError {
+    pub fn new(output: Output, run_output: RunOutput) -> RustFmtError {
         return RustFmtError {
-            files,
+            run_output,
             status_code: output.status.code().unwrap_or(-1),
             std_err: String::from_utf8_lossy(output.stderr.as_ref())
                 .parse()
@@ -249,7 +289,7 @@ impl RustFmtError {
     }
 
     pub fn files(&self) -> Vec<PathBuf> {
-        self.files.clone()
+        self.run_output.files.clone()
     }
 }
 
@@ -264,8 +304,25 @@ impl Display for RustFmtError {
     }
 }
 
-impl From<RustFmtError> for RunnerError {
-    fn from(err: RustFmtError) -> RunnerError {
-        RunnerError::RustFmt(err)
+impl Error for RustFmtTimeoutError {}
+
+#[derive(Debug, Clone)]
+pub struct RustFmtTimeoutError {
+    pub duration: Duration,
+}
+
+impl RustFmtTimeoutError {
+    pub fn new(duration: Duration) -> RustFmtTimeoutError {
+        RustFmtTimeoutError { duration }
+    }
+}
+
+impl Display for RustFmtTimeoutError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Compilation timeout. Timeout of {} seconds exceeded.",
+            self.duration.as_secs()
+        )
     }
 }

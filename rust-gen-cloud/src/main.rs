@@ -4,7 +4,6 @@ pub mod schema;
 #[macro_use]
 extern crate diesel;
 
-use std::time::Duration;
 use crate::model::{PolicyInfo, RunInfo};
 use diesel::{Connection, MysqlConnection};
 use dotenv::dotenv;
@@ -12,6 +11,7 @@ use rand::Rng;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::Runner;
+use std::time::Duration;
 use uuid::Uuid;
 
 pub fn establish_connection() -> MysqlConnection {
@@ -41,13 +41,10 @@ pub fn main() {
     for i in 0..100000 {
         let policy = Policy::parse_policy_args_or_random(&None);
         let seed = rand::thread_rng().gen();
-        println!(
-            "Running policy {} seed {} run {}",
-            policy.name, seed, i
-        );
+        println!("Running policy {} seed {} run {}", policy.name, seed, i);
         let output = runner.run(Some(seed), &policy);
         let files = match &output {
-            Ok(files) => files.clone(),
+            Ok(output) => output.files.clone(),
             Err(err) => err.files(),
         };
 

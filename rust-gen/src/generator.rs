@@ -18,7 +18,7 @@ pub struct GeneratorOutput {
     pub expected_checksum: Option<u128>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GeneratorError {
     pub statistics: Box<FullStatistics>,
     pub error_message: String,
@@ -36,7 +36,6 @@ pub type GeneratorResult = Result<GeneratorOutput, GeneratorError>;
 
 pub fn run_generator(
     seed: Option<u64>,
-    // policy: &Policy,
     policy: &Policy,
     add_checksum: bool,
     add_assertions: bool,

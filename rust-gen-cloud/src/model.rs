@@ -34,7 +34,7 @@ pub struct RunInfo {
 impl RunInfo {
     pub fn new(seed: u64, run_output: RunResult, policy_id: i32) -> RunInfo {
         let files = match &run_output {
-            Ok(files) => files.clone(),
+            Ok(output) => output.files.clone(),
             Err(error) => error.files(),
         };
         RunInfo {

@@ -27,7 +27,7 @@ pub struct Statistics {
     pub max_failed_ty_depth: usize,
 }
 
-#[derive(Default, Debug, Deserialize, Serialize)]
+#[derive(Default, Debug, Clone, Deserialize, Serialize)]
 pub struct FullStatistics {
     pub total_successful_items: usize,
     pub total_successful_stmts: usize,
