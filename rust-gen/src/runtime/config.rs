@@ -11,8 +11,8 @@ impl OptLevel {
             OptLevel('1'),
             OptLevel('2'),
             OptLevel('3'),
-            // OptLevel('s'),
-            // OptLevel('z'),
+            OptLevel('s'),
+            OptLevel('z'),
         ]
     }
 }
