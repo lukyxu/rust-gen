@@ -52,7 +52,7 @@ table! {
 table! {
     runs (run_id) {
         run_id -> Integer,
-        git_hash -> Varchar,
+        git_hash -> Char,
         version -> Varchar,
         hostname -> Varchar,
         seed -> Unsigned<Bigint>,
@@ -79,6 +79,7 @@ table! {
         compiler_name -> Varchar,
         opt -> Char,
         version -> Varchar,
+        success -> Bool,
         compilation_duration_in_millis -> Nullable<Unsigned<Bigint>>,
         run_duration_in_micros -> Nullable<Unsigned<Bigint>>,
         checksum -> Nullable<Decimal>,
