@@ -51,7 +51,7 @@ CREATE TABLE policies (
 
 CREATE TABLE runs (
     run_id INTEGER AUTO_INCREMENT,
-    git_hash VARCHAR(255) NOT NULL,
+    git_hash CHAR(40) NOT NULL,
     version VARCHAR(16) NOT NULL,
     hostname VARCHAR(32) NOT NULL,
     seed BIGINT UNSIGNED NOT NULL,
@@ -70,6 +70,7 @@ CREATE TABLE runs (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (run_id),
     FOREIGN KEY (policy_id) REFERENCES policies(policy_id),
+    INDEX (git_hash),
     INDEX (version),
     INDEX (hostname),
     INDEX (seed),

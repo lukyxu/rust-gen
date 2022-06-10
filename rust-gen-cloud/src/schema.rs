@@ -52,7 +52,7 @@ table! {
 table! {
     runs (run_id) {
         run_id -> Integer,
-        git_hash -> Varchar,
+        git_hash -> Char,
         version -> Varchar,
         hostname -> Varchar,
         seed -> Unsigned<Bigint>,
