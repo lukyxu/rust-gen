@@ -58,11 +58,42 @@ table! {
         seed -> Unsigned<Bigint>,
         success -> Bool,
         policy_id -> Integer,
+        generation_duration_in_millis -> Nullable<Unsigned<Bigint>>,
+        total_sub_runs -> Unsigned<Bigint>,
+        expected_checksum -> Nullable<Decimal>,
         statistics -> Nullable<Text>,
-        error -> Nullable<Varchar>,
+        error_kind -> Nullable<Varchar>,
+        error_message -> Nullable<Text>,
+        run_timeout -> Unsigned<Bigint>,
+        generate_timeout -> Unsigned<Bigint>,
+        compile_timeout -> Unsigned<Bigint>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
 }
 
-allow_tables_to_appear_in_same_query!(policies, runs,);
+table! {
+    sub_runs (sub_run_id) {
+        sub_run_id -> Integer,
+        run_id -> Integer,
+        compiler_name -> Varchar,
+        opt -> Char,
+        version -> Varchar,
+        compilation_duration_in_millis -> Nullable<Unsigned<Bigint>>,
+        run_duration_in_micros -> Nullable<Unsigned<Bigint>>,
+        checksum -> Nullable<Decimal>,
+        error_kind -> Nullable<Varchar>,
+        error_message -> Nullable<Text>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+joinable!(runs -> policies (policy_id));
+joinable!(sub_runs -> runs (run_id));
+
+allow_tables_to_appear_in_same_query!(
+    policies,
+    runs,
+    sub_runs,
+);

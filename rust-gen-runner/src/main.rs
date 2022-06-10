@@ -46,7 +46,7 @@ struct Args {
     generate_timeout: u64,
     #[clap(long, help = "Timeout in seconds for compiling programs.", default_value = "60")]
     compile_timeout: u64,
-    #[clap(long, help = "Timeout in seconds for generating programs.", default_value = "60")]
+    #[clap(long, help = "Timeout in seconds for generating programs.", default_value = "1")]
     run_timeout: u64,
 
     #[clap(long, help = "Option to not compile any of the generated programs")]

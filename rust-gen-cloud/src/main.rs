@@ -4,13 +4,13 @@ pub mod schema;
 #[macro_use]
 extern crate diesel;
 
-use crate::model::{PolicyInfo, RunInfo};
+use crate::model::{PolicyInfo, RunInfo, SubRunInfo};
 use diesel::{Connection, MysqlConnection};
 use dotenv::dotenv;
 use rand::Rng;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
-use rust_gen::runtime::run::Runner;
+use rust_gen::runtime::run::{Runner, RunOutput};
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -38,17 +38,14 @@ pub fn main() {
         rustfmt: false,
         generate_timeout: Duration::from_secs(30),
         compile_timeout: Duration::from_secs(60),
-        run_timeout: Duration::from_secs(60),
+        run_timeout: Duration::from_secs(1),
     };
     for i in 0..100000 {
         let policy = Policy::parse_policy_args_or_random(&None);
         let seed = rand::thread_rng().gen();
         println!("Running policy {} seed {} run {}", policy.name, seed, i);
         let output = runner.run(Some(seed), &policy);
-        let files = match &output {
-            Ok(output) => output.files.clone(),
-            Err(err) => err.files(),
-        };
+        let files = RunOutput::from_run_result(&output).files.clone();
 
         let new_policy: PolicyInfo = policy.into();
         let previous_policy = PolicyInfo::query(&new_policy, &connection);
@@ -60,7 +57,11 @@ pub fn main() {
             }
         };
 
-        RunInfo::new(seed, output, new_policy_id).insert_new(&connection);
+        let sub_runs = RunOutput::from_run_result(&output).subruns.clone();
+        let run_id = RunInfo::new(seed, output, new_policy_id, &runner).insert_new(&connection);
+        for sub_run in sub_runs {
+            SubRunInfo::new(run_id, sub_run).insert_new(&connection)
+        };
 
         for file in files {
             std::fs::remove_file(&file).unwrap();

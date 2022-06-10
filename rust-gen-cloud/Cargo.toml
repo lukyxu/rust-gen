@@ -7,7 +7,10 @@ edition = "2021"
 
 [dependencies]
 rust-gen = { path="../rust-gen" }
-diesel = { version = "1.4.8", features = ["mysql", "64-column-tables", "chrono"] }
+diesel = { version = "1.4.8", features = ["mysql", "64-column-tables", "chrono", "numeric"] }
+bigdecimal = "0.1.2"
+num-bigint = "0.2.6"
+
 rand = "0.8.0"
 dotenv = "0.15.0"
 sha2 = "0.10.2"
