@@ -29,9 +29,8 @@ impl ToString for OptLevel {
     }
 }
 
-static RUST_VERSIONS: [&str; 10] = [
-    "1.26.0", "1.31.0", "1.36.0", "1.41.0", "1.46.0", "1.51.0", "1.56.0", "stable", "beta",
-    "nightly",
+static RUST_VERSIONS: [&str; 4] = [
+    "1.31.0","1.46.0", "stable", "nightly",
 ];
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

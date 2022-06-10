@@ -2,7 +2,7 @@
 CREATE TABLE policies (
   policy_id INTEGER AUTO_INCREMENT,
   policy_sha256 CHAR(64) NOT NULL,
-  policy_name VARCHAR(255) NOT NULL,
+  policy_name VARCHAR(32) NOT NULL,
   max_file_attempts BIGINT UNSIGNED NOT NULL,
   max_item_attempts BIGINT UNSIGNED NOT NULL,
   max_fn_attempts BIGINT UNSIGNED NOT NULL,
@@ -52,8 +52,8 @@ CREATE TABLE policies (
 CREATE TABLE runs (
     run_id INTEGER AUTO_INCREMENT,
     git_hash VARCHAR(255) NOT NULL,
-    version VARCHAR(255) NOT NULL,
-    hostname VARCHAR(255) NOT NULL,
+    version VARCHAR(16) NOT NULL,
+    hostname VARCHAR(32) NOT NULL,
     seed BIGINT UNSIGNED NOT NULL,
     success BOOLEAN NOT NULL,
     policy_id INTEGER NOT NULL,
@@ -69,7 +69,15 @@ CREATE TABLE runs (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (run_id),
-    FOREIGN KEY (policy_id) REFERENCES policies(policy_id)
+    FOREIGN KEY (policy_id) REFERENCES policies(policy_id),
+    INDEX (version),
+    INDEX (hostname),
+    INDEX (seed),
+    INDEX (success),
+    INDEX (policy_id),
+    INDEX (generation_duration_in_millis),
+    INDEX (total_sub_runs),
+    INDEX (error_kind)
 );
 
 CREATE TABLE sub_runs(
@@ -78,6 +86,7 @@ CREATE TABLE sub_runs(
    compiler_name VARCHAR(16) NOT NULL,
    opt CHAR(1) NOT NULL,
    version VARCHAR(16) NOT NULL,
+   success BOOLEAN NOT NULL,
    compilation_duration_in_millis BIGINT UNSIGNED,
    run_duration_in_micros BIGINT UNSIGNED,
    checksum NUMERIC(39,0),
@@ -86,5 +95,13 @@ CREATE TABLE sub_runs(
    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
    PRIMARY KEY (sub_run_id),
-   FOREIGN KEY (run_id) REFERENCES runs(run_id)
+   FOREIGN KEY (run_id) REFERENCES runs(run_id),
+   INDEX (run_id),
+   INDEX (compiler_name),
+   INDEX (opt),
+   INDEX (version),
+   INDEX (success),
+   INDEX (compilation_duration_in_millis),
+   INDEX (run_duration_in_micros),
+   INDEX (error_kind)
 );

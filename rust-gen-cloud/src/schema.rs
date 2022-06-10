@@ -79,6 +79,7 @@ table! {
         compiler_name -> Varchar,
         opt -> Char,
         version -> Varchar,
+        success -> Bool,
         compilation_duration_in_millis -> Nullable<Unsigned<Bigint>>,
         run_duration_in_micros -> Nullable<Unsigned<Bigint>>,
         checksum -> Nullable<Decimal>,
