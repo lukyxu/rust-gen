@@ -9,45 +9,45 @@ use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub enum RunnerError {
+    GeneratorFailure(GeneratorError, RunOutput),
     GeneratorTimeout(GeneratorTimeoutError, RunOutput),
-    Generator(GeneratorError, RunOutput),
-    Compilation(Vec<CompilationError>, RunOutput),
+    CompilationFailure(Vec<CompilationError>, RunOutput),
     CompilationTimeout(Vec<CompilationTimeoutError>, RunOutput),
-    Run(Vec<RunError>, RunOutput),
+    RunFailure(Vec<RunError>, RunOutput),
     RunTimeout(Vec<RunTimeoutError>, RunOutput),
     DifferingChecksum(DifferingChecksumError, RunOutput),
     UnexpectedChecksum(UnexpectedChecksumError, RunOutput),
-    RustFmt(RustFmtError, RunOutput),
+    RustFmtFailure(RustFmtError, RunOutput),
     RustFmtTimeout(RustFmtTimeoutError, RunOutput),
 }
 
 impl RunnerError {
-    pub fn folder_name(&self) -> &'static str {
+    pub fn error_kind(&self) -> &'static str {
         match self {
+            RunnerError::GeneratorFailure(_, _) => "generator_failure",
             RunnerError::GeneratorTimeout(_, _) => "generator_timeout",
-            RunnerError::Generator(_, _) => "generator_error",
-            RunnerError::Compilation(_, _) => "compilation_error",
-            RunnerError::CompilationTimeout(_, _) => "compilation_timeout_error",
-            RunnerError::Run(_, _) => "run_error",
-            RunnerError::RunTimeout(_, _) => "run_timeout_error",
-            RunnerError::DifferingChecksum(_, _) => "differing_checksum_error",
-            RunnerError::UnexpectedChecksum(_, _) => "unexpected_checksum_error",
-            RunnerError::RustFmt(_, _) => "rustfmt_error",
-            RunnerError::RustFmtTimeout(_, _) => "rustfmt_timeout_error",
+            RunnerError::CompilationFailure(_, _) => "compilation_failure",
+            RunnerError::CompilationTimeout(_, _) => "compilation_timeout",
+            RunnerError::RunFailure(_, _) => "run_failure",
+            RunnerError::RunTimeout(_, _) => "run_timeout",
+            RunnerError::DifferingChecksum(_, _) => "differing_checksum",
+            RunnerError::UnexpectedChecksum(_, _) => "unexpected_checksum",
+            RunnerError::RustFmtFailure(_, _) => "rustfmt_failure",
+            RunnerError::RustFmtTimeout(_, _) => "rustfmt_timeout",
         }
     }
 
     pub fn run_output(&self) -> &RunOutput {
         match self {
-            RunnerError::GeneratorTimeout(_, run_output)
-            | RunnerError::Generator(_, run_output)
-            | RunnerError::Compilation(_, run_output)
+            RunnerError::GeneratorFailure(_, run_output)
+            | RunnerError::GeneratorTimeout(_, run_output)
+            | RunnerError::CompilationFailure(_, run_output)
             | RunnerError::CompilationTimeout(_, run_output)
-            | RunnerError::Run(_, run_output)
+            | RunnerError::RunFailure(_, run_output)
             | RunnerError::RunTimeout(_, run_output)
             | RunnerError::DifferingChecksum(_, run_output)
             | RunnerError::UnexpectedChecksum(_, run_output)
-            | RunnerError::RustFmt(_, run_output)
+            | RunnerError::RustFmtFailure(_, run_output)
             | RunnerError::RustFmtTimeout(_, run_output) => run_output
         }
     }
@@ -73,14 +73,14 @@ impl Display for RunnerError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             RunnerError::GeneratorTimeout(err, _) => Display::fmt(err, f),
-            RunnerError::Generator(err, _) => Display::fmt(err, f),
-            RunnerError::Compilation(errors, _) => display_fmt_array(errors, f),
+            RunnerError::GeneratorFailure(err, _) => Display::fmt(err, f),
+            RunnerError::CompilationFailure(errors, _) => display_fmt_array(errors, f),
             RunnerError::CompilationTimeout(errors, _) => display_fmt_array(errors, f),
-            RunnerError::Run(errors, _) => display_fmt_array(errors, f),
+            RunnerError::RunFailure(errors, _) => display_fmt_array(errors, f),
             RunnerError::RunTimeout(errors, _) => display_fmt_array(errors, f),
             RunnerError::DifferingChecksum(err, _) => Display::fmt(err, f),
             RunnerError::UnexpectedChecksum(err, _) => Display::fmt(err, f),
-            RunnerError::RustFmt(err, _) => Display::fmt(err, f),
+            RunnerError::RustFmtFailure(err, _) => Display::fmt(err, f),
             RunnerError::RustFmtTimeout(err, _) => Display::fmt(err, f),
         }
     }
@@ -134,10 +134,6 @@ impl CompilationError {
                 .parse()
                 .unwrap(),
         };
-    }
-
-    pub fn files(&self) -> Vec<PathBuf> {
-        return vec![self.rust_file_path.clone()];
     }
 }
 
@@ -203,10 +199,6 @@ impl RunError {
                 .parse()
                 .unwrap(),
         };
-    }
-
-    pub fn files(&self) -> Vec<PathBuf> {
-        return vec![self.rust_file_path.clone(), self.bin_file_path.clone()];
     }
 }
 
@@ -280,24 +272,18 @@ impl Display for UnexpectedChecksumError {
 
 #[derive(Debug, Clone)]
 pub struct RustFmtError {
-    pub run_output: RunOutput,
     pub status_code: i32,
     pub std_err: String,
 }
 
 impl RustFmtError {
-    pub fn new(output: Output, run_output: RunOutput) -> RustFmtError {
+    pub fn new(output: Output) -> RustFmtError {
         return RustFmtError {
-            run_output,
             status_code: output.status.code().unwrap_or(-1),
             std_err: String::from_utf8_lossy(output.stderr.as_ref())
                 .parse()
                 .unwrap(),
         };
-    }
-
-    pub fn files(&self) -> Vec<PathBuf> {
-        self.run_output.files.clone()
     }
 }
 

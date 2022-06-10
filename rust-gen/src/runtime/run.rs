@@ -14,6 +14,8 @@ use std::str::FromStr;
 use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 use std::{fs, thread};
+use std::error::Error;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Default, Clone)]
 pub struct RunOutput {
@@ -22,22 +24,41 @@ pub struct RunOutput {
     pub expected_checksum: Option<u128>,
     pub rust_file_path: Option<PathBuf>,
     pub subruns: Vec<SubRunResult>,
-    pub generation_time: Duration,
+    pub generation_time: Option<Duration>,
 }
 
+impl RunOutput {
+    pub fn from_run_result(output: &RunResult) -> &RunOutput {
+        match output {
+            Ok(output) => &output,
+            Err(err) => err.run_output()
+        }
+    }
+}
 pub type SubRunResult = Result<SubRunOutput, SubRunError>;
 
 #[derive(Debug, Clone)]
 #[allow(unused)]
 pub struct SubRunOutput {
-    compiler_name: String,
-    opt: OptLevel,
-    version: RustVersion,
-    executable_file: Option<PathBuf>,
-    compilation_duration: Option<Duration>,
-    run_duration: Option<Duration>,
-    checksum: Option<u128>,
+    pub compiler_name: String,
+    pub opt: OptLevel,
+    pub version: RustVersion,
+    pub executable_file: Option<PathBuf>,
+    pub compilation_duration: Option<Duration>,
+    pub run_duration: Option<Duration>,
+    pub checksum: Option<u128>,
 }
+
+impl SubRunOutput {
+    pub fn from_sub_run_result(sub_run_result: &SubRunResult) -> &SubRunOutput {
+        match sub_run_result {
+            Ok(output) => output,
+            Err(err) => err.subrun_output()
+        }
+    }
+}
+
+impl Error for SubRunError {}
 
 #[derive(Debug, Clone)]
 pub enum SubRunError {
@@ -47,12 +68,45 @@ pub enum SubRunError {
     RunTimeout(RunTimeoutError, SubRunOutput),
 }
 
+impl SubRunError {
+    pub fn error_kind(&self) -> SubRunErrorKind {
+        match self {
+            SubRunError::CompilationFailure(_,_) => SubRunErrorKind::CompilationFailure,
+            SubRunError::CompilationTimeout(_,_) => SubRunErrorKind::CompilationTimeout,
+            SubRunError::RunFailure(_,_) => SubRunErrorKind::RunFailure,
+            SubRunError::RunTimeout(_,_) => SubRunErrorKind::RunTimeout,
+        }
+    }
+}
+
+impl Display for SubRunError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SubRunError::CompilationFailure(err, _) => Display::fmt(err, f),
+            SubRunError::CompilationTimeout(err, _) => Display::fmt(err, f),
+            SubRunError::RunFailure(err, _) => Display::fmt(err, f),
+            SubRunError::RunTimeout(err, _) => Display::fmt(err, f),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash)]
 pub enum SubRunErrorKind {
     CompilationFailure,
     CompilationTimeout,
     RunFailure,
     RunTimeout,
+}
+
+impl ToString for SubRunErrorKind {
+    fn to_string(&self) -> String {
+        match self {
+            SubRunErrorKind::CompilationFailure => "compilation_failure",
+            SubRunErrorKind::CompilationTimeout => "compilation_timeout",
+            SubRunErrorKind::RunFailure => "run_failure",
+            SubRunErrorKind::RunTimeout => "run_timeout",
+        }.to_string()
+    }
 }
 
 impl SubRunError {
@@ -121,7 +175,7 @@ impl Runner {
             true,
             self.add_assertions,
         );
-        run_output.generation_time = gen_output.0;
+        run_output.generation_time = Some(gen_output.0);
         let GeneratorOutput {
             program,
             statistics,
@@ -132,7 +186,7 @@ impl Runner {
                 GeneratorTimeoutError::new(gen_output.0),
                 run_output.clone(),
             ))?
-            .map_err(|err| RunnerError::Generator(err, run_output.clone()))?;
+            .map_err(|err| RunnerError::GeneratorFailure(err, run_output.clone()))?;
 
         run_output.statistics = Some(statistics.clone());
         run_output.expected_checksum = Some(expected_checksum.unwrap());
@@ -168,10 +222,7 @@ impl Runner {
 
         // Push subrun files
         for subrun in &run_output.subruns {
-            let file = match subrun {
-                Ok(subrun_output) => subrun_output,
-                Err(err) => err.subrun_output(),
-            }
+            let file = SubRunOutput::from_sub_run_result(subrun)
             .executable_file
             .clone();
             if let Some(file) = file {
@@ -210,8 +261,8 @@ impl Runner {
 
         // Run rustfmt
         if self.rustfmt {
-            run_rustfmt(rust_file, &run_output)
-                .map_err(|err| RunnerError::RustFmt(err, run_output.clone()))?
+            run_rustfmt(rust_file)
+                .map_err(|err| RunnerError::RustFmtFailure(err, run_output.clone()))?
         }
 
         Ok(run_output)
@@ -244,7 +295,7 @@ impl Runner {
                 let directory = output_path
                     .as_ref()
                     .join("fail")
-                    .join(err.folder_name())
+                    .join(&format!("{}_error", err.error_kind()))
                     .join(i.to_string());
                 fs::create_dir_all(&directory).expect("Unable to create directory");
                 for file in &err.files() {
@@ -417,13 +468,13 @@ fn run_program<P: AsRef<Path>, S: AsRef<Path>>(rust_file: P, executable: S) -> R
     .expect("Unexpected execution output"))
 }
 
-fn run_rustfmt<P: AsRef<Path>>(rust_file: P, run_output: &RunOutput) -> Result<(), RustFmtError> {
+fn run_rustfmt<P: AsRef<Path>>(rust_file: P) -> Result<(), RustFmtError> {
     let output = Command::new(format!("rustfmt"))
         .arg(rust_file.as_ref())
         .output()
         .expect("Failed to execute runtime process");
     if !output.status.success() {
-        return Err(RustFmtError::new(output, run_output.clone()));
+        return Err(RustFmtError::new(output));
     }
     Ok(())
 }
@@ -436,18 +487,12 @@ fn subrun_validation(run_output: &RunOutput) -> Result<Vec<&SubRunOutput>, Runne
         .iter()
         .filter_map(|subrun| subrun.as_ref().err())
         .for_each(|err| {
-            let error_kind = match &err {
-                SubRunError::CompilationFailure(_, _) => SubRunErrorKind::CompilationFailure,
-                SubRunError::CompilationTimeout(_, _) => SubRunErrorKind::CompilationTimeout,
-                SubRunError::RunFailure(_, _) => SubRunErrorKind::RunFailure,
-                SubRunError::RunTimeout(_, _) => SubRunErrorKind::RunFailure,
-            };
-            errors.entry(error_kind).or_insert(vec![]).push(err.clone());
+            errors.entry(err.error_kind()).or_insert(vec![]).push(err.clone());
         });
 
     for error in errors {
         return Err(match error.0 {
-            SubRunErrorKind::CompilationFailure => RunnerError::Compilation(
+            SubRunErrorKind::CompilationFailure => RunnerError::CompilationFailure(
                 error
                     .1
                     .into_iter()
@@ -475,7 +520,7 @@ fn subrun_validation(run_output: &RunOutput) -> Result<Vec<&SubRunOutput>, Runne
                     .collect(),
                 run_output.clone(),
             ),
-            SubRunErrorKind::RunFailure => RunnerError::Run(
+            SubRunErrorKind::RunFailure => RunnerError::RunFailure(
                 error
                     .1
                     .into_iter()

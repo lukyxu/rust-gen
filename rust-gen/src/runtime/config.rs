@@ -17,6 +17,12 @@ impl OptLevel {
     }
 }
 
+impl OptLevel {
+    pub fn to_char(&self) -> char {
+        self.0
+    }
+}
+
 impl ToString for OptLevel {
     fn to_string(&self) -> String {
         self.0.to_string()

@@ -1,15 +1,18 @@
+use bigdecimal::BigDecimal;
 use crate::schema::policies;
 use crate::schema::runs;
+use crate::schema::sub_runs;
 use chrono::NaiveDateTime;
 use diesel::result::Error;
-use diesel::{
-    insert_into, ExpressionMethods, MysqlConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl,
-};
+use diesel::{sql_types, insert_into, ExpressionMethods, MysqlConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl, select};
+use num_bigint::{ToBigInt};
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
-use rust_gen::runtime::run::RunResult;
+use rust_gen::runtime::run::{Runner, RunOutput, RunResult, SubRunError, SubRunOutput, SubRunResult};
 use rust_gen::utils::{from_ron_string, to_ron_string};
 use sha2::{Digest, Sha256};
+
+no_arg_sql_function!(last_insert_id, sql_types::Integer);
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
@@ -23,8 +26,15 @@ pub struct RunInfo {
     pub seed: u64,
     pub success: bool,
     pub policy_id: i32,
+    pub generation_duration_in_millis: Option<u64>,
+    pub total_sub_runs: u64,
+    pub expected_checksum: Option<BigDecimal>,
     pub statistics: Option<String>,
-    pub error: Option<String>,
+    pub error_kind: Option<String>,
+    pub error_message: Option<String>,
+    pub run_timeout: u64,
+    pub generate_timeout: u64,
+    pub compile_timeout: u64,
     #[diesel(deserialize_as = "NaiveDateTime")]
     pub created_at: Option<NaiveDateTime>,
     #[diesel(deserialize_as = "NaiveDateTime")]
@@ -32,11 +42,8 @@ pub struct RunInfo {
 }
 
 impl RunInfo {
-    pub fn new(seed: u64, run_output: RunResult, policy_id: i32) -> RunInfo {
-        let files = match &run_output {
-            Ok(output) => output.files.clone(),
-            Err(error) => error.files(),
-        };
+    pub fn new(seed: u64, run_output: RunResult, policy_id: i32, runner: &Runner) -> RunInfo {
+        let files = RunOutput::from_run_result(&run_output).files.clone();
         RunInfo {
             run_id: None,
             git_hash: env!("GIT_HASH").to_string(),
@@ -45,6 +52,9 @@ impl RunInfo {
             seed,
             success: run_output.is_ok(),
             policy_id,
+            generation_duration_in_millis: RunOutput::from_run_result(&run_output).generation_time.map(|duration|duration.as_millis() as u64),
+            total_sub_runs: RunOutput::from_run_result(&run_output).subruns.len() as u64,
+            expected_checksum: RunOutput::from_run_result(&run_output).expected_checksum.map(|checksum|BigDecimal::new(checksum.to_bigint().unwrap(), 0)),
             statistics: files
                 .iter()
                 .filter_map(|path| {
@@ -53,22 +63,27 @@ impl RunInfo {
                         String::from_utf8(
                             std::fs::read(path).expect("Unable to read statistics.txt"),
                         )
-                        .expect("Unable to read utf-8")
+                            .expect("Unable to read utf-8")
                     })
                 })
                 .next(),
-            error: run_output.err().as_ref().map(RunnerError::to_string),
+            error_kind: run_output.as_ref().err().map(|err|err.error_kind().to_owned()),
+            error_message: run_output.as_ref().err().map(RunnerError::to_string),
+            run_timeout: runner.run_timeout.as_secs(),
+            generate_timeout: runner.generate_timeout.as_secs(),
+            compile_timeout: runner.compile_timeout.as_secs(),
             created_at: None,
             updated_at: None,
         }
     }
 
-    pub fn insert_new(&self, connection: &MysqlConnection) {
+    pub fn insert_new(&self, connection: &MysqlConnection) -> i32 {
         use crate::schema::runs::dsl::runs;
         insert_into(runs)
-            .values(self.clone())
+            .values(self)
             .execute(connection)
             .unwrap();
+        select(last_insert_id).first(connection).unwrap()
     }
 }
 
@@ -79,7 +94,7 @@ pub struct PolicyInfo {
     #[diesel(deserialize_as = "i32")]
     pub policy_id: Option<i32>,
     pub policy_sha256: String,
-    pub name: String,
+    pub policy_name: String,
     pub max_file_attempts: u64,
     pub max_item_attempts: u64,
     pub max_fn_attempts: u64,
@@ -131,7 +146,7 @@ impl PolicyInfo {
     pub fn insert_new(&self, connection: &MysqlConnection) {
         use crate::schema::policies::dsl::policies;
         insert_into(policies)
-            .values(self.clone())
+            .values(self)
             .execute(connection)
             .unwrap();
     }
@@ -160,7 +175,7 @@ impl From<Policy> for PolicyInfo {
         PolicyInfo {
             policy_id: None,
             policy_sha256: format!("{:X}", Sha256::digest(to_ron_string(&policy))),
-            name: policy.name,
+            policy_name: policy.name,
             max_file_attempts: policy.max_file_attempts as u64,
             max_item_attempts: policy.max_item_attempts as u64,
             max_fn_attempts: policy.max_fn_attempts as u64,
@@ -211,7 +226,7 @@ impl From<Policy> for PolicyInfo {
 impl From<PolicyInfo> for Policy {
     fn from(policy: PolicyInfo) -> Policy {
         Policy {
-            name: policy.name.to_string(),
+            name: policy.policy_name.to_string(),
             max_file_attempts: policy.max_file_attempts as usize,
             max_item_attempts: policy.max_item_attempts as usize,
             max_fn_attempts: policy.max_fn_attempts as usize,
@@ -254,6 +269,55 @@ impl From<PolicyInfo> for Policy {
             new_lifetime_prob: policy.new_lifetime_prob,
             disable_lifetime: policy.disable_lifetime,
         }
+    }
+}
+
+#[derive(Insertable, Queryable, Debug, Clone, PartialEq)]
+#[diesel(primary_key(policy_id))]
+#[table_name = "sub_runs"]
+pub struct SubRunInfo {
+    #[diesel(deserialize_as = "i32")]
+    pub sub_run_id: Option<i32>,
+    pub run_id: i32,
+    pub compiler_name: String,
+    pub opt: String,
+    pub version: String,
+    pub compilation_duration_in_millis: Option<u64>,
+    pub run_duration_in_micros: Option<u64>,
+    pub checksum: Option<BigDecimal>,
+    pub error_kind: Option<String>,
+    pub error_message: Option<String>,
+    #[diesel(deserialize_as = "NaiveDateTime")]
+    pub created_at: Option<NaiveDateTime>,
+    #[diesel(deserialize_as = "NaiveDateTime")]
+    pub updated_at: Option<NaiveDateTime>,
+}
+
+impl SubRunInfo {
+    pub fn new(run_id: i32, sub_run: SubRunResult) -> SubRunInfo {
+        let output = SubRunOutput::from_sub_run_result(&sub_run).clone();
+        SubRunInfo {
+            sub_run_id: None,
+            run_id,
+            compiler_name: output.compiler_name,
+            opt: output.opt.to_char().to_string(),
+            version: output.version.to_string(),
+            compilation_duration_in_millis: output.compilation_duration.map(|duration|duration.as_millis() as u64),
+            run_duration_in_micros: output.run_duration.map(|duration|duration.as_micros() as u64),
+            checksum: output.checksum.map(|checksum|BigDecimal::new(checksum.to_bigint().unwrap(), 0)),
+            error_kind: sub_run.as_ref().err().map(|err|err.error_kind().to_string()),
+            error_message: sub_run.as_ref().err().map(SubRunError::to_string),
+            created_at: None,
+            updated_at: None
+        }
+    }
+
+    pub fn insert_new(&self, connection: &MysqlConnection) {
+        use crate::schema::sub_runs::dsl::sub_runs;
+        insert_into(sub_runs)
+            .values(self)
+            .execute(connection)
+            .unwrap();
     }
 }
 
