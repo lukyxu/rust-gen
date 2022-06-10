@@ -94,7 +94,7 @@ pub struct PolicyInfo {
     #[diesel(deserialize_as = "i32")]
     pub policy_id: Option<i32>,
     pub policy_sha256: String,
-    pub name: String,
+    pub policy_name: String,
     pub max_file_attempts: u64,
     pub max_item_attempts: u64,
     pub max_fn_attempts: u64,
@@ -175,7 +175,7 @@ impl From<Policy> for PolicyInfo {
         PolicyInfo {
             policy_id: None,
             policy_sha256: format!("{:X}", Sha256::digest(to_ron_string(&policy))),
-            name: policy.name,
+            policy_name: policy.name,
             max_file_attempts: policy.max_file_attempts as u64,
             max_item_attempts: policy.max_item_attempts as u64,
             max_fn_attempts: policy.max_fn_attempts as u64,
@@ -226,7 +226,7 @@ impl From<Policy> for PolicyInfo {
 impl From<PolicyInfo> for Policy {
     fn from(policy: PolicyInfo) -> Policy {
         Policy {
-            name: policy.name.to_string(),
+            name: policy.policy_name.to_string(),
             max_file_attempts: policy.max_file_attempts as usize,
             max_item_attempts: policy.max_item_attempts as usize,
             max_fn_attempts: policy.max_fn_attempts as usize,
@@ -313,7 +313,6 @@ impl SubRunInfo {
     }
 
     pub fn insert_new(&self, connection: &MysqlConnection) {
-        // use crate::schema::policies::dsl::policies;
         use crate::schema::sub_runs::dsl::sub_runs;
         insert_into(sub_runs)
             .values(self)

@@ -1,1 +1,2 @@
-SELECT DISTINCT hostname FROM rustgen.runs
+SELECT DISTINCT hostname
+FROM runs

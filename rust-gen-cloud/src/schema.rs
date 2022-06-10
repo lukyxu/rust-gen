@@ -2,7 +2,7 @@ table! {
     policies (policy_id) {
         policy_id -> Integer,
         policy_sha256 -> Char,
-        name -> Varchar,
+        policy_name -> Varchar,
         max_file_attempts -> Unsigned<Bigint>,
         max_item_attempts -> Unsigned<Bigint>,
         max_fn_attempts -> Unsigned<Bigint>,
