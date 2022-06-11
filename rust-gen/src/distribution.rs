@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Distribution {
     Uniform(usize, usize),
+    Standard(f64, f64),
 }
 
 impl Distribution {
@@ -13,10 +14,18 @@ impl Distribution {
         Distribution::Uniform(low, high)
     }
 
+    pub fn new_standard(mean: f64, sd: f64) -> Distribution {
+        Distribution::Standard(mean, sd)
+    }
+
     pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
         match self {
             Distribution::Uniform(low, high) => {
                 rng.sample(distributions::Uniform::new_inclusive(*low, *high))
+            }
+            Distribution::Standard(mean, sd) => {
+                let f64: f64 = rng.sample(distributions::Standard);
+                (f64 * (*sd) + (*mean)).min(0.0) as usize
             }
         }
     }

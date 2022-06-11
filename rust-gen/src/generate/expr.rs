@@ -173,7 +173,9 @@ impl BinaryExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth && matches!(res_type, Ty::Prim(_))
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
+            && matches!(res_type, Ty::Prim(_))
     }
 }
 
@@ -281,7 +283,9 @@ impl IfExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.if_else_depth + 1 <= ctx.policy.max_if_else_depth && ctx.block_depth <= ctx.policy.max_block_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.if_else_depth + 1 <= ctx.policy.max_if_else_depth
+            && ctx.block_depth <= ctx.policy.max_block_depth
     }
 }
 
@@ -323,12 +327,17 @@ impl BlockExpr {
             Some(BlockExpr { stmts })
         })();
         std::mem::swap(&mut outer_symbol_table, &mut ctx.type_symbol_table);
-        std::mem::swap(&mut generable_ident_type_map, &mut ctx.generable_ident_type_map);
+        std::mem::swap(
+            &mut generable_ident_type_map,
+            &mut ctx.generable_ident_type_map,
+        );
         block_expr.map(|block_expr| (block_expr, outer_symbol_table))
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.block_depth + 1 <= ctx.policy.max_block_depth && ctx.block_depth <= ctx.policy.max_block_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.block_depth + 1 <= ctx.policy.max_block_depth
+            && ctx.block_depth <= ctx.policy.max_block_depth
     }
 }
 
@@ -496,7 +505,8 @@ impl FieldExpr {
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
         // TODO: Can improve this
-        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
     }
 }
 
@@ -541,7 +551,8 @@ impl IndexExpr {
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
         // TODO: Can improve this
-        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
     }
 }
 
