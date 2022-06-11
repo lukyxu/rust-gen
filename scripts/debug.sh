@@ -1,2 +1,2 @@
 #!/bin/sh
-time cargo run --bin runner --release -- --no-version --no-opt -n 10000 -p default
+time cargo run --bin rust-gen-runner --release -- --no-version --no-opt -n 100 -p default -s

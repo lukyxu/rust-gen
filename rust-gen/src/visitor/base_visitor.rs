@@ -161,7 +161,10 @@ pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
     }
 }
 
-pub fn walk_decl_local_stmt<V: Visitor>(visitor: &mut V, DeclLocalStmt { name, ty }: &DeclLocalStmt) {
+pub fn walk_decl_local_stmt<V: Visitor>(
+    visitor: &mut V,
+    DeclLocalStmt { name, ty }: &DeclLocalStmt,
+) {
     visitor.visit_name(name);
     visitor.visit_type(ty);
 }

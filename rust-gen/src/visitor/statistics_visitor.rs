@@ -1,10 +1,10 @@
-use crate::ast::expr::{Expr};
+use crate::ast::expr::Expr;
 use crate::ast::item::Item;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::TyKind;
 use crate::statistics::program::ProgramStatistics;
-use crate::visitor::base_visitor::{Visitor, walk_expr, walk_item, walk_stmt};
+use crate::visitor::base_visitor::{walk_expr, walk_item, walk_stmt, Visitor};
 
 #[derive(Default)]
 pub struct StatisticsVisitor {
@@ -41,13 +41,15 @@ impl Visitor for StatisticsVisitor {
             .or_insert(0) += 1;
         let ty_kind = match expr {
             Expr::Literal(_) => Some(TyKind::Prim),
-            Expr::Tuple(tuple) => {
-                Some(if tuple.tuple.is_empty() { TyKind::Unit } else { TyKind::Tuple })
-            }
+            Expr::Tuple(tuple) => Some(if tuple.tuple.is_empty() {
+                TyKind::Unit
+            } else {
+                TyKind::Tuple
+            }),
             Expr::Array(_) => Some(TyKind::Array),
             Expr::Struct(_) => Some(TyKind::Struct),
             Expr::Reference(_) => Some(TyKind::Reference),
-            _ => None
+            _ => None,
         };
         if let Some(ty_kind) = ty_kind {
             *self
