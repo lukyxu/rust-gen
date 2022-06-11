@@ -442,6 +442,9 @@ impl BinaryOp {
     apply_int!(apply_mul, expr_mul);
     apply_int!(apply_div, expr_div);
     apply_int!(apply_rem, expr_rem);
+    apply_int!(apply_bit_xor, expr_bit_xor);
+    apply_int!(apply_bit_and, expr_bit_and);
+    apply_int!(apply_bit_or, expr_bit_or);
     apply_int!(apply_eq, expr_eq);
     apply_int!(apply_ne, expr_ne);
     apply_int!(apply_lq, expr_lq);
@@ -462,6 +465,9 @@ impl BinaryOp {
             BinaryOp::Mul => self.apply_mul(lhs, rhs),
             BinaryOp::Div => self.apply_div(lhs, rhs),
             BinaryOp::Rem => self.apply_rem(lhs, rhs),
+            BinaryOp::BitXor => self.apply_bit_xor(lhs, rhs),
+            BinaryOp::BitAnd => self.apply_bit_and(lhs, rhs),
+            BinaryOp::BitOr => self.apply_bit_or(lhs, rhs),
             BinaryOp::Eq => self.apply_eq(lhs, rhs),
             BinaryOp::Ne => self.apply_ne(lhs, rhs),
             BinaryOp::Lq => self.apply_lq(lhs, rhs),
@@ -506,6 +512,9 @@ trait Literal<
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_bit_xor(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_bit_and(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_bit_or(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_ne(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_lq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
@@ -603,6 +612,18 @@ impl<
             assert!(T::min_value() < T::zero());
             Err(SignedOverflow)
         }
+    }
+
+    fn expr_bit_xor(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.bitxor(rhs).as_(), T::by_lit_expr_type()).into())
+    }
+
+    fn expr_bit_and(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.bitand(rhs).as_(), T::by_lit_expr_type()).into())
+    }
+
+    fn expr_bit_or(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.bitor(rhs).as_(), T::by_lit_expr_type()).into())
     }
 
     fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
