@@ -35,10 +35,10 @@ pub fn main() {
         add_assertions: false,
         no_compile: false,
         base_name: "base".to_owned(),
-        opts: OptLevel::all_opt_levels(),
-        // opts: vec![OptLevel::no_opt()],
-        versions: RustVersion::supported_rust_versions(),
-        // versions: vec![RustVersion::stable()],
+        // opts: OptLevel::all_opt_levels(),
+        opts: vec![OptLevel::no_opt()],
+        // versions: RustVersion::supported_rust_versions(),
+        versions: vec![RustVersion::stable()],
         rustfmt: true,
         generate_timeout: Duration::from_secs(30),
         compile_timeout: Duration::from_secs(60),
@@ -84,7 +84,6 @@ pub fn main() {
             let successful_map_id = successful_map.insert_new(&connection);
             let failed_map_id = failed_map.insert_new(&connection);
             let prog_map_id = prog_map.insert_new(&connection);
-            // let line_count =
             StatisticsInfo::new(
                 run_id,
                 successful_map_id,
