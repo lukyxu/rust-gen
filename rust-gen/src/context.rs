@@ -4,7 +4,7 @@ use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, Lifetime, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
-use crate::statistics::Statistics;
+use crate::statistics::GenerationStatistics;
 use crate::symbol_table::ty::TypeSymbolTable;
 
 use crate::generate::expr::GENERABLE_EXPR_FNS;
@@ -16,7 +16,7 @@ pub struct Context {
     pub policy: Policy,
     pub name_handler: NameHandler,
     pub type_symbol_table: TypeSymbolTable,
-    pub statistics: Statistics,
+    pub statistics: GenerationStatistics,
     pub rng: StdRng,
     pub gen_new_array_types: bool,
     pub gen_new_tuple_types: bool,
@@ -49,7 +49,7 @@ impl Context {
             policy: policy.clone(),
             name_handler: NameHandler::default(),
             type_symbol_table: TypeSymbolTable::default(),
-            statistics: Statistics::default(),
+            statistics: GenerationStatistics::default(),
             rng,
             gen_new_array_types: true,
             gen_new_tuple_types: true,

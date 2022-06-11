@@ -159,7 +159,7 @@ impl BinaryExpr {
             Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?)
         };
 
-        *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
+        *ctx.statistics.successful_bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
 
@@ -186,7 +186,7 @@ impl UnaryExpr {
             .cloned()
             .unwrap();
         let expr = Box::new(Expr::fuzz_move_expr(ctx, &args_type)?);
-        *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
+        *ctx.statistics.successful_un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
 

@@ -73,6 +73,22 @@ table! {
 }
 
 table! {
+    statistics (run_id) {
+        run_id -> Integer,
+        gen_success_statistics_id -> Nullable<Integer>,
+        gen_failure_statistics_id -> Nullable<Integer>,
+        run_statistics_id -> Nullable<Integer>,
+        statistics_id -> Nullable<Integer>,
+    }
+}
+
+table! {
+    statistics_map (statistics_map_id) {
+        statistics_map_id -> Integer,
+    }
+}
+
+table! {
     sub_runs (sub_run_id) {
         sub_run_id -> Integer,
         run_id -> Integer,
@@ -96,5 +112,7 @@ joinable!(sub_runs -> runs (run_id));
 allow_tables_to_appear_in_same_query!(
     policies,
     runs,
+    statistics,
+    statistics_map,
     sub_runs,
 );
