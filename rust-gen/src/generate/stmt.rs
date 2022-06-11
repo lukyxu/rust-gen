@@ -72,6 +72,9 @@ impl LocalStmt {
             mutable,
         }));
         ctx.type_symbol_table.add_var(name, res_type, mutable);
+        if !ctx.generable_ident_type_map.contains(res_type) {
+            ctx.generable_ident_type_map = ctx.generable_ident_type_map.insert(res_type.clone());
+        }
         res
     }
 }

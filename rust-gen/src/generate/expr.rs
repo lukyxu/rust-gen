@@ -173,7 +173,7 @@ impl BinaryExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth && matches!(res_type, Ty::Prim(_))
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth && matches!(res_type, Ty::Prim(_))
     }
 }
 
@@ -210,7 +210,8 @@ impl UnaryExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
             && matches!(res_type, Ty::Prim(PrimTy::Bool | PrimTy::Int(_)))
     }
 }
@@ -238,7 +239,8 @@ impl CastExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
             && matches!(res_type, Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
     }
 }
@@ -254,7 +256,6 @@ impl IfExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IfExpr> {
-        // let outer_symbol_table = ctx.type_symbol_table.clone();
         let cond = Expr::fuzz_expr(ctx, &PrimTy::Bool.into());
         (|| match cond {
             None => None,
@@ -280,7 +281,7 @@ impl IfExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.block_depth <= ctx.policy.max_block_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.if_else_depth + 1 <= ctx.policy.max_if_else_depth && ctx.block_depth <= ctx.policy.max_block_depth
     }
 }
 
@@ -306,6 +307,7 @@ impl BlockExpr {
     ) -> Option<(BlockExpr, TypeSymbolTable)> {
         let mut stmts: Vec<Stmt> = Vec::new();
         let mut outer_symbol_table = ctx.type_symbol_table.clone();
+        let mut generable_ident_type_map = ctx.generable_ident_type_map.clone();
         let mut num_stmts = ctx.choose_num_stmts();
         if !res_type.is_unit() {
             num_stmts -= 1;
@@ -321,11 +323,12 @@ impl BlockExpr {
             Some(BlockExpr { stmts })
         })();
         std::mem::swap(&mut outer_symbol_table, &mut ctx.type_symbol_table);
+        std::mem::swap(&mut generable_ident_type_map, &mut ctx.generable_ident_type_map);
         block_expr.map(|block_expr| (block_expr, outer_symbol_table))
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.block_depth <= ctx.policy.max_block_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.block_depth + 1 <= ctx.policy.max_block_depth && ctx.block_depth <= ctx.policy.max_block_depth
     }
 }
 
@@ -354,13 +357,8 @@ impl IdentExpr {
         mut_ident_exprs.choose(&mut ctx.rng).cloned()
     }
 
-    pub fn can_generate(_ctx: &mut Context, _res_type: &Ty) -> bool {
-        // Time tradeoff
-        // TODO: Manual search is slow
-        // !ctx.type_symbol_table
-        //     .get_ident_exprs_by_type(res_type)
-        //     .is_empty()
-        true
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.generable_ident_type_map.contains(res_type)
     }
 }
 
@@ -400,7 +398,7 @@ impl AssignExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
     }
 }
 
@@ -498,7 +496,7 @@ impl FieldExpr {
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
         // TODO: Can improve this
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.arith_depth <= ctx.policy.max_arith_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
     }
 }
 
@@ -543,7 +541,7 @@ impl IndexExpr {
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
         // TODO: Can improve this
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.arith_depth <= ctx.policy.max_arith_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
     }
 }
 
