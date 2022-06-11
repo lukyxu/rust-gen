@@ -135,7 +135,7 @@ pub enum StmtKind {
     Local,
     Semi,
     Expr,
-    Custom
+    Custom,
 }
 
 pub enum LocalStmtKind {
