@@ -5,7 +5,8 @@ use chrono::NaiveDateTime;
 use diesel::{insert_into, select, MysqlConnection, RunQueryDsl};
 use num_bigint::ToBigInt;
 use rust_gen::runtime::error::RunnerError;
-use rust_gen::runtime::run::{RunOutput, RunResult, Runner};
+use rust_gen::runtime::run::{RunOutput, RunResult, Runner, Statistics};
+use rust_gen::utils::to_ron_string;
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
@@ -35,8 +36,13 @@ pub struct RunInfo {
 }
 
 impl RunInfo {
-    pub fn new(seed: u64, run_output: RunResult, policy_id: i32, runner: &Runner) -> RunInfo {
-        let files = RunOutput::from_run_result(&run_output).files.clone();
+    pub fn new(
+        seed: u64,
+        run_output: RunResult,
+        policy_id: i32,
+        statistics: &Option<Statistics>,
+        runner: &Runner,
+    ) -> RunInfo {
         RunInfo {
             run_id: None,
             git_hash: env!("GIT_HASH").to_string(),
@@ -52,18 +58,7 @@ impl RunInfo {
             expected_checksum: RunOutput::from_run_result(&run_output)
                 .expected_checksum
                 .map(|checksum| BigDecimal::new(checksum.to_bigint().unwrap(), 0)),
-            statistics: files
-                .iter()
-                .filter_map(|path| {
-                    let path = path.to_string_lossy().to_string();
-                    path.contains("statistics.txt").then(|| {
-                        String::from_utf8(
-                            std::fs::read(path).expect("Unable to read statistics.txt"),
-                        )
-                        .expect("Unable to read utf-8")
-                    })
-                })
-                .next(),
+            statistics: statistics.as_ref().map(|stats| to_ron_string(stats)),
             error_kind: run_output
                 .as_ref()
                 .err()

@@ -18,12 +18,12 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 use std::{fs, thread};
 
-pub type RunStatistics = (FullGenerationStatistics, Option<FullProgramStatistics>);
+pub type Statistics = (FullGenerationStatistics, Option<FullProgramStatistics>);
 
 #[derive(Debug, Default, Clone)]
 pub struct RunOutput {
     pub files: Vec<PathBuf>,
-    pub statistics: Option<RunStatistics>,
+    pub statistics: Option<Statistics>,
     pub expected_checksum: Option<u128>,
     pub rust_file_path: Option<PathBuf>,
     pub subruns: Vec<SubRunResult>,

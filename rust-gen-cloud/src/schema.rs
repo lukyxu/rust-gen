@@ -82,6 +82,8 @@ table! {
         max_failed_stmt_depth -> Unsigned<Bigint>,
         max_failed_expr_depth -> Unsigned<Bigint>,
         max_failed_ty_depth -> Unsigned<Bigint>,
+        word_count -> Unsigned<Bigint>,
+        line_count -> Unsigned<Bigint>,
         created_at -> Timestamp,
         updated_at -> Timestamp,
     }
@@ -91,13 +93,16 @@ table! {
     statistics_map (statistics_map_id) {
         statistics_map_id -> Integer,
         total_items -> Nullable<Unsigned<Bigint>>,
+        total_stmts -> Nullable<Unsigned<Bigint>>,
+        total_exprs -> Nullable<Unsigned<Bigint>>,
+        total_tys -> Nullable<Unsigned<Bigint>>,
+        total_binary_ops -> Nullable<Unsigned<Bigint>>,
+        total_unary_ops -> Nullable<Unsigned<Bigint>>,
         item_struct -> Nullable<Unsigned<Bigint>>,
         item_function -> Nullable<Unsigned<Bigint>>,
-        total_stmts -> Nullable<Unsigned<Bigint>>,
         stmt_local -> Nullable<Unsigned<Bigint>>,
         stmt_semi -> Nullable<Unsigned<Bigint>>,
         stmt_expr -> Nullable<Unsigned<Bigint>>,
-        total_exprs -> Nullable<Unsigned<Bigint>>,
         expr_literal -> Nullable<Unsigned<Bigint>>,
         expr_binary -> Nullable<Unsigned<Bigint>>,
         expr_unary -> Nullable<Unsigned<Bigint>>,
@@ -109,14 +114,12 @@ table! {
         expr_index -> Nullable<Unsigned<Bigint>>,
         expr_field -> Nullable<Unsigned<Bigint>>,
         expr_reference -> Nullable<Unsigned<Bigint>>,
-        total_tys -> Nullable<Unsigned<Bigint>>,
         ty_unit -> Nullable<Unsigned<Bigint>>,
         ty_prim -> Nullable<Unsigned<Bigint>>,
         ty_tuple -> Nullable<Unsigned<Bigint>>,
         ty_array -> Nullable<Unsigned<Bigint>>,
         ty_struct -> Nullable<Unsigned<Bigint>>,
         ty_reference -> Nullable<Unsigned<Bigint>>,
-        total_binary_ops -> Nullable<Unsigned<Bigint>>,
         binary_op_add -> Nullable<Unsigned<Bigint>>,
         binary_op_sub -> Nullable<Unsigned<Bigint>>,
         binary_op_mul -> Nullable<Unsigned<Bigint>>,
@@ -139,7 +142,6 @@ table! {
         binary_op_wrapping_rem -> Nullable<Unsigned<Bigint>>,
         binary_op_wrapping_shl -> Nullable<Unsigned<Bigint>>,
         binary_op_wrapping_shr -> Nullable<Unsigned<Bigint>>,
-        total_unary_ops -> Nullable<Unsigned<Bigint>>,
         unary_op_deref -> Nullable<Unsigned<Bigint>>,
         unary_op_not -> Nullable<Unsigned<Bigint>>,
         unary_op_neg -> Nullable<Unsigned<Bigint>>,
@@ -169,4 +171,10 @@ table! {
 joinable!(runs -> policies (policy_id));
 joinable!(sub_runs -> runs (run_id));
 
-allow_tables_to_appear_in_same_query!(policies, runs, statistics, statistics_map, sub_runs,);
+allow_tables_to_appear_in_same_query!(
+    policies,
+    runs,
+    statistics,
+    statistics_map,
+    sub_runs,
+);
