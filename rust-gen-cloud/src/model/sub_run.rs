@@ -57,8 +57,8 @@ impl SubRunInfo {
     }
 
     pub fn insert_new(&self, connection: &MysqlConnection) {
-        use diesel::{insert_into, RunQueryDsl};
         use crate::schema::sub_runs::dsl::sub_runs;
+        use diesel::{insert_into, RunQueryDsl};
         insert_into(sub_runs)
             .values(self)
             .execute(connection)

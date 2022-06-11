@@ -4,17 +4,17 @@ pub mod schema;
 #[macro_use]
 extern crate diesel;
 
-use model::sub_run::SubRunInfo;
 use diesel::{Connection, MysqlConnection};
 use dotenv::dotenv;
+use model::policy::PolicyInfo;
+use model::run::RunInfo;
+use model::sub_run::SubRunInfo;
 use rand::Rng;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
-use rust_gen::runtime::run::{Runner, RunOutput};
+use rust_gen::runtime::run::{RunOutput, Runner};
 use std::time::Duration;
 use uuid::Uuid;
-use model::policy::PolicyInfo;
-use model::run::RunInfo;
 
 pub fn establish_connection() -> MysqlConnection {
     dotenv().ok();

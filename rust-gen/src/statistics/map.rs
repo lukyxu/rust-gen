@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
-pub struct StatisticMapping {
+pub struct StatisticsMap {
     pub item_counter: BTreeMap<ItemKind, usize>,
     pub stmt_counter: BTreeMap<StmtKind, usize>,
     pub expr_counter: BTreeMap<ExprKind, usize>,
@@ -17,19 +17,19 @@ pub struct StatisticMapping {
 }
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
-pub struct FullStatisticMapping {
+pub struct FullStatisticsMap {
     pub total_items: usize,
     pub total_stmts: usize,
     pub total_exprs: usize,
     pub total_tys: usize,
     pub total_binary_ops: usize,
     pub total_unary_ops: usize,
-    pub statistics_mapping: StatisticMapping,
+    pub statistics_mapping: StatisticsMap,
 }
 
-impl From<StatisticMapping> for FullStatisticMapping {
-    fn from(stats: StatisticMapping) -> FullStatisticMapping {
-        FullStatisticMapping {
+impl From<StatisticsMap> for FullStatisticsMap {
+    fn from(stats: StatisticsMap) -> FullStatisticsMap {
+        FullStatisticsMap {
             total_items: stats.item_counter.values().sum(),
             total_stmts: stats.stmt_counter.values().sum(),
             total_exprs: stats.expr_counter.values().sum(),

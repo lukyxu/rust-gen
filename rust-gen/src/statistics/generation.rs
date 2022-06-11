@@ -1,10 +1,10 @@
-use crate::statistics::map::{FullStatisticMapping, StatisticMapping};
+use crate::statistics::map::{FullStatisticsMap, StatisticsMap};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
 pub struct GenerationStatistics {
-    pub successful_mapping: StatisticMapping,
-    pub failed_mapping: StatisticMapping,
+    pub successful_mapping: StatisticsMap,
+    pub failed_mapping: StatisticsMap,
     pub max_failed_item_depth: usize,
     pub max_failed_stmt_depth: usize,
     pub max_failed_expr_depth: usize,
@@ -13,8 +13,8 @@ pub struct GenerationStatistics {
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize)]
 pub struct FullGenerationStatistics {
-    pub successful_mapping: FullStatisticMapping,
-    pub failed_mapping: FullStatisticMapping,
+    pub successful_mapping: FullStatisticsMap,
+    pub failed_mapping: FullStatisticsMap,
     pub max_failed_item_depth: usize,
     pub max_failed_stmt_depth: usize,
     pub max_failed_expr_depth: usize,

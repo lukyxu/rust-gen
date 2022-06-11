@@ -1,11 +1,11 @@
+use crate::model::last_insert_id;
 use crate::schema::runs;
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
-use diesel::{insert_into, RunQueryDsl, select, MysqlConnection};
+use diesel::{insert_into, select, MysqlConnection, RunQueryDsl};
 use num_bigint::ToBigInt;
 use rust_gen::runtime::error::RunnerError;
-use rust_gen::runtime::run::{Runner, RunOutput, RunResult};
-use crate::model::last_insert_id;
+use rust_gen::runtime::run::{RunOutput, RunResult, Runner};
 
 #[derive(Insertable, Queryable)]
 #[diesel(primary_key(run_id))]
