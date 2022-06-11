@@ -12,6 +12,7 @@ use crate::visitor::emit_visitor::EmitVisitor;
 use crate::visitor::expr_visitor::ExprVisitor;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use crate::visitor::statistics_visitor::StatisticsVisitor;
 
 pub struct GeneratorOutput {
     pub program: String,
@@ -50,6 +51,8 @@ pub fn run_generator(
     let mut expr_visitor = ExprVisitor::default();
     expr_visitor.visit_file(&mut file);
     // _print_program(&mut file);
+    let mut statistic_visitor = StatisticsVisitor::default();
+    statistic_visitor.visit_file(&mut file);
     let mut checksum_gen_visitor = ChecksumGenVisitor::new(true, add_checksum);
     checksum_gen_visitor.visit_file(&mut file);
     let mut assert_gen_visitor = AssertGenVisitor::new(false, add_assertions);
@@ -62,7 +65,7 @@ pub fn run_generator(
     Ok(GeneratorOutput {
         program: emit_visitor.output(),
         generation_statistics: std::mem::take(&mut ctx.statistics.into()),
-        program_statistics: None,
+        program_statistics: std::mem::take(&mut statistic_visitor.statistics.into()),
         expected_checksum: if add_checksum {
             checksum_eval_visitor.res
         } else {

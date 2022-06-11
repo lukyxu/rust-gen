@@ -1,4 +1,4 @@
-use crate::ast::expr::{Expr, LitExpr};
+use crate::ast::expr::{Expr};
 use crate::ast::item::Item;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::Stmt;
@@ -8,7 +8,7 @@ use crate::visitor::base_visitor::{Visitor, walk_expr, walk_item, walk_stmt};
 
 #[derive(Default)]
 pub struct StatisticsVisitor {
-    statistics: ProgramStatistics,
+    pub statistics: ProgramStatistics,
 }
 
 impl Visitor for StatisticsVisitor {
