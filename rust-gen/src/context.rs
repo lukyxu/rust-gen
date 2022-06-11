@@ -4,10 +4,10 @@ use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, Lifetime, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
-use crate::statistics::GenerationStatistics;
 use crate::symbol_table::ty::TypeSymbolTable;
 
 use crate::generate::expr::GENERABLE_EXPR_FNS;
+use crate::statistics::generation::GenerationStatistics;
 use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
 use std::collections::BTreeSet;

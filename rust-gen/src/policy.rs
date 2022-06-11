@@ -137,7 +137,6 @@ impl Policy {
             Policy::default(),
             Policy::heavy_basic_arithmetic(),
             // Policy::nested_heavy_basic_arithmetic(),
-
             Policy::tuple_debug(),
             Policy::tuple_field_debug(),
             Policy::my_debug(),
@@ -146,7 +145,6 @@ impl Policy {
             Policy::simple_debug_with_reference(),
             Policy::array_debug(),
             Policy::array_index_debug(),
-
             Policy::debug(),
             Policy::fields_stress_test(),
             Policy::reassign_ownership_transfer_debug(),

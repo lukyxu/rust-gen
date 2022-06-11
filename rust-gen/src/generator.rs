@@ -1,10 +1,11 @@
 use crate::ast::file::RustFile;
 use crate::context::Context;
 use crate::policy::Policy;
-use crate::statistics::FullStatistics;
 use crate::visitor::base_visitor::Visitor;
 use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
 
+use crate::statistics::generation::GenerationStatistics;
+use crate::statistics::program::ProgramStatistics;
 use crate::visitor::assert_gen_visitor::AssertGenVisitor;
 use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use crate::visitor::emit_visitor::EmitVisitor;
@@ -14,13 +15,14 @@ use std::fmt::{Display, Formatter};
 
 pub struct GeneratorOutput {
     pub program: String,
-    pub statistics: FullStatistics,
+    pub generation_statistics: GenerationStatistics,
+    pub program_statistics: Option<ProgramStatistics>,
     pub expected_checksum: Option<u128>,
 }
 
 #[derive(Debug, Clone)]
 pub struct GeneratorError {
-    pub statistics: Box<FullStatistics>,
+    pub statistics: Box<GenerationStatistics>,
     pub error_message: String,
 }
 
@@ -59,7 +61,8 @@ pub fn run_generator(
 
     Ok(GeneratorOutput {
         program: emit_visitor.output(),
-        statistics: std::mem::take(&mut ctx.statistics.into()),
+        generation_statistics: std::mem::take(&mut ctx.statistics.into()),
+        program_statistics: None,
         expected_checksum: if add_checksum {
             checksum_eval_visitor.res
         } else {

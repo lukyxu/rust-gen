@@ -10,7 +10,6 @@ pub mod generator;
 pub mod policy;
 pub mod runtime;
 pub mod statistics;
-pub mod statistics_old;
 pub mod symbol_table;
 pub mod utils;
 pub mod visitor;

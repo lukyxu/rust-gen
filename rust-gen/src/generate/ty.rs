@@ -67,8 +67,8 @@ impl TupleTy {
         increment_counter(
             &res,
             TyKind::Tuple,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }
@@ -118,8 +118,8 @@ impl ArrayTy {
         increment_counter(
             &res,
             TyKind::Array,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }
@@ -162,8 +162,8 @@ impl StructTy {
         increment_counter(
             &res,
             TyKind::Struct,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }
@@ -284,8 +284,8 @@ impl ReferenceTy {
         increment_counter(
             &res,
             TyKind::Reference,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }

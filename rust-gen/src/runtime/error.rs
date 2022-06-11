@@ -48,7 +48,7 @@ impl RunnerError {
             | RunnerError::DifferingChecksum(_, run_output)
             | RunnerError::UnexpectedChecksum(_, run_output)
             | RunnerError::RustFmtFailure(_, run_output)
-            | RunnerError::RustFmtTimeout(_, run_output) => run_output
+            | RunnerError::RustFmtTimeout(_, run_output) => run_output,
         }
     }
 
@@ -165,7 +165,11 @@ pub struct CompilationTimeoutError {
 
 impl CompilationTimeoutError {
     pub fn new(opt: OptLevel, version: RustVersion, duration: Duration) -> CompilationTimeoutError {
-        CompilationTimeoutError { opt, version,  duration }
+        CompilationTimeoutError {
+            opt,
+            version,
+            duration,
+        }
     }
 }
 
@@ -224,7 +228,11 @@ pub struct RunTimeoutError {
 
 impl RunTimeoutError {
     pub fn new(opt: OptLevel, version: RustVersion, duration: Duration) -> RunTimeoutError {
-        RunTimeoutError { opt, version,  duration }
+        RunTimeoutError {
+            opt,
+            version,
+            duration,
+        }
     }
 }
 
