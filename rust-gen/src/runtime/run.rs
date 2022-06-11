@@ -203,7 +203,7 @@ impl Runner {
         let stats_file = self.tmp_dir.join("statistics.txt");
         write_as_ron(
             fs::File::create(&stats_file).expect("Unable to create file"),
-            generation_statistics,
+            &run_output.statistics.unwrap(),
         );
 
         run_output.files = vec![rust_file.clone(), stats_file];
