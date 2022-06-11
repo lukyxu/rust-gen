@@ -1,7 +1,7 @@
 use crate::schema::sub_runs;
 use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
-use diesel::MysqlConnection;
+use diesel::{insert_into, MysqlConnection, RunQueryDsl};
 use num_bigint::ToBigInt;
 use rust_gen::runtime::run::{SubRunError, SubRunOutput, SubRunResult};
 
@@ -58,7 +58,6 @@ impl SubRunInfo {
 
     pub fn insert_new(&self, connection: &MysqlConnection) {
         use crate::schema::sub_runs::dsl::sub_runs;
-        use diesel::{insert_into, RunQueryDsl};
         insert_into(sub_runs)
             .values(self)
             .execute(connection)

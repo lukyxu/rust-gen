@@ -5,8 +5,8 @@ use crate::runtime::error::{
     CompilationError, CompilationTimeoutError, DifferingChecksumError, GeneratorTimeoutError,
     RunError, RunTimeoutError, RunnerError, RustFmtError, UnexpectedChecksumError,
 };
-use crate::statistics::generation::GenerationStatistics;
-use crate::statistics::program::ProgramStatistics;
+use crate::statistics::generation::{FullGenerationStatistics, GenerationStatistics};
+use crate::statistics::program::{FullProgramStatistics, ProgramStatistics};
 use crate::utils::write_as_ron;
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -18,7 +18,7 @@ use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 use std::{fs, thread};
 
-pub type RunStatistics = (GenerationStatistics, Option<ProgramStatistics>);
+pub type RunStatistics = (FullGenerationStatistics, Option<FullProgramStatistics>);
 
 #[derive(Debug, Default, Clone)]
 pub struct RunOutput {

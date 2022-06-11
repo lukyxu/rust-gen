@@ -1,11 +1,13 @@
+use crate::model::last_insert_id;
 use crate::schema::statistics_map;
 use chrono::NaiveDateTime;
+use diesel::{insert_into, select, MysqlConnection, RunQueryDsl};
 use rust_gen::ast::expr::ExprKind;
 use rust_gen::ast::item::ItemKind;
 use rust_gen::ast::op::{BinaryOp, UnaryOp};
 use rust_gen::ast::stmt::StmtKind;
 use rust_gen::ast::ty::TyKind;
-use rust_gen::statistics::map::{FullStatisticsMap, StatisticsMap};
+use rust_gen::statistics::map::FullStatisticsMap;
 use std::collections::BTreeMap;
 
 #[derive(Insertable, Queryable)]
@@ -124,13 +126,13 @@ impl From<FullStatisticsMap> for StatisticsMapInfo {
             binary_op_ne: get_counter_value(&map.bin_op_counter, &BinaryOp::Ne),
             binary_op_ge: get_counter_value(&map.bin_op_counter, &BinaryOp::Ge),
             binary_op_gt: get_counter_value(&map.bin_op_counter, &BinaryOp::Gt),
-            binary_op_wrapping_add:get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingAdd),
-            binary_op_wrapping_sub:get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingSub),
-            binary_op_wrapping_mul:get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingMul),
-            binary_op_wrapping_div:get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingDiv),
-            binary_op_wrapping_rem:get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingRem),
-            binary_op_wrapping_shl:get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingShl),
-            binary_op_wrapping_shr:get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingShr),
+            binary_op_wrapping_add: get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingAdd),
+            binary_op_wrapping_sub: get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingSub),
+            binary_op_wrapping_mul: get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingMul),
+            binary_op_wrapping_div: get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingDiv),
+            binary_op_wrapping_rem: get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingRem),
+            binary_op_wrapping_shl: get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingShl),
+            binary_op_wrapping_shr: get_counter_value(&map.bin_op_counter, &BinaryOp::WrappingShr),
             total_unary_ops: full_stats.total_unary_ops as u64,
             unary_op_deref: get_counter_value(&map.un_op_counter, &UnaryOp::Deref),
             unary_op_not: get_counter_value(&map.un_op_counter, &UnaryOp::Not),
@@ -138,5 +140,16 @@ impl From<FullStatisticsMap> for StatisticsMapInfo {
             created_at: None,
             updated_at: None,
         }
+    }
+}
+
+impl StatisticsMapInfo {
+    pub fn insert_new(&self, connection: &MysqlConnection) -> i32 {
+        use crate::schema::statistics_map::dsl::statistics_map;
+        insert_into(statistics_map)
+            .values(self)
+            .execute(connection)
+            .unwrap();
+        select(last_insert_id).first(connection).unwrap()
     }
 }

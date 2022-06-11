@@ -4,7 +4,9 @@ pub mod schema;
 #[macro_use]
 extern crate diesel;
 
-use diesel::{Connection, MysqlConnection};
+use crate::model::statistic::StatisticsInfo;
+use crate::model::statistic_map::StatisticsMapInfo;
+use diesel::{Connection, Insertable, MysqlConnection};
 use dotenv::dotenv;
 use model::policy::PolicyInfo;
 use model::run::RunInfo;
@@ -37,12 +39,12 @@ pub fn main() {
         // opts: vec![OptLevel::no_opt()],
         versions: RustVersion::supported_rust_versions(),
         // versions: vec![RustVersion::stable()],
-        rustfmt: false,
+        rustfmt: true,
         generate_timeout: Duration::from_secs(30),
         compile_timeout: Duration::from_secs(60),
         run_timeout: Duration::from_secs(1),
     };
-    for i in 0..100000 {
+    for i in 0..1000000 {
         let policy = Policy::parse_policy_args_or_random(&None);
         let seed = rand::thread_rng().gen();
         println!("Running policy {} seed {} run {}", policy.name, seed, i);
@@ -60,9 +62,27 @@ pub fn main() {
         };
 
         let sub_runs = RunOutput::from_run_result(&output).subruns.clone();
+        let run_stats = RunOutput::from_run_result(&output).statistics.clone();
         let run_id = RunInfo::new(seed, output, new_policy_id, &runner).insert_new(&connection);
         for sub_run in sub_runs {
             SubRunInfo::new(run_id, sub_run).insert_new(&connection)
+        }
+
+        if let Some(run_stats) = run_stats {
+            let (gen_stats, prog_stats) = &run_stats;
+            let successful_map: StatisticsMapInfo = gen_stats.successful_mapping.clone().into();
+            let failed_map: StatisticsMapInfo = gen_stats.failed_mapping.clone().into();
+            let prog_map: StatisticsMapInfo = prog_stats.as_ref().unwrap().mapping.clone().into();
+            let successful_map_id = successful_map.insert_new(&connection);
+            let failed_map_id = failed_map.insert_new(&connection);
+            let prog_map_id = prog_map.insert_new(&connection);
+            StatisticsInfo::new(
+                run_id,
+                successful_map_id,
+                failed_map_id,
+                prog_map_id,
+                &run_stats,
+            ).insert_new(&connection);
         }
 
         for file in files {
