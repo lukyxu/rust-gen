@@ -14,10 +14,10 @@ use crate::ast::ty::{Ty, UIntTy};
 use crate::visitor::base_visitor;
 use crate::visitor::base_visitor::Visitor;
 
-#[derive(Clone)]
-pub struct StatisticsVisitor {
-    statistics
-}
+// #[derive(Clone)]
+// pub struct StatisticsVisitor {
+//     statistics:
+// }
 
 impl Default for ExprVisitor {
     fn default() -> ExprVisitor {
