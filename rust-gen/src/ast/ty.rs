@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 pub type Ty = GTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum GTy<A> {
     Unit,
     Prim(PrimTy),
@@ -121,7 +121,7 @@ impl ToString for Ty {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum PrimTy {
     Bool,
     #[allow(dead_code)]
@@ -204,14 +204,14 @@ impl PrimTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum FloatTy {
     F32,
     F64,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum IntTy {
     ISize,
     I8,
@@ -278,7 +278,7 @@ impl IntTy {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum UIntTy {
     USize,
     U8,
@@ -345,7 +345,7 @@ impl UIntTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GTupleTy<A> {
     pub tuple: Vec<GTy<A>>,
     pub assoc: A,
@@ -413,7 +413,7 @@ impl ToString for TupleTy {
 
 pub type ArrayTy = GArrayTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GArrayTy<A> {
     pub base_ty: Box<GTy<A>>,
     pub len: usize,
@@ -468,7 +468,7 @@ impl ArrayTy {
 
 pub type StructTy = GStructTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum GStructTy<A> {
     Field(GFieldStructTy<A>),
     Tuple(GTupleStructTy<A>),
@@ -539,7 +539,7 @@ impl ToString for StructTy {
 
 pub type FieldStructTy = GFieldStructTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GFieldStructTy<A> {
     pub name: String,
     pub is_copy: bool,
@@ -575,7 +575,7 @@ impl From<FieldStructTy> for StructTy {
 
 pub type FieldDef = GFieldDef<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GFieldDef<A> {
     pub name: String,
     pub ty: Box<GTy<A>>,
@@ -589,7 +589,7 @@ impl ToString for FieldDef {
 
 pub type TupleStructTy = GTupleStructTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GTupleStructTy<A> {
     pub name: String,
     pub is_copy: bool,
@@ -634,7 +634,7 @@ impl ToString for Lifetime {
 
 pub type ReferenceTy = GReferenceTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GReferenceTy<A> {
     pub elem: Box<GTy<A>>,
     pub mutability: bool,

@@ -254,7 +254,6 @@ impl IfExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IfExpr> {
-        // let outer_symbol_table = ctx.type_symbol_table.clone();
         let cond = Expr::fuzz_expr(ctx, &PrimTy::Bool.into());
         (|| match cond {
             None => None,
@@ -306,6 +305,7 @@ impl BlockExpr {
     ) -> Option<(BlockExpr, TypeSymbolTable)> {
         let mut stmts: Vec<Stmt> = Vec::new();
         let mut outer_symbol_table = ctx.type_symbol_table.clone();
+        let mut generable_ident_type_map = ctx.generable_ident_type_map.clone();
         let mut num_stmts = ctx.choose_num_stmts();
         if !res_type.is_unit() {
             num_stmts -= 1;
@@ -321,6 +321,7 @@ impl BlockExpr {
             Some(BlockExpr { stmts })
         })();
         std::mem::swap(&mut outer_symbol_table, &mut ctx.type_symbol_table);
+        std::mem::swap(&mut generable_ident_type_map, &mut ctx.generable_ident_type_map);
         block_expr.map(|block_expr| (block_expr, outer_symbol_table))
     }
 
@@ -354,13 +355,14 @@ impl IdentExpr {
         mut_ident_exprs.choose(&mut ctx.rng).cloned()
     }
 
-    pub fn can_generate(_ctx: &mut Context, _res_type: &Ty) -> bool {
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
         // Time tradeoff
         // TODO: Manual search is slow
+        ctx.generable_ident_type_map.contains(res_type)
         // !ctx.type_symbol_table
         //     .get_ident_exprs_by_type(res_type)
         //     .is_empty()
-        true
+        // true
     }
 }
 

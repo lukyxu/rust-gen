@@ -159,6 +159,15 @@ impl Visitor for ExprVisitor {
         self.expr = Some(EvalExpr::unit_expr());
     }
 
+    fn visit_custom_stmt(&mut self, stmt: &mut CustomStmt) {
+        match stmt {
+            CustomStmt::Println(_stmt) => {}
+            CustomStmt::Assert(stmt) => {
+                stmt.rhs_expr = Some(self.safe_expr_visit(&mut stmt.lhs_expr));
+            }
+        }
+    }
+
     fn visit_expr(&mut self, expr: &mut Expr) {
         if let Expr::Unary(_) = expr {
             // visit_unary_expr can modify the expr to some other expr variant
@@ -171,7 +180,6 @@ impl Visitor for ExprVisitor {
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
         self.expr = Some(EvalExpr::Literal(expr.clone()));
     }
-
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
         if expr.op.short_circuit_rhs(&lhs) {
@@ -194,6 +202,7 @@ impl Visitor for ExprVisitor {
         }
         self.expr = Some(res.unwrap());
     }
+
     fn visit_unary_expr(&mut self, _expr: &mut UnaryExpr) {
         unreachable!()
     }
@@ -416,15 +425,6 @@ impl Visitor for ExprVisitor {
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
         self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }));
-    }
-
-    fn visit_custom_stmt(&mut self, stmt: &mut CustomStmt) {
-        match stmt {
-            CustomStmt::Println(_stmt) => {}
-            CustomStmt::Assert(stmt) => {
-                stmt.rhs_expr = Some(self.safe_expr_visit(&mut stmt.lhs_expr));
-            }
-        }
     }
 }
 

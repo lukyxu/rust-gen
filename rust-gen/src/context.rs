@@ -11,11 +11,13 @@ use crate::statistics::generation::GenerationStatistics;
 use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
 use std::collections::BTreeSet;
+use rpds::{RedBlackTreeSet};
 
 pub struct Context {
     pub policy: Policy,
     pub name_handler: NameHandler,
     pub type_symbol_table: TypeSymbolTable,
+    pub generable_ident_type_map: RedBlackTreeSet<Ty>,
     pub statistics: GenerationStatistics,
     pub rng: StdRng,
     pub gen_new_array_types: bool,
@@ -50,6 +52,7 @@ impl Context {
             name_handler: NameHandler::default(),
             type_symbol_table: TypeSymbolTable::default(),
             statistics: GenerationStatistics::default(),
+            generable_ident_type_map: RedBlackTreeSet::new(),
             rng,
             gen_new_array_types: true,
             gen_new_tuple_types: true,
@@ -289,6 +292,7 @@ impl Context {
 pub struct ContextSnapshot {
     name_handler: NameHandler,
     type_symbol_table: TypeSymbolTable,
+    generable_ident_type_map: RedBlackTreeSet<Ty>,
 }
 
 impl Context {
@@ -296,12 +300,14 @@ impl Context {
         ContextSnapshot {
             name_handler: self.name_handler.clone(),
             type_symbol_table: self.type_symbol_table.clone(),
+            generable_ident_type_map: self.generable_ident_type_map.clone(),
         }
     }
 
     pub fn restore_snapshot(&mut self, snapshot: ContextSnapshot) {
         self.name_handler = snapshot.name_handler;
         self.type_symbol_table = snapshot.type_symbol_table;
+        self.generable_ident_type_map = snapshot.generable_ident_type_map;
     }
 }
 
