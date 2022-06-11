@@ -9,6 +9,15 @@ pub enum Item {
     Function(FunctionItem),
 }
 
+impl Item {
+    pub fn kind(&self) -> ItemKind {
+        match self {
+            Item::Struct(_) => ItemKind::Struct,
+            Item::Function(_) => ItemKind::Function,
+        }
+    }
+}
+
 impl From<StructItem> for Item {
     fn from(item: StructItem) -> Item {
         Item::Struct(item)

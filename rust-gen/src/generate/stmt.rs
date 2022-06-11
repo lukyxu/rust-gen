@@ -29,6 +29,7 @@ impl Stmt {
             StmtKind::Local => LocalStmt::generate_stmt(ctx, res_type).map(From::from),
             StmtKind::Semi => SemiStmt::generate_stmt(ctx, res_type).map(From::from),
             StmtKind::Expr => panic!("Cannot generate expr stmt using generate_non_expr_stmt"),
+            StmtKind::Custom => panic!("Cannot generate custom stmt using generate_non_expr_stmt"),
         }
     }
 

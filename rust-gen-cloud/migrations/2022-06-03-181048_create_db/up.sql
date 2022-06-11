@@ -127,6 +127,7 @@ CREATE TABLE statistics_map(
     expr_assign BIGINT UNSIGNED,
     expr_index BIGINT UNSIGNED,
     expr_field BIGINT UNSIGNED,
+    expr_reference BIGINT UNSIGNED,
     total_tys BIGINT UNSIGNED,
     ty_unit BIGINT UNSIGNED,
     ty_prim BIGINT UNSIGNED,
