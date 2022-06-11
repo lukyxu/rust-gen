@@ -1,4 +1,3 @@
-use std::cmp::min;
 use rand::distributions;
 use rand::Rng;
 use serde::{Deserialize, Serialize};

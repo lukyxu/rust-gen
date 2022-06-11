@@ -10,8 +10,8 @@ use crate::generate::expr::GENERABLE_EXPR_FNS;
 use crate::statistics::generation::GenerationStatistics;
 use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
+use rpds::RedBlackTreeSet;
 use std::collections::BTreeSet;
-use rpds::{RedBlackTreeSet};
 
 pub struct Context {
     pub policy: Policy,
