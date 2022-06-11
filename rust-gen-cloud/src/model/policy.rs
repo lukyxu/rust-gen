@@ -2,7 +2,7 @@ use crate::schema::policies;
 use chrono::NaiveDateTime;
 use diesel::result::Error;
 use diesel::MysqlConnection;
-use diesel::{ExpressionMethods, QueryDsl, QueryResult, Queryable, RunQueryDsl};
+use diesel::{insert_into, ExpressionMethods, QueryDsl, QueryResult, Queryable, RunQueryDsl};
 use rust_gen::policy::Policy;
 use rust_gen::utils::{from_ron_string, to_ron_string};
 use sha2::{Digest, Sha256};
@@ -65,7 +65,6 @@ pub struct PolicyInfo {
 impl PolicyInfo {
     pub fn insert_new(&self, connection: &MysqlConnection) {
         use crate::schema::policies::dsl::policies;
-        use diesel::{insert_into, RunQueryDsl};
         insert_into(policies)
             .values(self)
             .execute(connection)

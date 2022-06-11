@@ -46,6 +46,9 @@ impl StatisticsInfo {
 
     pub fn insert_new(&self, connection: &MysqlConnection) {
         use crate::schema::statistics::dsl::statistics;
-        insert_into(statistics).values(self).execute(connection).unwrap();
+        insert_into(statistics)
+            .values(self)
+            .execute(connection)
+            .unwrap();
     }
 }

@@ -6,7 +6,7 @@ extern crate diesel;
 
 use crate::model::statistic::StatisticsInfo;
 use crate::model::statistic_map::StatisticsMapInfo;
-use diesel::{Connection, Insertable, MysqlConnection};
+use diesel::{Connection, MysqlConnection};
 use dotenv::dotenv;
 use model::policy::PolicyInfo;
 use model::run::RunInfo;
@@ -82,7 +82,8 @@ pub fn main() {
                 failed_map_id,
                 prog_map_id,
                 &run_stats,
-            ).insert_new(&connection);
+            )
+            .insert_new(&connection);
         }
 
         for file in files {

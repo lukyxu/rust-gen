@@ -5,8 +5,8 @@ use crate::runtime::error::{
     CompilationError, CompilationTimeoutError, DifferingChecksumError, GeneratorTimeoutError,
     RunError, RunTimeoutError, RunnerError, RustFmtError, UnexpectedChecksumError,
 };
-use crate::statistics::generation::{FullGenerationStatistics, GenerationStatistics};
-use crate::statistics::program::{FullProgramStatistics, ProgramStatistics};
+use crate::statistics::generation::FullGenerationStatistics;
+use crate::statistics::program::FullProgramStatistics;
 use crate::utils::write_as_ron;
 use std::collections::BTreeMap;
 use std::error::Error;

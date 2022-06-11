@@ -5,7 +5,7 @@ use crate::visitor::base_visitor::Visitor;
 use crate::visitor::checksum_eval_visitor::ChecksumEvalVisitor;
 
 use crate::statistics::generation::{FullGenerationStatistics, GenerationStatistics};
-use crate::statistics::program::{FullProgramStatistics, ProgramStatistics};
+use crate::statistics::program::FullProgramStatistics;
 use crate::visitor::assert_gen_visitor::AssertGenVisitor;
 use crate::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use crate::visitor::emit_visitor::EmitVisitor;
