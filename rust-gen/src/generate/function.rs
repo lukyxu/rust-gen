@@ -20,7 +20,6 @@ impl Function {
     /// Attempts a single attempt to generate a valid main function.
     pub fn generate_main_fn(ctx: &mut Context) -> Option<Function> {
         let block = BlockExpr::generate_expr_internal(ctx, &Ty::unit_type())?;
-        ctx.statistics.main_fn_stmts = block.stmts.len();
         Some(Function {
             name: String::from("main"),
             block,

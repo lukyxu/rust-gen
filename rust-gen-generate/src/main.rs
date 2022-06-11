@@ -27,7 +27,7 @@ pub fn main() {
     let policy = Policy::parse_policy_args(&args.policy);
     let GeneratorOutput {
         program,
-        statistics,
+        generation_statistics: statistics,
         ..
     } = run_generator(args.seed, &policy, !args.no_checksum, args.add_assertions).unwrap();
     if args.statistics {

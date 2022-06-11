@@ -59,6 +59,25 @@ impl Expr {
     pub fn u128(u: u128) -> Expr {
         LitIntExpr::new(u, UIntTy::U128.into()).into()
     }
+
+    pub fn kind(&self) -> ExprKind {
+        match self {
+            Expr::Literal(_) => ExprKind::Literal,
+            Expr::Binary(_) => ExprKind::Binary,
+            Expr::Unary(_) => ExprKind::Unary,
+            Expr::Cast(_) => ExprKind::Cast,
+            Expr::If(_) => ExprKind::If,
+            Expr::Block(_) => ExprKind::Block,
+            Expr::Ident(_) => ExprKind::Ident,
+            Expr::Tuple(_) => ExprKind::Literal,
+            Expr::Assign(_) => ExprKind::Assign,
+            Expr::Array(_) => ExprKind::Literal,
+            Expr::Index(_) => ExprKind::Index,
+            Expr::Field(_) => ExprKind::Field,
+            Expr::Struct(_) => ExprKind::Literal,
+            Expr::Reference(_) => ExprKind::Reference,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -395,5 +414,6 @@ pub enum ExprKind {
     Assign,
     Index,
     Field,
+    Reference,
     __Nonexhaustive,
 }

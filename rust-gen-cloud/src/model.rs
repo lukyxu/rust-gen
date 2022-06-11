@@ -1,14 +1,19 @@
-use bigdecimal::BigDecimal;
 use crate::schema::policies;
 use crate::schema::runs;
 use crate::schema::sub_runs;
+use bigdecimal::BigDecimal;
 use chrono::NaiveDateTime;
 use diesel::result::Error;
-use diesel::{sql_types, insert_into, ExpressionMethods, MysqlConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl, select};
-use num_bigint::{ToBigInt};
+use diesel::{
+    insert_into, select, sql_types, ExpressionMethods, MysqlConnection, QueryDsl, QueryResult,
+    Queryable, RunQueryDsl,
+};
+use num_bigint::ToBigInt;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::error::RunnerError;
-use rust_gen::runtime::run::{Runner, RunOutput, RunResult, SubRunError, SubRunOutput, SubRunResult};
+use rust_gen::runtime::run::{
+    RunOutput, RunResult, Runner, SubRunError, SubRunOutput, SubRunResult,
+};
 use rust_gen::utils::{from_ron_string, to_ron_string};
 use sha2::{Digest, Sha256};
 
@@ -52,9 +57,13 @@ impl RunInfo {
             seed,
             success: run_output.is_ok(),
             policy_id,
-            generation_duration_in_millis: RunOutput::from_run_result(&run_output).generation_time.map(|duration|duration.as_millis() as u64),
+            generation_duration_in_millis: RunOutput::from_run_result(&run_output)
+                .generation_time
+                .map(|duration| duration.as_millis() as u64),
             total_sub_runs: RunOutput::from_run_result(&run_output).subruns.len() as u64,
-            expected_checksum: RunOutput::from_run_result(&run_output).expected_checksum.map(|checksum|BigDecimal::new(checksum.to_bigint().unwrap(), 0)),
+            expected_checksum: RunOutput::from_run_result(&run_output)
+                .expected_checksum
+                .map(|checksum| BigDecimal::new(checksum.to_bigint().unwrap(), 0)),
             statistics: files
                 .iter()
                 .filter_map(|path| {
@@ -63,11 +72,14 @@ impl RunInfo {
                         String::from_utf8(
                             std::fs::read(path).expect("Unable to read statistics.txt"),
                         )
-                            .expect("Unable to read utf-8")
+                        .expect("Unable to read utf-8")
                     })
                 })
                 .next(),
-            error_kind: run_output.as_ref().err().map(|err|err.error_kind().to_owned()),
+            error_kind: run_output
+                .as_ref()
+                .err()
+                .map(|err| err.error_kind().to_owned()),
             error_message: run_output.as_ref().err().map(RunnerError::to_string),
             run_timeout: runner.run_timeout.as_secs(),
             generate_timeout: runner.generate_timeout.as_secs(),
@@ -79,10 +91,7 @@ impl RunInfo {
 
     pub fn insert_new(&self, connection: &MysqlConnection) -> i32 {
         use crate::schema::runs::dsl::runs;
-        insert_into(runs)
-            .values(self)
-            .execute(connection)
-            .unwrap();
+        insert_into(runs).values(self).execute(connection).unwrap();
         select(last_insert_id).first(connection).unwrap()
     }
 }
@@ -304,13 +313,22 @@ impl SubRunInfo {
             opt: output.opt.to_char().to_string(),
             version: output.version.to_string(),
             success: sub_run.as_ref().is_ok(),
-            compilation_duration_in_millis: output.compilation_duration.map(|duration|duration.as_millis() as u64),
-            run_duration_in_micros: output.run_duration.map(|duration|duration.as_micros() as u64),
-            checksum: output.checksum.map(|checksum|BigDecimal::new(checksum.to_bigint().unwrap(), 0)),
-            error_kind: sub_run.as_ref().err().map(|err|err.error_kind().to_string()),
+            compilation_duration_in_millis: output
+                .compilation_duration
+                .map(|duration| duration.as_millis() as u64),
+            run_duration_in_micros: output
+                .run_duration
+                .map(|duration| duration.as_micros() as u64),
+            checksum: output
+                .checksum
+                .map(|checksum| BigDecimal::new(checksum.to_bigint().unwrap(), 0)),
+            error_kind: sub_run
+                .as_ref()
+                .err()
+                .map(|err| err.error_kind().to_string()),
             error_message: sub_run.as_ref().err().map(SubRunError::to_string),
             created_at: None,
-            updated_at: None
+            updated_at: None,
         }
     }
 

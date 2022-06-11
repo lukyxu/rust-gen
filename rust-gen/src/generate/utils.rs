@@ -122,7 +122,7 @@ pub fn increment_counter<T, K: Eq + Hash + Ord>(
 }
 
 macro_rules! track_function_with_ty {
-    ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
+    ($function_name: ident, $kind: ident, $counter: ident) => {
         pub fn $function_name<T: 'static>(
             kind: $kind,
             f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
@@ -132,8 +132,8 @@ macro_rules! track_function_with_ty {
                 increment_counter(
                     &res,
                     kind,
-                    &mut ctx.statistics.$success_counter,
-                    &mut ctx.statistics.$failed_counter,
+                    &mut ctx.statistics.successful_mapping.$counter,
+                    &mut ctx.statistics.failed_mapping.$counter,
                 );
                 res
             })
@@ -142,7 +142,7 @@ macro_rules! track_function_with_ty {
 }
 
 macro_rules! track_function {
-    ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
+    ($function_name: ident, $kind: ident, $counter: ident) => {
         /// Adds statistic counter calculations.
         pub fn $function_name<T: 'static>(
             kind: $kind,
@@ -153,8 +153,8 @@ macro_rules! track_function {
                 increment_counter(
                     &res,
                     kind,
-                    &mut ctx.statistics.$success_counter,
-                    &mut ctx.statistics.$failed_counter,
+                    &mut ctx.statistics.successful_mapping.$counter,
+                    &mut ctx.statistics.failed_mapping.$counter,
                 );
                 res
             })
@@ -162,22 +162,9 @@ macro_rules! track_function {
     };
 }
 
-track_function_with_ty!(
-    track_expr,
-    ExprKind,
-    successful_expr_counter,
-    failed_expr_counter
-);
-track_function_with_ty!(
-    track_stmt,
-    StmtKind,
-    successful_stmt_counter,
-    failed_stmt_counter
-);
-track_function!(
-    track_item,
-    ItemKind,
-    successful_item_counter,
-    failed_item_counter
-);
-track_function!(track_type, TyKind, successful_ty_counter, failed_ty_counter);
+track_function_with_ty!(track_expr, ExprKind, expr_counter);
+
+track_function_with_ty!(track_stmt, StmtKind, stmt_counter);
+
+track_function!(track_item, ItemKind, item_counter);
+track_function!(track_type, TyKind, ty_counter);

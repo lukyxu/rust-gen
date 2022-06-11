@@ -41,7 +41,7 @@ impl Command {
                 vec![
                     "source ~/.profile".to_owned(),
                     "cd ~/rust-gen/rust-gen-cloud".to_owned(),
-                    "(nohup cargo run --release > logs.txt 2>&1) &".to_owned(),
+                    "(nohup cargo run --release > logs.txt 2>&1 &)".to_owned(),
                 ]
             }
             Command::Restart => Command::Stop

@@ -10,7 +10,7 @@ use dotenv::dotenv;
 use rand::Rng;
 use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
-use rust_gen::runtime::run::{Runner, RunOutput};
+use rust_gen::runtime::run::{RunOutput, Runner};
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -61,7 +61,7 @@ pub fn main() {
         let run_id = RunInfo::new(seed, output, new_policy_id, &runner).insert_new(&connection);
         for sub_run in sub_runs {
             SubRunInfo::new(run_id, sub_run).insert_new(&connection)
-        };
+        }
 
         for file in files {
             std::fs::remove_file(&file).unwrap();

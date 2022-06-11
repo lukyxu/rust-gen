@@ -18,6 +18,17 @@ pub enum Stmt {
     Custom(CustomStmt), // TODO: Macros and empty statements
 }
 
+impl Stmt {
+    pub fn kind(&self) -> StmtKind {
+        match self {
+            Stmt::Local(_) => StmtKind::Local,
+            Stmt::Expr(_) => StmtKind::Expr,
+            Stmt::Semi(_) => StmtKind::Semi,
+            Stmt::Custom(_) => StmtKind::Custom,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum LocalStmt {
     /// Local declaration such as `let x;` (not implemented yet).
@@ -124,6 +135,7 @@ pub enum StmtKind {
     Local,
     Semi,
     Expr,
+    Custom,
 }
 
 pub enum LocalStmtKind {

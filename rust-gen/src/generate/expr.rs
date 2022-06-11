@@ -8,7 +8,7 @@ use crate::ast::expr::{
     FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, Member, PlaceExpr,
     ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
-use crate::ast::op::BinaryOp;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::{
     ArrayTy, FieldDef, FieldStructTy, GTy, PrimTy, ReferenceTy, StructTy, TupleStructTy, TupleTy,
@@ -17,8 +17,8 @@ use crate::ast::ty::{
 use crate::context::Context;
 use crate::generate::utils::{
     apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct,
-    apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth,
-    limit_if_else_depth, revert_ctx_on_failure, track_expr,
+    apply_limit_expr_depth_in_tuple, increment_counter, limit_arith_depth, limit_block_depth,
+    limit_expr_depth, limit_if_else_depth, revert_ctx_on_failure, track_expr,
 };
 use crate::symbol_table::ty::TypeSymbolTable;
 
@@ -137,6 +137,17 @@ impl BinaryExpr {
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
         let op = ctx.choose_binary_op(res_type)?;
+        let expr = BinaryExpr::generate_expr_for_op(ctx, res_type, op);
+        increment_counter(
+            &expr,
+            op,
+            &mut ctx.statistics.successful_mapping.bin_op_counter,
+            &mut ctx.statistics.failed_mapping.bin_op_counter,
+        );
+        expr
+    }
+
+    fn generate_expr_for_op(ctx: &mut Context, res_type: &Ty, op: BinaryOp) -> Option<BinaryExpr> {
         let lhs_arg_ty = op
             .get_compatible_lhs_arg_types(res_type, ctx)
             .choose(&mut ctx.rng)
@@ -158,8 +169,6 @@ impl BinaryExpr {
         } else {
             Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?)
         };
-
-        *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
 
@@ -180,13 +189,23 @@ impl UnaryExpr {
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<UnaryExpr> {
         let op = ctx.choose_unary_op(res_type)?;
+        let expr = UnaryExpr::generate_expr_for_op(ctx, res_type, op);
+        increment_counter(
+            &expr,
+            op,
+            &mut ctx.statistics.successful_mapping.un_op_counter,
+            &mut ctx.statistics.failed_mapping.un_op_counter,
+        );
+        expr
+    }
+
+    fn generate_expr_for_op(ctx: &mut Context, res_type: &Ty, op: UnaryOp) -> Option<UnaryExpr> {
         let args_type = op
             .get_compatible_arg_types(res_type)
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
         let expr = Box::new(Expr::fuzz_move_expr(ctx, &args_type)?);
-        *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
 

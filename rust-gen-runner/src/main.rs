@@ -42,11 +42,23 @@ struct Args {
     #[clap(short, long, help = "Include binaries from output.")]
     include_binaries: bool,
 
-    #[clap(long, help = "Timeout in seconds for generating programs.", default_value = "30")]
+    #[clap(
+        long,
+        help = "Timeout in seconds for generating programs.",
+        default_value = "30"
+    )]
     generate_timeout: u64,
-    #[clap(long, help = "Timeout in seconds for compiling programs.", default_value = "60")]
+    #[clap(
+        long,
+        help = "Timeout in seconds for compiling programs.",
+        default_value = "60"
+    )]
     compile_timeout: u64,
-    #[clap(long, help = "Timeout in seconds for generating programs.", default_value = "1")]
+    #[clap(
+        long,
+        help = "Timeout in seconds for generating programs.",
+        default_value = "1"
+    )]
     run_timeout: u64,
 
     #[clap(long, help = "Option to not compile any of the generated programs")]
