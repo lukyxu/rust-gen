@@ -92,11 +92,14 @@ macro_rules! apply_limit_ty_depth_function {
             ctx: &mut Context,
             res_type: &S,
         ) -> Option<T> {
+            let prev_max_composite_depth = ctx.policy.max_composite_depth;
             let prev_max_depth = ctx.policy.$max_depth;
             let prev_gen_new_ty = ctx.$gen_new_ty;
+            ctx.policy.max_composite_depth = ctx.policy.max_composite_depth.saturating_sub(1);
             ctx.policy.$max_depth = ctx.policy.$max_depth.saturating_sub(1);
             ctx.$gen_new_ty = false;
             let res = f(ctx, res_type);
+            ctx.policy.max_composite_depth = prev_max_composite_depth;
             ctx.policy.$max_depth = prev_max_depth;
             ctx.$gen_new_ty = prev_gen_new_ty;
             res

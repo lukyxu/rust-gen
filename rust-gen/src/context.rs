@@ -105,7 +105,10 @@ impl Context {
         if let Some(elem_ty) = elem_ty {
             dist.retain(|(array_ty, _)| &*array_ty.base_ty == elem_ty);
         }
-        dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
+        dist.retain(|(array_ty, _)| {
+            array_ty.array_depth() <= self.policy.max_array_depth
+                && array_ty.composite_depth() <= self.policy.max_composite_depth
+        });
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(array_ty, _)| !array_ty.require_lifetime());
         }
@@ -124,7 +127,10 @@ impl Context {
         if let Some(elem_ty) = elem_ty {
             dist.retain(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty));
         }
-        dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
+        dist.retain(|(tuple_ty, _)| {
+            tuple_ty.tuple_depth() <= self.policy.max_tuple_depth
+                && tuple_ty.composite_depth() <= self.policy.max_composite_depth
+        });
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(tuple_ty, _)| !tuple_ty.require_lifetime());
         }
@@ -149,7 +155,10 @@ impl Context {
                 StructTy::Tuple(tuple) => (&tuple.fields).into_iter().any(|ty| ty == elem_ty),
             });
         }
-        dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
+        dist.retain(|(struct_ty, _)| {
+            struct_ty.struct_depth() <= self.policy.max_tuple_depth
+                && struct_ty.composite_depth() <= self.policy.max_composite_depth
+        });
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(struct_ty, _)| !struct_ty.require_lifetime());
         }

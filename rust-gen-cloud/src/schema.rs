@@ -23,6 +23,7 @@ table! {
         max_block_depth -> Unsigned<Bigint>,
         max_arith_depth -> Unsigned<Bigint>,
         max_expr_depth -> Unsigned<Bigint>,
+        max_composite_depth -> Unsigned<Bigint>,
         array_length_dist -> Varchar,
         default_array_type_dist -> Text,
         new_array_prob -> Double,
@@ -172,10 +173,4 @@ table! {
 joinable!(runs -> policies (policy_id));
 joinable!(sub_runs -> runs (run_id));
 
-allow_tables_to_appear_in_same_query!(
-    policies,
-    runs,
-    statistics,
-    statistics_map,
-    sub_runs,
-);
+allow_tables_to_appear_in_same_query!(policies, runs, statistics, statistics_map, sub_runs,);

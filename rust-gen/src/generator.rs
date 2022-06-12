@@ -14,6 +14,7 @@ use crate::visitor::statistics_visitor::StatisticsVisitor;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+#[derive(Debug)]
 pub struct GeneratorOutput {
     pub program: String,
     pub generation_statistics: FullGenerationStatistics,

@@ -32,14 +32,6 @@ impl<A> GTy<A> {
         self.is_primitive_number() && target_type.is_primitive_number()
     }
 
-    /// Returns the array depth of a type.
-    pub fn array_depth(&self) -> usize {
-        match self {
-            GTy::Array(array_ty) => 1 + array_ty.base_ty.array_depth(),
-            _ => 0,
-        }
-    }
-
     pub fn unit_type() -> Ty {
         GTy::Unit
     }
@@ -51,6 +43,24 @@ impl<A> GTy<A> {
             GTy::Unit => true,
             GTy::Tuple(tuple_ty) => tuple_ty.tuple.is_empty(),
             _ => false,
+        }
+    }
+
+    /// Returns the composite depth of a type.
+    pub fn composite_depth(&self) -> usize {
+        match self {
+            GTy::Array(array_ty) => array_ty.composite_depth(),
+            GTy::Tuple(tuple_ty) => tuple_ty.composite_depth(),
+            GTy::Struct(struct_ty) => struct_ty.composite_depth(),
+            _ => 0,
+        }
+    }
+
+    /// Returns the array depth of a type.
+    pub fn array_depth(&self) -> usize {
+        match self {
+            GTy::Array(array_ty) => array_ty.array_depth(),
+            _ => 0,
         }
     }
 
@@ -352,6 +362,15 @@ pub struct GTupleTy<A> {
 }
 
 impl<A> GTupleTy<A> {
+    pub fn composite_depth(&self) -> usize {
+        1 + self
+            .tuple
+            .iter()
+            .map(GTy::composite_depth)
+            .max()
+            .unwrap_or_default()
+    }
+
     /// Returns the depth of a tuple.
     pub fn tuple_depth(&self) -> usize {
         1 + self
@@ -427,6 +446,10 @@ impl<A: Clone> GArrayTy<A> {
 }
 
 impl<A> GArrayTy<A> {
+    pub fn composite_depth(&self) -> usize {
+        1 + self.base_ty.composite_depth()
+    }
+
     pub fn array_depth(&self) -> usize {
         1 + self.base_ty.array_depth()
     }
@@ -475,6 +498,24 @@ pub enum GStructTy<A> {
 }
 
 impl<A> GStructTy<A> {
+    pub fn composite_depth(&self) -> usize {
+        1 + match self {
+            GStructTy::Field(field_struct) => field_struct
+                .fields
+                .iter()
+                .map(|f| f.ty.composite_depth())
+                .max()
+                .unwrap_or_default(),
+            GStructTy::Tuple(tuple_struct) => tuple_struct
+                .fields
+                .tuple
+                .iter()
+                .map(GTy::composite_depth)
+                .max()
+                .unwrap_or_default(),
+        }
+    }
+
     pub fn struct_depth(&self) -> usize {
         1 + match self {
             GStructTy::Field(field_struct) => field_struct

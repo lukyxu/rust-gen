@@ -23,6 +23,7 @@ CREATE TABLE policies
     max_block_depth          BIGINT UNSIGNED NOT NULL,
     max_arith_depth          BIGINT UNSIGNED NOT NULL,
     max_expr_depth           BIGINT UNSIGNED NOT NULL,
+    max_composite_depth      BIGINT UNSIGNED NOT NULL,
     array_length_dist        VARCHAR(255)    NOT NULL,
     default_array_type_dist  TEXT            NOT NULL,
     new_array_prob           DOUBLE          NOT NULL,

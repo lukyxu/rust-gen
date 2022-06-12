@@ -406,8 +406,8 @@ impl AssignExpr {
         Some(AssignExpr { place, rhs })
     }
 
-    pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && res_type.is_unit()
     }
 }
 
@@ -462,6 +462,11 @@ impl FieldExpr {
     }
 
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
+        if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth
+            || res_type.composite_depth() + 1 > ctx.policy.max_composite_depth
+        {
+            return None;
+        }
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
         let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
@@ -521,7 +526,9 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
-        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
+        if res_type.array_depth() + 1 > ctx.policy.max_array_depth
+            || res_type.composite_depth() + 1 > ctx.policy.max_composite_depth
+        {
             return None;
         }
         // [Struct1(5), Struct1(5), Struct1(5)][0] is invalid if Struct1 is not copy
