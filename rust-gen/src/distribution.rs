@@ -4,11 +4,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Distribution {
+    Const(usize),
     Uniform(usize, usize),
     Standard(f64, f64),
 }
 
 impl Distribution {
+    pub fn new_const(value: usize) -> Distribution {
+        Distribution::Const(value)
+    }
+
     pub fn new_uniform_inclusive(low: usize, high: usize) -> Distribution {
         assert!(low <= high);
         Distribution::Uniform(low, high)
@@ -20,6 +25,7 @@ impl Distribution {
 
     pub fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> usize {
         match self {
+            Distribution::Const(value) => *value,
             Distribution::Uniform(low, high) => {
                 rng.sample(distributions::Uniform::new_inclusive(*low, *high))
             }
@@ -31,6 +37,6 @@ impl Distribution {
     }
 
     pub fn none() -> Distribution {
-        Distribution::Uniform(0, 0)
+        Distribution::Const(0)
     }
 }

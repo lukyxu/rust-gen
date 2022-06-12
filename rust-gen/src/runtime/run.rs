@@ -14,6 +14,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::FromStr;
+use std::sync::mpsc::RecvTimeoutError;
 use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 use std::{fs, thread};
@@ -140,6 +141,7 @@ pub struct Runner {
     pub run_timeout: Duration,
 }
 
+#[derive(Debug)]
 pub struct Timed<T>(Duration, Option<T>);
 
 impl<T> Timed<T> {
@@ -160,7 +162,10 @@ impl<T> Timed<T> {
                 }
                 Timed(time_taken, Some(res))
             }
-            Err(_) => Timed(duration, None),
+            Err(RecvTimeoutError::Timeout) => Timed(duration, None),
+            Err(RecvTimeoutError::Disconnected) => {
+                panic!("Timeout function panicked")
+            }
         }
     }
 }
