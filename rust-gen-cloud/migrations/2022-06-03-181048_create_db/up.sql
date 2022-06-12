@@ -57,6 +57,7 @@ CREATE TABLE runs
     hostname                      VARCHAR(32)     NOT NULL,
     seed                          BIGINT UNSIGNED NOT NULL,
     success                       BOOLEAN         NOT NULL,
+    reviewed                      BOOLEAN         NOT NULL,
     policy_id                     INTEGER         NOT NULL,
     generation_duration_in_millis BIGINT UNSIGNED,
     total_sub_runs                BIGINT UNSIGNED NOT NULL,

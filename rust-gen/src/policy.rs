@@ -135,8 +135,21 @@ impl Policy {
     pub fn get_policies() -> Vec<Policy> {
         vec![
             Policy::default(),
+            // Policy::simple_arithmetics()
             Policy::heavy_basic_arithmetic(),
+            // Policy::simple_arithmetic_many_types(),
+            // Policy::heavy_basic_arithmetic_many_types(),
+            // Policy::control_flow()
             // Policy::nested_heavy_basic_arithmetic(),
+            // Policy::assignments()
+            // Policy::tuples()
+            // Policy::arrays()
+            // Policy::structs()
+            // Policy::ownership()
+            // Policy::stress_test()
+            // Policy::functions()
+            // Policy::lifetime()
+
             // Policy::tuple_debug(),
             // Policy::tuple_field_debug(),
             // Policy::my_debug(),

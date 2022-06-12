@@ -240,7 +240,7 @@ impl Display for RunTimeoutError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "Compilation timeout for optimization {:?} and Rust version {:?}. Timeout of {} seconds exceeded.",
+            "Run timeout for optimization {:?} and Rust version {:?}. Timeout of {} seconds exceeded.",
             self.opt,
             self.version,
             self.duration.as_secs()
@@ -323,7 +323,7 @@ impl Display for RustFmtTimeoutError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "Compilation timeout. Timeout of {} seconds exceeded.",
+            "Rustfmt timeout. Timeout of {} seconds exceeded.",
             self.duration.as_secs()
         )
     }

@@ -19,6 +19,7 @@ pub struct RunInfo {
     pub hostname: String,
     pub seed: u64,
     pub success: bool,
+    pub reviewed: bool,
     pub policy_id: i32,
     pub generation_duration_in_millis: Option<u64>,
     pub total_sub_runs: u64,
@@ -50,6 +51,7 @@ impl RunInfo {
             hostname: env!("HOSTNAME").to_string(),
             seed,
             success: run_output.is_ok(),
+            reviewed: run_output.is_ok(),
             policy_id,
             generation_duration_in_millis: RunOutput::from_run_result(&run_output)
                 .generation_time

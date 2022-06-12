@@ -57,6 +57,7 @@ table! {
         hostname -> Varchar,
         seed -> Unsigned<Bigint>,
         success -> Bool,
+        reviewed -> Bool,
         policy_id -> Integer,
         generation_duration_in_millis -> Nullable<Unsigned<Bigint>>,
         total_sub_runs -> Unsigned<Bigint>,
@@ -171,4 +172,10 @@ table! {
 joinable!(runs -> policies (policy_id));
 joinable!(sub_runs -> runs (run_id));
 
-allow_tables_to_appear_in_same_query!(policies, runs, statistics, statistics_map, sub_runs,);
+allow_tables_to_appear_in_same_query!(
+    policies,
+    runs,
+    statistics,
+    statistics_map,
+    sub_runs,
+);
