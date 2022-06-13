@@ -215,6 +215,18 @@ impl Runner {
 
         run_output.files = vec![rust_file.clone(), stats_file];
 
+        // Run rustfmt
+        if self.rustfmt {
+            let rustfmt_output = timed_run_rustfmt(self.rustfmt_timeout, &rust_file);
+            rustfmt_output
+                .1
+                .ok_or(RunnerError::RustFmtTimeout(
+                    RustFmtTimeoutError::new(rustfmt_output.0),
+                    run_output.clone(),
+                ))?
+                .map_err(|err| RunnerError::RustFmtFailure(err, run_output.clone()))?
+        }
+
         if self.no_compile {
             return Ok(run_output);
         }
@@ -265,18 +277,6 @@ impl Runner {
                 },
                 run_output,
             ));
-        }
-
-        // Run rustfmt
-        if self.rustfmt {
-            let rustfmt_output = timed_run_rustfmt(self.rustfmt_timeout, rust_file);
-            rustfmt_output
-                .1
-                .ok_or(RunnerError::RustFmtTimeout(
-                    RustFmtTimeoutError::new(rustfmt_output.0),
-                    run_output.clone(),
-                ))?
-                .map_err(|err| RunnerError::RustFmtFailure(err, run_output.clone()))?
         }
 
         Ok(run_output)

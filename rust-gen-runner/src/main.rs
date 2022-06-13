@@ -61,9 +61,9 @@ struct Args {
     )]
     run_timeout: u64,
     #[clap(
-    long,
-    help = "Timeout in seconds for running rustfmt.",
-    default_value = "10"
+        long,
+        help = "Timeout in seconds for running rustfmt.",
+        default_value = "10"
     )]
     rustfmt_timeout: u64,
 
