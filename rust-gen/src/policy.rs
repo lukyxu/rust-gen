@@ -457,7 +457,7 @@ impl Policy {
     pub fn arithmetic_with_control_flow() -> Policy {
         PolicyBuilder::from_policy(Policy::arithmetics())
             .name("arithmetic_with_control_flow".to_owned())
-            .num_stmt_dist(Distribution::new_uniform_inclusive(2, 10))
+            .num_stmt_dist(Distribution::new_uniform_inclusive(2, 8))
             .expr_dist_with(ExprKind::Binary, 2.0)
             .expr_dist_with(ExprKind::Unary, 1.0)
             .expr_dist_with(ExprKind::If, 0.5)
@@ -481,6 +481,7 @@ impl Policy {
     pub fn tuples() -> Policy {
         PolicyBuilder::from_policy(Policy::assignments())
             .name("tuples".to_owned())
+            .num_stmt_dist(Distribution::new_uniform_inclusive(2, 6))
             .type_dist(vec![
                 (TyKind::Prim, 2.0),
                 (TyKind::Tuple, 0.5),
@@ -503,6 +504,7 @@ impl Policy {
     pub fn arrays() -> Policy {
         PolicyBuilder::from_policy(Policy::assignments())
             .name("arrays".to_owned())
+            .num_stmt_dist(Distribution::new_uniform_inclusive(2, 6))
             .type_dist(vec![
                 (TyKind::Prim, 2.0),
                 (TyKind::Array, 0.5),
@@ -522,6 +524,7 @@ impl Policy {
     pub fn structs() -> Policy {
         PolicyBuilder::from_policy(Policy::assignments())
             .name("structs".to_owned())
+            .num_stmt_dist(Distribution::new_uniform_inclusive(2, 6))
             .type_dist(vec![
                 (TyKind::Prim, 2.0),
                 (TyKind::Struct, 0.5),
@@ -542,6 +545,7 @@ impl Policy {
     pub fn composite() -> Policy {
         PolicyBuilder::from_policy(Policy::assignments())
             .name("composite".to_owned())
+            .num_stmt_dist(Distribution::new_uniform_inclusive(2, 6))
             .type_dist(vec![
                 (TyKind::Prim, 2.0),
                 (TyKind::Struct, 0.1),

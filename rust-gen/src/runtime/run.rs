@@ -3,7 +3,8 @@ use crate::policy::Policy;
 use crate::runtime::config::{OptLevel, RustVersion};
 use crate::runtime::error::{
     CompilationError, CompilationTimeoutError, DifferingChecksumError, GeneratorTimeoutError,
-    RunError, RunTimeoutError, RunnerError, RustFmtError, UnexpectedChecksumError,
+    RunError, RunTimeoutError, RunnerError, RustFmtError, RustFmtTimeoutError,
+    UnexpectedChecksumError,
 };
 use crate::statistics::generation::FullGenerationStatistics;
 use crate::statistics::program::FullProgramStatistics;
@@ -139,6 +140,7 @@ pub struct Runner {
     pub generate_timeout: Duration,
     pub compile_timeout: Duration,
     pub run_timeout: Duration,
+    pub rustfmt_timeout: Duration,
 }
 
 #[derive(Debug)]
@@ -267,7 +269,13 @@ impl Runner {
 
         // Run rustfmt
         if self.rustfmt {
-            run_rustfmt(rust_file)
+            let rustfmt_output = timed_run_rustfmt(self.rustfmt_timeout, rust_file);
+            rustfmt_output
+                .1
+                .ok_or(RunnerError::RustFmtTimeout(
+                    RustFmtTimeoutError::new(rustfmt_output.0),
+                    run_output.clone(),
+                ))?
                 .map_err(|err| RunnerError::RustFmtFailure(err, run_output.clone()))?
         }
 
@@ -472,7 +480,9 @@ fn run_program<P: AsRef<Path>, S: AsRef<Path>>(rust_file: P, executable: S) -> R
     .expect("Unexpected execution output"))
 }
 
-fn run_rustfmt<P: AsRef<Path>>(rust_file: P) -> Result<(), RustFmtError> {
+type RunRustfmtResult = Result<(), RustFmtError>;
+
+fn run_rustfmt<P: AsRef<Path>>(rust_file: P) -> RunRustfmtResult {
     let output = Command::new(format!("rustfmt"))
         .arg(rust_file.as_ref())
         .output()
@@ -481,6 +491,14 @@ fn run_rustfmt<P: AsRef<Path>>(rust_file: P) -> Result<(), RustFmtError> {
         return Err(RustFmtError::new(output));
     }
     Ok(())
+}
+
+fn timed_run_rustfmt<P: AsRef<Path>>(timeout: Duration, rust_file: P) -> Timed<RunRustfmtResult> {
+    let input_file = Arc::new(rust_file.as_ref().to_path_buf());
+    Timed::<RunRustfmtResult>::run_with_timeout(
+        timeout,
+        Box::new(move || run_rustfmt(&*input_file)),
+    )
 }
 
 fn subrun_validation(run_output: &RunOutput) -> Result<Vec<&SubRunOutput>, RunnerError> {

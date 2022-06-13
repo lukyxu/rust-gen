@@ -69,6 +69,7 @@ CREATE TABLE runs
     run_timeout                   BIGINT UNSIGNED NOT NULL,
     generate_timeout              BIGINT UNSIGNED NOT NULL,
     compile_timeout               BIGINT UNSIGNED NOT NULL,
+    rustfmt_timeout               BIGINT UNSIGNED NOT NULL,
     created_at                    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (run_id),

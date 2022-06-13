@@ -60,6 +60,12 @@ struct Args {
         default_value = "1"
     )]
     run_timeout: u64,
+    #[clap(
+    long,
+    help = "Timeout in seconds for running rustfmt.",
+    default_value = "10"
+    )]
+    rustfmt_timeout: u64,
 
     #[clap(long, help = "Option to not compile any of the generated programs")]
     no_compile: bool,
@@ -121,6 +127,7 @@ pub fn main() {
         generate_timeout: Duration::from_secs(args.generate_timeout),
         compile_timeout: Duration::from_secs(args.compile_timeout),
         run_timeout: Duration::from_secs(args.run_timeout),
+        rustfmt_timeout: Duration::from_secs(args.rustfmt_timeout),
     };
 
     fs::create_dir_all(&output_path).expect("Unable to create directory");
