@@ -62,9 +62,6 @@ impl Command {
                 format!("git checkout {}", branch).to_owned(),
                 "git pull".to_owned(),
             ]
-            .into_iter()
-            .chain(Command::Restart.commands().into_iter())
-            .collect(),
         }
     }
 }
