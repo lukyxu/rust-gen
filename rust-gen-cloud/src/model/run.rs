@@ -30,6 +30,7 @@ pub struct RunInfo {
     pub run_timeout: u64,
     pub generate_timeout: u64,
     pub compile_timeout: u64,
+    pub rustfmt_timeout: u64,
     #[diesel(deserialize_as = "NaiveDateTime")]
     pub created_at: Option<NaiveDateTime>,
     #[diesel(deserialize_as = "NaiveDateTime")]
@@ -69,6 +70,7 @@ impl RunInfo {
             run_timeout: runner.run_timeout.as_secs(),
             generate_timeout: runner.generate_timeout.as_secs(),
             compile_timeout: runner.compile_timeout.as_secs(),
+            rustfmt_timeout: runner.rustfmt_timeout.as_secs(),
             created_at: None,
             updated_at: None,
         }
