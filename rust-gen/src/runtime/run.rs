@@ -30,6 +30,7 @@ pub struct RunOutput {
     pub rust_file_path: Option<PathBuf>,
     pub subruns: Vec<SubRunResult>,
     pub generation_time: Option<Duration>,
+    pub rustfmt_time: Option<Duration>,
 }
 
 impl RunOutput {
@@ -224,7 +225,8 @@ impl Runner {
                     RustFmtTimeoutError::new(rustfmt_output.0),
                     run_output.clone(),
                 ))?
-                .map_err(|err| RunnerError::RustFmtFailure(err, run_output.clone()))?
+                .map_err(|err| RunnerError::RustFmtFailure(err, run_output.clone()))?;
+            run_output.rustfmt_time = Some(rustfmt_output.0);
         }
 
         if self.no_compile {

@@ -61,6 +61,7 @@ CREATE TABLE runs
     reviewed                      BOOLEAN         NOT NULL,
     policy_id                     INTEGER         NOT NULL,
     generation_duration_in_millis BIGINT UNSIGNED,
+    rustfmt_duration_in_millis    BIGINT UNSIGNED,
     total_sub_runs                BIGINT UNSIGNED NOT NULL,
     expected_checksum             NUMERIC(39, 0),
     statistics                    TEXT,

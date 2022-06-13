@@ -22,6 +22,7 @@ pub struct RunInfo {
     pub reviewed: bool,
     pub policy_id: i32,
     pub generation_duration_in_millis: Option<u64>,
+    pub rustfmt_duration_in_millis: Option<u64>,
     pub total_sub_runs: u64,
     pub expected_checksum: Option<BigDecimal>,
     pub statistics: Option<String>,
@@ -56,6 +57,9 @@ impl RunInfo {
             policy_id,
             generation_duration_in_millis: RunOutput::from_run_result(&run_output)
                 .generation_time
+                .map(|duration| duration.as_millis() as u64),
+            rustfmt_duration_in_millis: RunOutput::from_run_result(&run_output)
+                .rustfmt_time
                 .map(|duration| duration.as_millis() as u64),
             total_sub_runs: RunOutput::from_run_result(&run_output).subruns.len() as u64,
             expected_checksum: RunOutput::from_run_result(&run_output)
