@@ -54,10 +54,11 @@ pub fn run_generator(
     // _print_program(&mut file);
     let mut statistic_visitor = StatisticsVisitor::default();
     statistic_visitor.visit_file(&mut file);
-    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true, add_checksum);
+    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true, add_checksum, false);
     checksum_gen_visitor.visit_file(&mut file);
-    let mut assert_gen_visitor = AssertGenVisitor::new(false, add_assertions);
+    let mut assert_gen_visitor = AssertGenVisitor::new(false, add_assertions, true);
     assert_gen_visitor.visit_file(&mut file);
+    // _print_program(&mut file);
     let mut checksum_eval_visitor = ChecksumEvalVisitor::default();
     checksum_eval_visitor.visit_file(&mut file);
     let mut emit_visitor = EmitVisitor::default();

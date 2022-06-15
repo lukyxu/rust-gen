@@ -28,6 +28,7 @@ pub trait ValidationGen {
 pub struct ValidationGenVisitor<G: ValidationGen> {
     init_checksum: bool,
     add_validation: bool,
+    use_full_symbol_table: bool,
     phantom: PhantomData<G>,
     local_type_symbol_table: LocalTypeSymbolTable,
     prev_local_type_symbol_tables: Vec<LocalTypeSymbolTable>,
@@ -37,10 +38,11 @@ pub struct ValidationGenVisitor<G: ValidationGen> {
 }
 
 impl<G: ValidationGen> ValidationGenVisitor<G> {
-    pub fn new(init_checksum: bool, add_validation: bool) -> ValidationGenVisitor<G> {
+    pub fn new(init_checksum: bool, add_validation: bool, use_full_symbol_table: bool) -> ValidationGenVisitor<G> {
         ValidationGenVisitor {
             init_checksum,
             add_validation,
+            use_full_symbol_table,
             phantom: PhantomData,
             local_type_symbol_table: LocalTypeSymbolTable::new(),
             prev_local_type_symbol_tables: vec![],
@@ -86,7 +88,13 @@ impl<G: ValidationGen> ValidationGenVisitor<G> {
         for stmt in (&mut expr.stmts).split_last_mut().unwrap().1 {
             self.visit_stmt(stmt);
         }
-        for name in &self.local_type_symbol_table {
+
+        let symbol_table_names: Vec<&String> = if self.use_full_symbol_table {
+            (&self.full_type_symbol_table).into_iter().rev().map(|x|x.0).collect()
+        } else {
+            self.local_type_symbol_table.iter().collect()
+        };
+        for name in symbol_table_names {
             G::add_validation(expr, name, &self.full_type_symbol_table, self.checksum_name);
         }
 
@@ -140,10 +148,10 @@ impl<G: ValidationGen> Visitor for ValidationGenVisitor<G> {
     }
 
     fn visit_local_init_stmt(&mut self, stmt: &mut InitLocalStmt) {
+        self.visit_expr(&mut stmt.rhs);
         self.local_type_symbol_table.insert(stmt.name.clone());
         self.full_type_symbol_table
             .add_var(stmt.name.clone(), &stmt.ty, stmt.mutable);
-        self.visit_expr(&mut stmt.rhs);
     }
 
     // fuzz_move_expr
