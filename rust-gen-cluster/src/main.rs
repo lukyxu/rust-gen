@@ -61,7 +61,7 @@ impl Command {
                 "git stash".to_owned(),
                 format!("git checkout {}", branch).to_owned(),
                 "git pull".to_owned(),
-            ]
+            ],
         }
     }
 }

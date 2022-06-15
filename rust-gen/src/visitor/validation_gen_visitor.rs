@@ -38,7 +38,11 @@ pub struct ValidationGenVisitor<G: ValidationGen> {
 }
 
 impl<G: ValidationGen> ValidationGenVisitor<G> {
-    pub fn new(init_checksum: bool, add_validation: bool, use_full_symbol_table: bool) -> ValidationGenVisitor<G> {
+    pub fn new(
+        init_checksum: bool,
+        add_validation: bool,
+        use_full_symbol_table: bool,
+    ) -> ValidationGenVisitor<G> {
         ValidationGenVisitor {
             init_checksum,
             add_validation,
@@ -90,7 +94,11 @@ impl<G: ValidationGen> ValidationGenVisitor<G> {
         }
 
         let symbol_table_names: Vec<&String> = if self.use_full_symbol_table {
-            (&self.full_type_symbol_table).into_iter().rev().map(|x|x.0).collect()
+            (&self.full_type_symbol_table)
+                .into_iter()
+                .rev()
+                .map(|x| x.0)
+                .collect()
         } else {
             self.local_type_symbol_table.iter().collect()
         };
