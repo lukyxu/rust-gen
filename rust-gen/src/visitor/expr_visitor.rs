@@ -86,9 +86,9 @@ impl ExprVisitor {
 
     pub fn eval_index(&mut self, index: EvalExpr) -> usize {
         if let EvalExpr::Literal(LitExpr::Int(LitIntExpr {
-                                                  value,
-                                                  ty: LitIntTy::Unsigned(UIntTy::USize),
-                                              })) = index
+            value,
+            ty: LitIntTy::Unsigned(UIntTy::USize),
+        })) = index
         {
             value as usize
         } else {
@@ -98,7 +98,7 @@ impl ExprVisitor {
 
     pub fn eval_index_expr(&mut self, base: EvalExpr, index: usize) -> EvalExpr {
         match base {
-                EvalExpr::Array(exprs) => exprs.array[index].clone(),
+            EvalExpr::Array(exprs) => exprs.array[index].clone(),
             _ => panic!(),
         }
     }
@@ -378,9 +378,7 @@ impl Visitor for ExprVisitor {
                 let prev_expr = self.mut_symbol_table().get_expr_ref_by_name(&name).unwrap();
                 ExprVisitor::get_expr_by_place(prev_expr, &base).clone()
             }
-            Err(base) => {
-                base
-            }
+            Err(base) => base,
         };
         self.expr = Some(self.eval_index_expr(base, index))
     }

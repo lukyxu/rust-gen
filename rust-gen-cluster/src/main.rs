@@ -78,6 +78,8 @@ fn main() {
         "cloud-vm-42-116.doc.ic.ac.uk",
         "cloud-vm-42-125.doc.ic.ac.uk",
         "cloud-vm-42-197.doc.ic.ac.uk",
+        "cloud-vm-43-224.doc.ic.ac.uk",
+        "cloud-vm-43-235.doc.ic.ac.uk",
     ];
     if let Some(index) = args.machine_index {
         if index >= machines.len() {
