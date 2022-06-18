@@ -137,7 +137,9 @@ pub struct Runner {
     pub no_compile: bool,
     pub opts: Vec<OptLevel>,
     pub versions: Vec<RustVersion>,
+    pub run_rustc: bool,
     pub run_mrustc: bool,
+    pub run_gccrs: bool,
     pub rustfmt: bool,
     pub generate_timeout: Duration,
     pub compile_timeout: Duration,
@@ -205,7 +207,7 @@ impl Runner {
         let rust_file = self.tmp_dir.join(self.base_name.clone() + ".rs");
 
         // Save program
-        fs::write(&rust_file, program).expect("Unable to write file");
+        fs::write(&rust_file, &program).expect("Unable to write file");
         run_output.rust_file_path = Some(rust_file.clone());
 
         // Write statistics
@@ -235,11 +237,13 @@ impl Runner {
         }
 
         // Compile and run program (with multiple optimizations)
-        for version in &self.versions {
-            for opt in &self.opts {
-                run_output
-                    .subruns
-                    .push(self.subrun(&RustCompiler::RustC, opt, version, &rust_file));
+        if self.run_rustc {
+            for version in &self.versions {
+                for opt in &self.opts {
+                    run_output
+                        .subruns
+                        .push(self.subrun(&RustCompiler::RustC, opt, version, &rust_file));
+                }
             }
         }
 
@@ -252,6 +256,17 @@ impl Runner {
                     .subruns
                     .push(self.subrun(&RustCompiler::MrustC, &OptLevel::some_opt(), &RustVersion::mrustc_version(), &rust_file));
             }
+        }
+
+        if self.run_gccrs {
+            let mut program_gccrs = GCC_RS_DRIVER.to_owned();
+            program_gccrs.push_str(&program.replace("println!(\"{}\", checksum)", "print_int(checksum);"));
+            let gcc_rs_path = self.tmp_dir.join(self.base_name.clone() + "-gccrs" + ".rs");
+            fs::write(&gcc_rs_path, &program_gccrs).expect("Unable to write file");
+            run_output
+                .subruns
+                .push(self.subrun(&RustCompiler::GCCRS, &OptLevel::no_opt(), &RustVersion::gccrs_version(), &gcc_rs_path));
+            run_output.files.push(gcc_rs_path);
         }
 
         // Push subrun files
@@ -267,7 +282,7 @@ impl Runner {
         let subrun_outputs = subrun_validation(&run_output)?;
 
         // Compare outputs
-        if !subrun_outputs
+        if !subrun_outputs.is_empty() && !subrun_outputs
             .iter()
             .all(|run| run.checksum == subrun_outputs[0].checksum)
         {
@@ -372,7 +387,7 @@ impl Runner {
                 ))?
                 .map_err(|err| SubRunError::CompilationFailure(err, subrun_output.clone()))?,
         );
-        let run_executable_result = timed_run_program(self.run_timeout, &rust_file, &output_file);
+        let run_executable_result = timed_run_program(self.run_timeout, &rust_file, &output_file, *compiler == RustCompiler::GCCRS);
         subrun_output.run_duration = Some(run_executable_result.0);
         subrun_output.checksum = Some(
             run_executable_result
@@ -464,6 +479,13 @@ fn compile_program<P: AsRef<Path>, S: AsRef<Path>>(
             }
             args
         }
+        RustCompiler::GCCRS => {
+            vec![
+                input_file.as_ref().to_str().unwrap().to_owned(),
+                "-o".to_owned(),
+                output_file.as_ref().to_str().unwrap().to_owned(),
+            ]
+        }
     };
 
     let output = command.args(args).output().expect("Failed to execute compile process");
@@ -485,22 +507,23 @@ fn timed_run_program<P: AsRef<Path>, S: AsRef<Path>>(
     timeout: Duration,
     rust_file: P,
     executable: S,
+    running_gccrs: bool,
 ) -> Timed<RunExecutableResult> {
     let input_file = Arc::new(rust_file.as_ref().to_path_buf());
     let output_file = Arc::new(executable.as_ref().to_path_buf());
     Timed::<RunExecutableResult>::run_with_timeout(
         timeout,
-        Box::new(move || run_program(&*input_file, &*output_file)),
+        Box::new(move || run_program(&*input_file, &*output_file, running_gccrs)),
     )
 }
 
-fn run_program<P: AsRef<Path>, S: AsRef<Path>>(rust_file: P, executable: S) -> RunExecutableResult {
+fn run_program<P: AsRef<Path>, S: AsRef<Path>>(rust_file: P, executable: S, running_gccrs: bool) -> RunExecutableResult {
     let rust_file = rust_file.as_ref();
     let executable = executable.as_ref();
     let output = Command::new(executable.to_str().unwrap())
         .output()
         .expect("Failed to execute runtime process");
-    if !output.status.success() {
+    if !output.status.success() && (!running_gccrs || matches!(output.status.code(), Some(1)))  {
         return Err(RunError::new(
             rust_file.to_path_buf(),
             executable.to_path_buf(),
@@ -616,3 +639,70 @@ fn subrun_validation(run_output: &RunOutput) -> Result<Vec<&SubRunOutput>, Runne
         .map(|subrun| subrun.as_ref().ok().unwrap())
         .collect());
 }
+
+const GCC_RS_DRIVER: &'static str = r#"
+macro_rules! impl_int {
+    ($($ty:ident = $lang:literal),*) => {
+        $(
+            impl $ty {
+                pub fn wrapping_add(self, rhs: Self) -> Self {
+                    self + rhs
+                }
+
+                pub fn wrapping_sub(self, rhs: Self) -> Self {
+                    self - rhs
+                }
+
+                pub fn wrapping_mul(self, rhs: Self) -> Self {
+                    self * rhs
+                }
+
+                pub fn wrapping_div(self, rhs: Self) -> Self {
+                    self / rhs
+                }
+
+                pub fn wrapping_rem(self, rhs: Self) -> Self {
+                    self % rhs
+                }
+
+                pub fn wrapping_shl(self, rhs: u32) -> Self {
+                    self << rhs
+                }
+
+                pub fn wrapping_shr(self, rhs: u32) -> Self {
+                    self >> rhs
+                }
+            }
+        )*
+    }
+}
+
+impl_int!(
+    i8 = "i8",
+    i16 = "i16",
+    i32 = "i32",
+    i64 = "i64",
+    i128 = "i128",
+    isize = "isize",
+    u8 = "u8",
+    u16 = "u16",
+    u32 = "u32",
+    u64 = "u64",
+    u128 = "u128",
+    usize = "usize"
+);
+
+extern "C" {
+    fn printf(s: *const i8, ...);
+}
+
+fn print_int(value: u128) {
+    let s = "%d\n\0";
+    let s_p = s as *const str;
+    let c_p = s_p as *const i8;
+    unsafe {
+        printf(c_p, value as isize);
+    }
+}
+
+"#;

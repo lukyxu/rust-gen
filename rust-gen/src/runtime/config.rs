@@ -49,6 +49,10 @@ impl RustVersion {
     pub fn mrustc_version() -> RustVersion {
         RustVersion("1.29.1-b364724f".to_owned())
     }
+
+    pub fn gccrs_version() -> RustVersion {
+        RustVersion("12.0.1-20220118".to_owned())
+    }
 }
 
 impl ToString for RustVersion {
@@ -61,6 +65,7 @@ impl ToString for RustVersion {
 pub enum RustCompiler{
     RustC,
     MrustC,
+    GCCRS,
 }
 
 impl ToString for RustCompiler {
@@ -68,6 +73,7 @@ impl ToString for RustCompiler {
         match self {
             RustCompiler::RustC => "rustc",
             RustCompiler::MrustC => "mrustc",
+            RustCompiler::GCCRS => "gccrs"
         }.to_owned()
     }
 }

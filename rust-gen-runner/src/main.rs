@@ -85,6 +85,12 @@ struct Args {
     rustfmt: bool,
     #[clap(long, help = "Removes unremoved temp output files in tmp directory.")]
     clean: bool,
+    #[clap(long, help = "Excludes rustc subruns.")]
+    exclude_rustc: bool,
+    #[clap(long, help = "Include mrustc subruns.")]
+    include_mrustc: bool,
+    #[clap(long, help = "Include gccrs subruns.")]
+    include_gccrs: bool,
 }
 
 pub fn main() {
@@ -123,7 +129,9 @@ pub fn main() {
         base_name,
         opts,
         versions,
-        run_mrustc: true,
+        run_rustc: !args.exclude_rustc,
+        run_mrustc: args.include_mrustc,
+        run_gccrs: args.include_gccrs,
         rustfmt: args.rustfmt,
         generate_timeout: Duration::from_secs(args.generate_timeout),
         compile_timeout: Duration::from_secs(args.compile_timeout),
