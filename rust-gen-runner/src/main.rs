@@ -123,6 +123,7 @@ pub fn main() {
         base_name,
         opts,
         versions,
+        run_mrustc: true,
         rustfmt: args.rustfmt,
         generate_timeout: Duration::from_secs(args.generate_timeout),
         compile_timeout: Duration::from_secs(args.compile_timeout),

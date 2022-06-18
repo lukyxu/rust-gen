@@ -167,7 +167,7 @@ impl StructTemplate {
 }
 
 fn generate_checksum_and_emit(file: &mut RustFile) -> String {
-    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true, true);
+    let mut checksum_gen_visitor = ChecksumGenVisitor::new(true, true, false);
     checksum_gen_visitor.visit_file(file);
     let mut emit_visitor = EmitVisitor::default();
     emit_visitor.visit_file(file);
@@ -310,13 +310,13 @@ fn struct_block_partial_move() {
 fn struct_block_partial_reassign() {
     let mut template = StructTemplate::default();
     template.add_stmt(StructTemplate::struct_ident_stmt("s2"));
-    // let block_stmts = vec![Stmt::Semi(SemiStmt {
-    //     expr: AssignExpr {
-    //         place: StructTemplate::tuple_field_expr("s2", 0).into(),
-    //         rhs: Box::new(StructTemplate::struct1_expr(3))
-    //     }.into()
-    // })];
-    // template.add_stmt(StructTemplate::block_stmt(block_stmts));
+    let block_stmts = vec![Stmt::Semi(SemiStmt {
+        expr: AssignExpr {
+            place: StructTemplate::tuple_field_expr("s2", 0).into(),
+            rhs: Box::new(StructTemplate::struct1_expr(3))
+        }.into()
+    })];
+    template.add_stmt(StructTemplate::block_stmt(block_stmts));
     let output = generate_checksum_and_emit(&mut template.2);
     assert!(!output.contains("checksum = (checksum + (((s2.0).0) as u128));"));
     assert!(!output.contains("checksum = (checksum + (((s2.1).0) as u128));"));

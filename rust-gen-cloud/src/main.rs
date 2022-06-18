@@ -39,6 +39,7 @@ pub fn main() {
         // opts: vec![OptLevel::no_opt()],
         versions: RustVersion::supported_rust_versions(),
         // versions: vec![RustVersion::stable()],
+        run_mrustc: false,
         rustfmt: true,
         generate_timeout: Duration::from_secs(30),
         compile_timeout: Duration::from_secs(60),

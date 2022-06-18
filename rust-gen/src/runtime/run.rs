@@ -1,6 +1,6 @@
 use crate::generator::{run_generator, GeneratorOutput, GeneratorResult};
 use crate::policy::Policy;
-use crate::runtime::config::{OptLevel, RustVersion};
+use crate::runtime::config::{OptLevel, RustCompiler, RustVersion};
 use crate::runtime::error::{
     CompilationError, CompilationTimeoutError, DifferingChecksumError, GeneratorTimeoutError,
     RunError, RunTimeoutError, RunnerError, RustFmtError, RustFmtTimeoutError,
@@ -18,7 +18,7 @@ use std::str::FromStr;
 use std::sync::mpsc::RecvTimeoutError;
 use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
-use std::{fs, thread};
+use std::{env, fs, thread};
 
 pub type Statistics = (FullGenerationStatistics, Option<FullProgramStatistics>);
 
@@ -137,6 +137,7 @@ pub struct Runner {
     pub no_compile: bool,
     pub opts: Vec<OptLevel>,
     pub versions: Vec<RustVersion>,
+    pub run_mrustc: bool,
     pub rustfmt: bool,
     pub generate_timeout: Duration,
     pub compile_timeout: Duration,
@@ -238,7 +239,18 @@ impl Runner {
             for opt in &self.opts {
                 run_output
                     .subruns
-                    .push(self.subrun(opt, version, &rust_file));
+                    .push(self.subrun(&RustCompiler::RustC, opt, version, &rust_file));
+            }
+        }
+
+        if self.run_mrustc {
+            run_output
+                .subruns
+                .push(self.subrun(&RustCompiler::MrustC, &OptLevel::no_opt(), &RustVersion::mrustc_version(), &rust_file));
+            if self.opts.len() > 1 {
+                run_output
+                    .subruns
+                    .push(self.subrun(&RustCompiler::MrustC, &OptLevel::some_opt(), &RustVersion::mrustc_version(), &rust_file));
             }
         }
 
@@ -327,12 +339,13 @@ impl Runner {
 
     fn subrun<P: AsRef<Path>>(
         &self,
+        compiler: &RustCompiler,
         opt: &OptLevel,
         version: &RustVersion,
         rust_file: P,
     ) -> SubRunResult {
         let mut subrun_output = SubRunOutput {
-            compiler_name: "rustc".to_string(),
+            compiler_name: compiler.to_string(),
             opt: opt.clone(),
             version: version.clone(),
             executable_file: None,
@@ -344,7 +357,7 @@ impl Runner {
             self.base_name.clone() + "-" + &version.to_string() + "-" + &opt.to_string();
         let output_file = self.tmp_dir.join(output_file_name);
         let compilation_result =
-            timed_compile_program(self.compile_timeout, &rust_file, &output_file, opt, version);
+            timed_compile_program(self.compile_timeout, &rust_file, &output_file, compiler,opt, version);
         subrun_output.compilation_duration = Some(compilation_result.0);
         subrun_output.executable_file = Some(
             compilation_result
@@ -402,38 +415,58 @@ fn timed_compile_program<P: AsRef<Path>, S: AsRef<Path>>(
     timeout: Duration,
     input_file: P,
     output_file: S,
+    compiler: &RustCompiler,
     opt_level: &OptLevel,
     version: &RustVersion,
 ) -> Timed<CompilationResult> {
     let input_file = Arc::new(input_file.as_ref().to_path_buf());
     let output_file = Arc::new(output_file.as_ref().to_path_buf());
+    let compiler = Arc::new(compiler.clone());
     let opt_level = Arc::new(opt_level.clone());
     let version = Arc::new(version.clone());
     Timed::<CompilationResult>::run_with_timeout(
         timeout,
-        Box::new(move || compile_program(&*input_file, &*output_file, &*opt_level, &*version)),
+        Box::new(move || compile_program(&*input_file, &*output_file, &*compiler, &*opt_level, &*version)),
     )
 }
 
 fn compile_program<P: AsRef<Path>, S: AsRef<Path>>(
     input_file: P,
     output_file: S,
+    compiler: &RustCompiler,
     opt_level: &OptLevel,
     version: &RustVersion,
 ) -> CompilationResult {
-    let output = Command::new("rustc")
-        .args([
-            &format!("+{}", version.to_string()),
-            "-A",
-            "warnings",
-            "-C",
-            &format!("opt-level={}", opt_level.to_string()),
-            input_file.as_ref().to_str().unwrap(),
-            "-o",
-            output_file.as_ref().to_str().unwrap(),
-        ])
-        .output()
-        .expect("Failed to execute compile process");
+    let mut command = Command::new(compiler.to_string());
+    let args: Vec<String> = match compiler {
+        RustCompiler::RustC => {
+            vec![
+                format!("+{}", version.to_string()),
+                "-A".to_owned(),
+                "warnings".to_owned(),
+                "-C".to_owned(),
+                format!("opt-level={}", opt_level.to_string()),
+                input_file.as_ref().to_str().unwrap().to_owned(),
+                "-o".to_owned(),
+                output_file.as_ref().to_str().unwrap().to_owned(),
+            ]
+        },
+        RustCompiler::MrustC => {
+            let mut args = vec![
+                input_file.as_ref().to_str().unwrap().to_owned(),
+                "-L".to_owned(),
+                env::var("MRUSTC_STD_PATH").expect("MRUSTC_STD_PATH not set"),
+                "-o".to_owned(),
+                output_file.as_ref().to_str().unwrap().to_owned(),
+            ];
+            if opt_level != &OptLevel::no_opt() {
+                args.push("-O".to_owned())
+            }
+            args
+        }
+    };
+
+    let output = command.args(args).output().expect("Failed to execute compile process");
 
     if !output.status.success() {
         return Err(CompilationError::new(

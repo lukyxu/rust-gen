@@ -5,6 +5,10 @@ impl OptLevel {
         OptLevel('0')
     }
 
+    pub fn some_opt() -> OptLevel {
+        OptLevel('2')
+    }
+
     pub fn all_opt_levels() -> Vec<OptLevel> {
         vec![
             OptLevel('0'),
@@ -41,10 +45,29 @@ impl RustVersion {
     pub fn supported_rust_versions() -> Vec<RustVersion> {
         RUST_VERSIONS.map(&str::to_string).map(RustVersion).to_vec()
     }
+
+    pub fn mrustc_version() -> RustVersion {
+        RustVersion("1.29.1-b364724f".to_owned())
+    }
 }
 
 impl ToString for RustVersion {
     fn to_string(&self) -> String {
         self.0.clone()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum RustCompiler{
+    RustC,
+    MrustC,
+}
+
+impl ToString for RustCompiler {
+    fn to_string(&self) -> String {
+        match self {
+            RustCompiler::RustC => "rustc",
+            RustCompiler::MrustC => "mrustc",
+        }.to_owned()
     }
 }

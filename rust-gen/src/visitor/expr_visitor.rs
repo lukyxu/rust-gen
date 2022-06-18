@@ -1,6 +1,6 @@
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr,
+    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr,
     TupleExpr, TupleStructExpr, UnaryExpr,
 };
 
@@ -32,7 +32,7 @@ impl Default for ExprVisitor {
             expr: None,
             symbol_table: ExprSymbolTable::default(),
             prev_symbol_tables: vec![],
-            max_attempt_fix: 2,
+            max_attempt_fix: 1,
         }
     }
 }

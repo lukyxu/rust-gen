@@ -297,7 +297,11 @@ impl BinaryExpr {
 
     pub fn replacement_op(&self, error: EvalExprError) -> BinaryOp {
         match self.op {
-            BinaryOp::Add => BinaryOp::Sub,
+            BinaryOp::Add => match error {
+                SignedOverflow => BinaryOp::Sub,
+                UnsignedOverflow => BinaryOp::WrappingAdd,
+                _ => panic!(),
+            },
             BinaryOp::Sub => match error {
                 SignedOverflow => BinaryOp::Add,
                 UnsignedOverflow => BinaryOp::WrappingSub,

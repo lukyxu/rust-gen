@@ -130,6 +130,7 @@ impl TypeSymbolTable {
             if matches!(ty.ownership_state(), OwnershipState::NotApplicable) {
                 return;
             }
+
             ty.set_ownership_state(OwnershipState::Owned);
         }
     }
