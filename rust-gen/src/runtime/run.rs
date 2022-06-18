@@ -523,13 +523,14 @@ fn run_program<P: AsRef<Path>, S: AsRef<Path>>(rust_file: P, executable: S, runn
     let output = Command::new(executable.to_str().unwrap())
         .output()
         .expect("Failed to execute runtime process");
-    if !output.status.success() && (!running_gccrs || matches!(output.status.code(), Some(1)))  {
+    if (!output.status.success() && (!running_gccrs || matches!(output.status.code(), Some(1)))) || String::from_utf8(output.stdout.clone()).expect("Invalid stdout").trim_end().is_empty()  {
         return Err(RunError::new(
             rust_file.to_path_buf(),
             executable.to_path_buf(),
             &output,
         ));
     }
+
     Ok(u128::from_str(
         String::from_utf8(output.stdout)
             .expect("Invalid stdout")

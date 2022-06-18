@@ -679,6 +679,7 @@ version = "0.3.0"
 dependencies = [
  "bigdecimal",
  "chrono",
+ "clap",
  "diesel",
  "dotenv",
  "num-bigint",

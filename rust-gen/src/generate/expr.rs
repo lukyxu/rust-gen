@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;
 use std::cmp::max;
 use std::collections::HashMap;
+use std::ops::Deref;
 
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, ExprKind, Field, FieldExpr,
@@ -542,8 +543,13 @@ impl IndexExpr {
         }
 
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
+        // let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
+        let place: Result<PlaceExpr, _> = (*base.clone()).try_into();
+        if place.is_ok() && !ctx.type_symbol_table.get_tracked_ty(&base).unwrap().movable() {
+            return None;
+        }
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
             rhs: Box::new(LitIntExpr::new(array_type.len as u128, UIntTy::USize.into()).into()),

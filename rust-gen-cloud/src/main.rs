@@ -16,6 +16,7 @@ use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::{RunOutput, Runner};
 use std::time::Duration;
+use clap::Parser;
 use uuid::Uuid;
 
 pub fn establish_connection() -> MysqlConnection {
@@ -26,7 +27,29 @@ pub fn establish_connection() -> MysqlConnection {
         .expect(&format!("Error connecting to {}", database_url))
 }
 
+#[derive(Parser, Debug)]
+#[clap(author, version, about, about = "Randomized rust program generator.")]
+struct Args {
+    #[clap(
+    short,
+    long,
+    help = "Generation policy. By default, the policy is randomly chosen. Use the flag \"-p help\" for a list of available policies"
+    )]
+    policy: Option<String>,
+    #[clap(
+    short,
+    long,
+    help = "Number of programs to be generated, compiled and runtime."
+    )]
+    num_runs: Option<u64>,
+    #[clap(long, help = "Include mrustc subruns.")]
+    include_mrustc: bool,
+    #[clap(long, help = "Include gccrs subruns.")]
+    include_gccrs: bool,
+}
+
 pub fn main() {
+    let args: Args = Args::parse();
     let tmp_dir = std::env::temp_dir().join(format!("rust-gen-{}", Uuid::new_v4()));
     std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
     let connection = establish_connection();
@@ -40,16 +63,16 @@ pub fn main() {
         versions: RustVersion::supported_rust_versions(),
         // versions: vec![RustVersion::stable()],
         run_rustc: true,
-        run_mrustc: false,
-        run_gccrs: false,
+        run_mrustc: args.include_mrustc,
+        run_gccrs: args.include_gccrs,
         rustfmt: true,
         generate_timeout: Duration::from_secs(30),
         compile_timeout: Duration::from_secs(60),
         run_timeout: Duration::from_secs(1),
         rustfmt_timeout: Duration::from_secs(120),
     };
-    for i in 0..1000000 {
-        let policy = Policy::parse_policy_args_or_random(&None);
+    for i in 0..args.num_runs.unwrap_or(u64::MAX) {
+        let policy = Policy::parse_policy_args_or_random(&args.policy);
         let seed = rand::thread_rng().gen();
         println!("Running policy {} seed {} run {}", policy.name, seed, i);
         let output = runner.run(Some(seed), &policy);
