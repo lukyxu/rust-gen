@@ -3,7 +3,7 @@ use crate::ast::ty::{
     GTupleStructTy, GTupleTy, GTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty,
 };
 use serde::{Deserialize, Serialize};
-use crate::ast::expr::IdentExpr;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OwnershipState {
@@ -51,7 +51,7 @@ impl TrackedTy {
                     .iter()
                     .map(TrackedTy::ownership_state)
                     .any(|state| {
-                        state == OwnershipState::Owned || state == OwnershipState::PartiallyOwned
+                        state == OwnershipState::Moved || state == OwnershipState::PartiallyOwned
                     })
                 {
                     return OwnershipState::PartiallyOwned;
@@ -251,6 +251,9 @@ pub type TrackedTupleTy = GTupleTy<OwnershipState>;
 
 impl TrackedTupleTy {
     pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        if self.is_copy() {
+            return
+        }
         self.assoc = state;
         self.tuple
             .iter_mut()
@@ -286,6 +289,9 @@ pub type TrackedArrayTy = GArrayTy<OwnershipState>;
 
 impl TrackedArrayTy {
     pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        if self.is_copy() {
+            return
+        }
         self.assoc = state;
         self.base_ty.set_ownership_state(state);
     }
