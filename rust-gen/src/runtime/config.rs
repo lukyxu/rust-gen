@@ -62,7 +62,7 @@ impl ToString for RustVersion {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum RustCompiler{
+pub enum RustCompiler {
     RustC,
     MrustC,
     GCCRS,
@@ -73,7 +73,8 @@ impl ToString for RustCompiler {
         match self {
             RustCompiler::RustC => "rustc",
             RustCompiler::MrustC => "mrustc",
-            RustCompiler::GCCRS => "gccrs"
-        }.to_owned()
+            RustCompiler::GCCRS => "gccrs",
+        }
+        .to_owned()
     }
 }

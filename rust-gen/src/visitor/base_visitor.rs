@@ -1,4 +1,8 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
+    FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr,
+    ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 use crate::ast::file::RustFile;
 
 use crate::ast::function::Function;
@@ -201,7 +205,9 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
         Expr::Index(index_expr) => visitor.visit_index_expr(index_expr),
         Expr::Struct(struct_expr) => visitor.visit_struct_expr(struct_expr),
         Expr::Reference(reference_expr) => visitor.visit_reference_expr(reference_expr),
-        Expr::FunctionCall(function_call_expr) => visitor.visit_function_call_expr(function_call_expr),
+        Expr::FunctionCall(function_call_expr) => {
+            visitor.visit_function_call_expr(function_call_expr)
+        }
     }
 }
 
@@ -330,7 +336,6 @@ pub fn walk_function_call_expr<V: Visitor>(
 ) {
     visitor.visit_name(name);
 }
-
 
 pub fn walk_field<V: Visitor>(visitor: &mut V, Field { name, expr }: &mut Field) {
     visitor.visit_name(name);

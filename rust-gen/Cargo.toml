@@ -12,11 +12,3 @@ ron = { git = "https://github.com/ron-rs/ron.git", rev = "366c1d8" }
 derive_builder = "0.11.2"
 rpds = "0.11.0"
 archery = "0.4.0"
-
-[dependencies.uuid]
-version = "1.1.1"
-features = [
-    "v4",                # Lets you generate random UUIDs
-    "fast-rng",          # Use a faster (but still sufficiently random) RNG
-    "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
-]

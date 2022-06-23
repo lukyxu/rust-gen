@@ -240,32 +240,45 @@ impl Runner {
         if self.run_rustc {
             for version in &self.versions {
                 for opt in &self.opts {
-                    run_output
-                        .subruns
-                        .push(self.subrun(&RustCompiler::RustC, opt, version, &rust_file));
+                    run_output.subruns.push(self.subrun(
+                        &RustCompiler::RustC,
+                        opt,
+                        version,
+                        &rust_file,
+                    ));
                 }
             }
         }
 
         if self.run_mrustc {
-            run_output
-                .subruns
-                .push(self.subrun(&RustCompiler::MrustC, &OptLevel::no_opt(), &RustVersion::mrustc_version(), &rust_file));
+            run_output.subruns.push(self.subrun(
+                &RustCompiler::MrustC,
+                &OptLevel::no_opt(),
+                &RustVersion::mrustc_version(),
+                &rust_file,
+            ));
             if self.opts.len() > 1 {
-                run_output
-                    .subruns
-                    .push(self.subrun(&RustCompiler::MrustC, &OptLevel::some_opt(), &RustVersion::mrustc_version(), &rust_file));
+                run_output.subruns.push(self.subrun(
+                    &RustCompiler::MrustC,
+                    &OptLevel::some_opt(),
+                    &RustVersion::mrustc_version(),
+                    &rust_file,
+                ));
             }
         }
 
         if self.run_gccrs {
             let mut program_gccrs = GCC_RS_DRIVER.to_owned();
-            program_gccrs.push_str(&program.replace("println!(\"{}\", checksum)", "print_int(checksum);"));
+            program_gccrs
+                .push_str(&program.replace("println!(\"{}\", checksum)", "print_int(checksum);"));
             let gcc_rs_path = self.tmp_dir.join(self.base_name.clone() + "-gccrs" + ".rs");
             fs::write(&gcc_rs_path, &program_gccrs).expect("Unable to write file");
-            run_output
-                .subruns
-                .push(self.subrun(&RustCompiler::GCCRS, &OptLevel::no_opt(), &RustVersion::gccrs_version(), &gcc_rs_path));
+            run_output.subruns.push(self.subrun(
+                &RustCompiler::GCCRS,
+                &OptLevel::no_opt(),
+                &RustVersion::gccrs_version(),
+                &gcc_rs_path,
+            ));
             run_output.files.push(gcc_rs_path);
         }
 
@@ -282,9 +295,10 @@ impl Runner {
         let subrun_outputs = subrun_validation(&run_output)?;
 
         // Compare outputs
-        if !subrun_outputs.is_empty() && !subrun_outputs
-            .iter()
-            .all(|run| run.checksum == subrun_outputs[0].checksum)
+        if !subrun_outputs.is_empty()
+            && !subrun_outputs
+                .iter()
+                .all(|run| run.checksum == subrun_outputs[0].checksum)
         {
             return Err(RunnerError::DifferingChecksum(
                 DifferingChecksumError {
@@ -371,8 +385,14 @@ impl Runner {
         let output_file_name =
             self.base_name.clone() + "-" + &version.to_string() + "-" + &opt.to_string();
         let output_file = self.tmp_dir.join(output_file_name);
-        let compilation_result =
-            timed_compile_program(self.compile_timeout, &rust_file, &output_file, compiler,opt, version);
+        let compilation_result = timed_compile_program(
+            self.compile_timeout,
+            &rust_file,
+            &output_file,
+            compiler,
+            opt,
+            version,
+        );
         subrun_output.compilation_duration = Some(compilation_result.0);
         subrun_output.executable_file = Some(
             compilation_result
@@ -387,7 +407,12 @@ impl Runner {
                 ))?
                 .map_err(|err| SubRunError::CompilationFailure(err, subrun_output.clone()))?,
         );
-        let run_executable_result = timed_run_program(self.run_timeout, &rust_file, &output_file, *compiler == RustCompiler::GCCRS);
+        let run_executable_result = timed_run_program(
+            self.run_timeout,
+            &rust_file,
+            &output_file,
+            *compiler == RustCompiler::GCCRS,
+        );
         subrun_output.run_duration = Some(run_executable_result.0);
         subrun_output.checksum = Some(
             run_executable_result
@@ -441,7 +466,15 @@ fn timed_compile_program<P: AsRef<Path>, S: AsRef<Path>>(
     let version = Arc::new(version.clone());
     Timed::<CompilationResult>::run_with_timeout(
         timeout,
-        Box::new(move || compile_program(&*input_file, &*output_file, &*compiler, &*opt_level, &*version)),
+        Box::new(move || {
+            compile_program(
+                &*input_file,
+                &*output_file,
+                &*compiler,
+                &*opt_level,
+                &*version,
+            )
+        }),
     )
 }
 
@@ -465,7 +498,7 @@ fn compile_program<P: AsRef<Path>, S: AsRef<Path>>(
                 "-o".to_owned(),
                 output_file.as_ref().to_str().unwrap().to_owned(),
             ]
-        },
+        }
         RustCompiler::MrustC => {
             let mut args = vec![
                 input_file.as_ref().to_str().unwrap().to_owned(),
@@ -488,7 +521,10 @@ fn compile_program<P: AsRef<Path>, S: AsRef<Path>>(
         }
     };
 
-    let output = command.args(args).output().expect("Failed to execute compile process");
+    let output = command
+        .args(args)
+        .output()
+        .expect("Failed to execute compile process");
 
     if !output.status.success() {
         return Err(CompilationError::new(
@@ -517,13 +553,22 @@ fn timed_run_program<P: AsRef<Path>, S: AsRef<Path>>(
     )
 }
 
-fn run_program<P: AsRef<Path>, S: AsRef<Path>>(rust_file: P, executable: S, running_gccrs: bool) -> RunExecutableResult {
+fn run_program<P: AsRef<Path>, S: AsRef<Path>>(
+    rust_file: P,
+    executable: S,
+    running_gccrs: bool,
+) -> RunExecutableResult {
     let rust_file = rust_file.as_ref();
     let executable = executable.as_ref();
     let output = Command::new(executable.to_str().unwrap())
         .output()
         .expect("Failed to execute runtime process");
-    if (!output.status.success() && (!running_gccrs || matches!(output.status.code(), Some(1)))) || String::from_utf8(output.stdout.clone()).expect("Invalid stdout").trim_end().is_empty()  {
+    if (!output.status.success() && (!running_gccrs || matches!(output.status.code(), Some(1))))
+        || String::from_utf8(output.stdout.clone())
+            .expect("Invalid stdout")
+            .trim_end()
+            .is_empty()
+    {
         return Err(RunError::new(
             rust_file.to_path_buf(),
             executable.to_path_buf(),

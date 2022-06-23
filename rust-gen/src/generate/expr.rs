@@ -3,7 +3,11 @@ use rand::prelude::SliceRandom;
 use std::cmp::max;
 use std::collections::HashMap;
 
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, ExprKind, Field, FieldExpr, FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, ExprKind, Field, FieldExpr,
+    FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::{
@@ -48,7 +52,9 @@ impl Expr {
             ExprKind::Cast => CastExpr::generate_expr(ctx, res_type).map(From::from),
             ExprKind::Index => IndexExpr::generate_expr(ctx, res_type).map(From::from),
             ExprKind::Field => FieldExpr::generate_expr(ctx, res_type).map(From::from),
-            ExprKind::FunctionCall => FunctionCallExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::FunctionCall => {
+                FunctionCallExpr::generate_expr(ctx, res_type).map(From::from)
+            }
             _ => panic!("ExprKind {:?} not supported yet", expr_kind),
         }
     }
@@ -629,17 +635,13 @@ impl FunctionCallExpr {
     pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<FunctionCallExpr> {
         track_expr(
             ExprKind::FunctionCall,
-            revert_ctx_on_failure(Box::new(
-                FunctionCallExpr::generate_expr_internal,
-            ))
+            revert_ctx_on_failure(Box::new(FunctionCallExpr::generate_expr_internal)),
         )(ctx, res_type)
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<FunctionCallExpr> {
         let ident = ctx.choose_function_call_by_type(res_type)?;
-        Some(FunctionCallExpr {
-            name: ident.name
-        })
+        Some(FunctionCallExpr { name: ident.name })
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {

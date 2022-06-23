@@ -290,14 +290,14 @@ impl Context {
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
         let names = self.type_symbol_table.get_names_by_type(ty);
         Some(IdentExpr {
-            name: names.choose(&mut self.rng).cloned()?
+            name: names.choose(&mut self.rng).cloned()?,
         })
     }
 
     pub fn choose_function_call_by_type(&mut self, ty: &Ty) -> Option<FunctionCallExpr> {
         let names = self.function_symbol_table.get_names_by_type(ty);
         Some(FunctionCallExpr {
-            name: names.choose(&mut self.rng).cloned()?
+            name: names.choose(&mut self.rng).cloned()?,
         })
     }
 
