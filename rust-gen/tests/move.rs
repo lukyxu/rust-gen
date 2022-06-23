@@ -6,7 +6,7 @@ use rust_gen::ast::file::RustFile;
 use rust_gen::ast::function::Function;
 use rust_gen::ast::item::{FunctionItem, Item, StructItem};
 use rust_gen::ast::stmt::{InitLocalStmt, SemiStmt, Stmt};
-use rust_gen::ast::ty::{StructTy, TupleStructTy, TupleTy, UIntTy};
+use rust_gen::ast::ty::{StructTy, TupleStructTy, TupleTy, Ty, UIntTy};
 use rust_gen::visitor::base_visitor::Visitor;
 use rust_gen::visitor::checksum_gen_visitor::ChecksumGenVisitor;
 use rust_gen::visitor::emit_visitor::EmitVisitor;
@@ -60,6 +60,7 @@ impl StructTemplate {
                 FunctionItem {
                     function: Function {
                         name: "main".to_string(),
+                        return_ty: Ty::unit_type(),
                         block: BlockExpr {
                             stmts: vec![
                                 // let s2 = Struct2(Struct1(1), (Struct1(2)));
