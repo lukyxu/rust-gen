@@ -1,15 +1,15 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
-use crate::ast::file::RustFile;
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+
 use crate::ast::function::Function;
-use crate::ast::item::{FunctionItem, Item, StructItem};
-use crate::ast::op::{BinaryOp, UnaryOp};
+
+
 
 use crate::generate::eval_expr::{
     EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
     EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
 };
 
-use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
@@ -575,6 +575,7 @@ mod tests {
     fn assign_scope_test() {
         let mut func = Function {
             name: "main".to_owned(),
+            return_ty: Ty::unit_type(),
             block: BlockExpr {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
@@ -633,6 +634,7 @@ mod tests {
     fn assign_if_true_test() {
         let mut func = Function {
             name: "main".to_owned(),
+            return_ty: Ty::unit_type(),
             block: BlockExpr {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
@@ -704,6 +706,7 @@ mod tests {
     fn assign_if_false_test() {
         let mut func = Function {
             name: "main".to_owned(),
+            return_ty: Ty::unit_type(),
             block: BlockExpr {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
