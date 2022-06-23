@@ -6,6 +6,7 @@ extern crate diesel;
 
 use crate::model::statistic::StatisticsInfo;
 use crate::model::statistic_map::StatisticsMapInfo;
+use clap::Parser;
 use diesel::{Connection, MysqlConnection};
 use dotenv::dotenv;
 use model::policy::PolicyInfo;
@@ -16,7 +17,6 @@ use rust_gen::policy::Policy;
 use rust_gen::runtime::config::{OptLevel, RustVersion};
 use rust_gen::runtime::run::{RunOutput, Runner};
 use std::time::Duration;
-use clap::Parser;
 use uuid::Uuid;
 
 pub fn establish_connection() -> MysqlConnection {
@@ -31,15 +31,15 @@ pub fn establish_connection() -> MysqlConnection {
 #[clap(author, version, about, about = "Randomized rust program generator.")]
 struct Args {
     #[clap(
-    short,
-    long,
-    help = "Generation policy. By default, the policy is randomly chosen. Use the flag \"-p help\" for a list of available policies"
+        short,
+        long,
+        help = "Generation policy. By default, the policy is randomly chosen. Use the flag \"-p help\" for a list of available policies"
     )]
     policy: Option<String>,
     #[clap(
-    short,
-    long,
-    help = "Number of programs to be generated, compiled and runtime."
+        short,
+        long,
+        help = "Number of programs to be generated, compiled and runtime."
     )]
     num_runs: Option<u64>,
     #[clap(long, help = "Include mrustc subruns.")]

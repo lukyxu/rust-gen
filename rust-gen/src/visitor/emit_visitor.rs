@@ -1,7 +1,11 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
+    FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
-use crate::ast::item::{StructItem};
+use crate::ast::item::StructItem;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::{CustomStmt, ExprStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{IntTy, Lifetime, StructTy, Ty, UIntTy};
@@ -63,7 +67,8 @@ impl Visitor for EmitVisitor {
     fn visit_function(&mut self, function: &mut Function) {
         self.output.push_str(&format!("fn {}() ", function.name));
         if !function.return_ty.is_unit() {
-            self.output.push_str(&format!("-> {} ", function.return_ty.to_string()));
+            self.output
+                .push_str(&format!("-> {} ", function.return_ty.to_string()));
         }
         self.visit_block_expr(&mut function.block);
     }
@@ -353,7 +358,7 @@ impl Visitor for EmitVisitor {
     }
 
     fn visit_function_call_expr(&mut self, expr: &mut FunctionCallExpr) {
-        self.output.push_str(&format!("{}()",expr.name))
+        self.output.push_str(&format!("{}()", expr.name))
     }
 
     fn visit_field(&mut self, field: &mut Field) {

@@ -38,7 +38,7 @@ pub enum Expr {
     /// Reference expression such as `&a` or `&mut a`.
     Reference(ReferenceExpr), // TODO: Path, Box
     /// Function call expression such as `f()`
-    FunctionCall(FunctionCallExpr)
+    FunctionCall(FunctionCallExpr),
 }
 
 impl Expr {

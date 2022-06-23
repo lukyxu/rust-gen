@@ -314,8 +314,9 @@ fn struct_block_partial_reassign() {
     let block_stmts = vec![Stmt::Semi(SemiStmt {
         expr: AssignExpr {
             place: StructTemplate::tuple_field_expr("s2", 0).into(),
-            rhs: Box::new(StructTemplate::struct1_expr(3))
-        }.into()
+            rhs: Box::new(StructTemplate::struct1_expr(3)),
+        }
+        .into(),
     })];
     template.add_stmt(StructTemplate::block_stmt(block_stmts));
     let output = generate_checksum_and_emit(&mut template.2);

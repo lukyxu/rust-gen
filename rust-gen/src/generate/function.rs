@@ -32,9 +32,11 @@ impl Function {
         let res_ty = Ty::fuzz_type(ctx)?;
         let block = BlockExpr::generate_expr_internal(ctx, &res_ty)?;
         let fn_name = ctx.create_function_name();
-        ctx.function_symbol_table.add_var(fn_name.clone(), &res_ty, true);
+        ctx.function_symbol_table
+            .add_var(fn_name.clone(), &res_ty, true);
         if !ctx.generable_function_call_type_map.contains(&res_ty) {
-            ctx.generable_function_call_type_map = ctx.generable_function_call_type_map.insert(res_ty.clone());
+            ctx.generable_function_call_type_map =
+                ctx.generable_function_call_type_map.insert(res_ty.clone());
         }
         Some(Function {
             name: fn_name,

@@ -1,8 +1,10 @@
-use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::expr::{
+    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
+    FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+};
 
 use crate::ast::function::Function;
-
-
 
 use crate::generate::eval_expr::{
     EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
@@ -13,7 +15,7 @@ use crate::ast::stmt::{CustomStmt, DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
-use crate::visitor::base_visitor::{Visitor, walk_function};
+use crate::visitor::base_visitor::{walk_function, Visitor};
 
 #[derive(Clone)]
 /// Visitor used to correct certain behaviours that would result in runtime errors.
@@ -52,7 +54,8 @@ impl ExprVisitor {
     }
 
     pub fn add_function(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
-        self.functions_mapping.add_expr(key, value.clone(), ty.clone());
+        self.functions_mapping
+            .add_expr(key, value.clone(), ty.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
@@ -177,7 +180,11 @@ impl Visitor for ExprVisitor {
 
     fn visit_function(&mut self, function: &mut Function) {
         walk_function(self, function);
-        self.add_function(&function.name, self.expr.clone().as_ref().unwrap(), &function.return_ty);
+        self.add_function(
+            &function.name,
+            self.expr.clone().as_ref().unwrap(),
+            &function.return_ty,
+        );
     }
 
     // TODO: Implement local decl stmt
