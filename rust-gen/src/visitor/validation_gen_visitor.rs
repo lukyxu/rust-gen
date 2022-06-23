@@ -84,6 +84,7 @@ impl<G: ValidationGen> ValidationGenVisitor<G> {
             }
             Expr::Struct(struct_expr) => self.visit_struct_expr(struct_expr),
             Expr::Reference(reference_expr) => self.visit_reference_expr(reference_expr),
+            Expr::FunctionCall(function_call_expr) => self.visit_function_call_expr(function_call_expr),
         }
     }
 

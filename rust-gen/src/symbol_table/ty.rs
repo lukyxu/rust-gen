@@ -36,12 +36,12 @@ impl TypeSymbolTable {
     }
 
     // TODO: refactor
-    pub fn get_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
+    pub fn get_names_by_type(&self, ty: &Ty) -> Vec<String> {
         self.var_type_mapping
             .iter()
             .filter_map(|(name, mapping)| {
                 (Ty::from(&mapping.ty) == *ty && mapping.ty.movable())
-                    .then(|| IdentExpr { name: name.clone() })
+                    .then(|| name.clone())
             })
             .collect()
     }
@@ -96,7 +96,8 @@ impl TypeSymbolTable {
             | Expr::Array(_)
             | Expr::Index(_)
             | Expr::Struct(_)
-            | Expr::Assign(_) => true,
+            | Expr::Assign(_)
+            | Expr::FunctionCall(_) => true,
             Expr::Ident(ident) => {
                 let mapping = self.var_type_mapping.get_mut(&ident.name).unwrap();
                 match mapping.ty.ownership_state() {

@@ -37,6 +37,8 @@ pub enum Expr {
     Struct(StructExpr),
     /// Reference expression such as `&a` or `&mut a`.
     Reference(ReferenceExpr), // TODO: Path, Box
+    /// Function call expression such as `f()`
+    FunctionCall(FunctionCallExpr)
 }
 
 impl Expr {
@@ -76,6 +78,7 @@ impl Expr {
             Expr::Field(_) => ExprKind::Field,
             Expr::Struct(_) => ExprKind::Literal,
             Expr::Reference(_) => ExprKind::Reference,
+            Expr::FunctionCall(_) => ExprKind::FunctionCall,
         }
     }
 }
@@ -401,6 +404,17 @@ impl From<ReferenceExpr> for Expr {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionCallExpr {
+    pub name: String,
+}
+
+impl From<FunctionCallExpr> for Expr {
+    fn from(expr: FunctionCallExpr) -> Expr {
+        Expr::FunctionCall(expr)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ExprKind {
@@ -415,5 +429,6 @@ pub enum ExprKind {
     Index,
     Field,
     Reference,
+    FunctionCall,
     __Nonexhaustive,
 }

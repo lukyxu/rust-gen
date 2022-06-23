@@ -28,6 +28,7 @@ impl Visitor for ChecksumEvalVisitor {
         for stmt in &mut function.block.stmts {
             self.expr_visitor.visit_stmt(stmt);
         }
+        self.expr_visitor.add_function(&function.name, self.expr_visitor.expr.clone().as_ref().unwrap(), &function.return_ty);
         self.res = self
             .expr_visitor
             .symbol_table

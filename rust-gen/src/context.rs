@@ -1,4 +1,4 @@
-use crate::ast::expr::{ExprKind, IdentExpr};
+use crate::ast::expr::{ExprKind, FunctionCallExpr, IdentExpr};
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
@@ -17,7 +17,9 @@ pub struct Context {
     pub policy: Policy,
     pub name_handler: NameHandler,
     pub type_symbol_table: TypeSymbolTable,
+    pub function_symbol_table: TypeSymbolTable,
     pub generable_ident_type_map: RedBlackTreeSet<Ty>,
+    pub generable_function_call_type_map: RedBlackTreeSet<Ty>,
     pub statistics: GenerationStatistics,
     pub rng: StdRng,
     pub gen_new_array_types: bool,
@@ -51,8 +53,10 @@ impl Context {
             policy: policy.clone(),
             name_handler: NameHandler::default(),
             type_symbol_table: TypeSymbolTable::default(),
+            function_symbol_table: TypeSymbolTable::default(),
             statistics: GenerationStatistics::default(),
             generable_ident_type_map: RedBlackTreeSet::new(),
+            generable_function_call_type_map: RedBlackTreeSet::new(),
             rng,
             gen_new_array_types: true,
             gen_new_tuple_types: true,
@@ -284,8 +288,17 @@ impl Context {
     }
 
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
-        let ident_exprs = self.type_symbol_table.get_ident_exprs_by_type(ty);
-        ident_exprs.choose(&mut self.rng).cloned()
+        let names = self.type_symbol_table.get_names_by_type(ty);
+        Some(IdentExpr {
+            name: names.choose(&mut self.rng).cloned()?
+        })
+    }
+
+    pub fn choose_function_call_by_type(&mut self, ty: &Ty) -> Option<FunctionCallExpr> {
+        let names = self.function_symbol_table.get_names_by_type(ty);
+        Some(FunctionCallExpr {
+            name: names.choose(&mut self.rng).cloned()?
+        })
     }
 
     pub fn choose_copy_tuple_struct(&mut self) -> bool {
