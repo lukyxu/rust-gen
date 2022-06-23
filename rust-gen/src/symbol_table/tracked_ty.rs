@@ -3,6 +3,7 @@ use crate::ast::ty::{
     GTupleStructTy, GTupleTy, GTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty,
 };
 use serde::{Deserialize, Serialize};
+use crate::ast::expr::IdentExpr;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OwnershipState {
@@ -15,6 +16,10 @@ pub enum OwnershipState {
 impl OwnershipState {
     pub fn movable(self) -> bool {
         matches!(self, OwnershipState::NotApplicable | OwnershipState::Owned)
+    }
+
+    pub fn partially_movable(self) -> bool {
+        matches!(self, OwnershipState::NotApplicable | OwnershipState::Owned | OwnershipState::PartiallyOwned)
     }
 }
 
@@ -209,6 +214,10 @@ impl TrackedTy {
 
     pub fn movable(&self) -> bool {
         self.ownership_state().movable()
+    }
+
+    pub fn partially_movable(&self) -> bool {
+        self.ownership_state().partially_movable()
     }
 }
 

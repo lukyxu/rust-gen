@@ -83,6 +83,23 @@ impl TypeSymbolTable {
         }
     }
 
+    pub fn all_movable(&mut self, expr: &Expr) -> bool {
+        match expr {
+            Expr::Field(expr) => {
+                let ty = self.get_tracked_ty(&expr.base);
+                match ty {
+                    None => return true,
+                    Some(ty) => ty.movable() && self.all_movable(&expr.base)
+                }
+            }
+            Expr::Ident(expr) => {
+                let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
+                mapping.ty.movable()
+            }
+            _ => true,
+        }
+    }
+
     pub fn move_expr(&mut self, expr: &Expr) -> bool {
         match expr {
             Expr::Literal(_)

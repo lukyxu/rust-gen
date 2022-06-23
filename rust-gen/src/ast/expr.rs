@@ -3,6 +3,7 @@ use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 
 use crate::ast::op::{BinaryOp, UnaryOp};
 use serde::{Deserialize, Serialize};
+use crate::generate::eval_expr::EvalExpr;
 
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
