@@ -1,28 +1,29 @@
-use crate::ast::expr::{
-    ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr,
-    TupleExpr, TupleStructExpr, UnaryExpr,
-};
+use crate::ast::expr::{ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr, FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr};
+use crate::ast::file::RustFile;
+use crate::ast::function::Function;
+use crate::ast::item::{FunctionItem, Item, StructItem};
+use crate::ast::op::{BinaryOp, UnaryOp};
 
 use crate::generate::eval_expr::{
     EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
     EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
 };
 
-use crate::ast::stmt::{CustomStmt, DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, ExprStmt, InitLocalStmt, SemiStmt, Stmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
-use crate::visitor::base_visitor::Visitor;
+use crate::visitor::base_visitor::{Visitor, walk_function};
 
 #[derive(Clone)]
 /// Visitor used to correct certain behaviours that would result in runtime errors.
 /// Any program generated using generate functions and passed through `ExprVisitor`
 /// should result in valid rust programs which are executable and do not crash.
 pub struct ExprVisitor {
-    expr: Option<EvalExpr>,
+    pub expr: Option<EvalExpr>,
     pub symbol_table: ExprSymbolTable,
     prev_symbol_tables: Vec<ExprSymbolTable>,
+    pub functions_mapping: ExprSymbolTable,
     max_attempt_fix: usize,
 }
 
@@ -32,6 +33,7 @@ impl Default for ExprVisitor {
             expr: None,
             symbol_table: ExprSymbolTable::default(),
             prev_symbol_tables: vec![],
+            functions_mapping: ExprSymbolTable::default(),
             max_attempt_fix: 1,
         }
     }
@@ -47,6 +49,10 @@ impl ExprVisitor {
 
     fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
         self.symbol_table.add_expr(key, value.clone(), ty.clone());
+    }
+
+    pub fn add_function(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
+        self.functions_mapping.add_expr(key, value.clone(), ty.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
@@ -167,6 +173,11 @@ impl Visitor for ExprVisitor {
 
     fn exit_scope(&mut self) {
         self.symbol_table = self.prev_symbol_tables.pop().unwrap();
+    }
+
+    fn visit_function(&mut self, function: &mut Function) {
+        walk_function(self, function);
+        self.add_function(&function.name, self.expr.clone().as_ref().unwrap(), &function.return_ty);
     }
 
     // TODO: Implement local decl stmt
@@ -416,6 +427,17 @@ impl Visitor for ExprVisitor {
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
         self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }));
+    }
+
+    fn visit_function_call_expr(&mut self, expr: &mut FunctionCallExpr) {
+        if let Some(expr) = self.functions_mapping.get_expr_by_name(&expr.name) {
+            self.expr = Some(expr.clone());
+            // Should never evaluated to unknown value
+            assert_ne!(expr, EvalExpr::Unknown);
+        } else {
+            dbg!(&self.functions_mapping);
+            panic!("Unexpected function call expression")
+        }
     }
 }
 

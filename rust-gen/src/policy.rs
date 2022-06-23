@@ -145,7 +145,7 @@ impl Policy {
             Policy::arrays(),
             Policy::structs(),
             Policy::composite(),
-            // Policy::functions()
+            Policy::functions(),
             // Policy::lifetime()
             Policy::ownership_transfer(),
         ]
@@ -588,6 +588,15 @@ impl Policy {
             .new_tuple_prob(1.0)
             .tuple_struct_copy_prob(0.0)
             .field_struct_copy_prob(0.0)
+            .build()
+            .unwrap()
+    }
+
+    pub fn functions() -> Policy {
+        PolicyBuilder::from_policy(Policy::default())
+            .name("functions".to_owned())
+            .expr_dist_with(ExprKind::FunctionCall, 2.0)
+            .item_dist(vec![(ItemKind::Struct, 1.0), (ItemKind::Function, 1.0)])
             .build()
             .unwrap()
     }
