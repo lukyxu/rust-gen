@@ -40,7 +40,7 @@ impl TypeSymbolTable {
         self.var_type_mapping
             .iter()
             .filter_map(|(name, mapping)| {
-                (Ty::from(&mapping.ty) == *ty && mapping.ty.movable()).then(|| name.clone())
+                (Ty::from(&mapping.ty) == *ty).then(|| name.clone())
             })
             .collect()
     }
@@ -80,6 +80,23 @@ impl TypeSymbolTable {
                 Some(&mut mapping.ty)
             }
             _ => None,
+        }
+    }
+
+    pub fn all_movable(&mut self, expr: &Expr) -> bool {
+        match expr {
+            Expr::Field(expr) => {
+                let ty = self.get_tracked_ty(&expr.base);
+                match ty {
+                    None => return true,
+                    Some(ty) => ty.movable() && self.all_movable(&expr.base)
+                }
+            }
+            Expr::Ident(expr) => {
+                let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
+                mapping.ty.movable()
+            }
+            _ => true,
         }
     }
 

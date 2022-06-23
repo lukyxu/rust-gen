@@ -366,7 +366,8 @@ impl IdentExpr {
 
     fn generate_place_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(res_type);
-        mut_ident_exprs.choose(&mut ctx.rng).cloned()
+        let ident = mut_ident_exprs.choose(&mut ctx.rng).cloned()?;
+        Some(ident)
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
@@ -473,6 +474,12 @@ impl FieldExpr {
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
         let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
+
+        let tracked_ty = ctx.type_symbol_table.get_tracked_ty(&base);
+        if tracked_ty.is_some() && !tracked_ty.unwrap().partially_movable() {
+            return None;
+        }
+
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
             .enumerate()
@@ -486,6 +493,12 @@ impl FieldExpr {
     pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
+
+        let tracked_ty = ctx.type_symbol_table.get_tracked_ty(&base);
+        if tracked_ty.is_some() && !tracked_ty.unwrap().partially_movable() {
+            return None;
+        }
+
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
                 field_struct
@@ -546,15 +559,15 @@ impl IndexExpr {
 
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
         // let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
-        let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
+        let base = Box::new(Expr::fuzz_move_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
-        let place: Result<PlaceExpr, _> = (*base.clone()).try_into();
-        if place.is_ok() {
-            let tracked_ty = ctx.type_symbol_table.get_tracked_ty(&base);
-            if tracked_ty.is_some() && tracked_ty.unwrap().movable() {
-                return None;
-            }
+
+        let tracked_ty = ctx.type_symbol_table.get_tracked_ty(&base);
+        if tracked_ty.is_some() && !ctx.type_symbol_table.all_movable(&base) {
+            // Ident needs to be movable
+            return None;
         }
+
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
             rhs: Box::new(LitIntExpr::new(array_type.len as u128, UIntTy::USize.into()).into()),

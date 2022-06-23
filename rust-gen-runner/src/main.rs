@@ -11,6 +11,7 @@ use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use rand::Rng;
 use uuid::Uuid;
 
 #[derive(Parser, Debug)]
@@ -79,6 +80,8 @@ struct Args {
         help = "Option to not runtime differential testing with different versions."
     )]
     no_version: bool,
+    #[clap(long, help = "Runs seed from 0..n")]
+    ascending_seed: bool,
     #[clap(long, help = "Add assertions.")]
     add_assertions: bool,
     #[clap(long, help = "Run rustfmt on generated output.")]
@@ -105,7 +108,7 @@ pub fn main() {
     let base_name = args.base_name.clone();
     let progress_bar = ProgressBar::new(num_rums);
     progress_bar.set_style(ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{bar:50.cyan/blue}] Program {pos:>5}/{len:5} (ETA {eta})")
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:50.cyan/blue}] Program {pos:>5}/{len:5} (ETA {eta}) (Seed {msg})")
         .progress_chars("#>-"));
 
     if Path::exists(Path::new(&output_path)) {
@@ -146,7 +149,9 @@ pub fn main() {
     }
 
     for i in 0..num_rums {
-        run(&runner, &args, i);
+        let seed = if args.ascending_seed { i } else { rand::thread_rng().gen() };
+        progress_bar.set_message(seed.to_string());
+        run(&runner, &args, seed);
         progress_bar.inc(1);
     }
     fs::remove_dir_all(tmp_dir.as_path()).expect("Unable to delete directory");
