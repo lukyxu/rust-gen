@@ -63,7 +63,7 @@ Rust Gen creates programs with the following features:
 | Box       | 🔴    |
 | Reference | 🟢    |
 | Enum      | 🔴    |
-| Struct    | 🔴    |
+| Struct    | 🟢    |
 
 </details>
 
@@ -110,7 +110,7 @@ Rust Gen creates programs with the following features:
 <details><summary>Binary Operations</summary>
 
 | Feature     | Status |
-| ----------- | -------|
+|-------------| -------|
 | Add         | 🟢    |
 | Sub         | 🟢    |
 | Mul         | 🟢    |
@@ -128,6 +128,14 @@ Rust Gen creates programs with the following features:
 | Ne          | 🟢    |
 | Ge          | 🟢    |
 | Gt          | 🟢    |
+| WrappingAdd | 🟢    |
+| WrappingSub | 🟢    |
+| WrappingMul | 🟢    |
+| WrappingDiv | 🟢    |
+| WrappingRem | 🟢    |
+| WrappingShl | 🟢    |
+| WrappingShr | 🟢    |
+
 
 </details>
 
