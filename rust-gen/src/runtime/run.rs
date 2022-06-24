@@ -414,6 +414,8 @@ impl Runner {
             &rust_file,
             &output_file,
             *compiler == RustCompiler::GCCRS,
+            opt,
+            version,
         );
         subrun_output.run_duration = Some(run_executable_result.0);
         subrun_output.checksum = Some(
@@ -546,12 +548,16 @@ fn timed_run_program<P: AsRef<Path>, S: AsRef<Path>>(
     rust_file: P,
     executable: S,
     running_gccrs: bool,
+    opt_level: &OptLevel,
+    version: &RustVersion,
 ) -> Timed<RunExecutableResult> {
     let input_file = Arc::new(rust_file.as_ref().to_path_buf());
     let output_file = Arc::new(executable.as_ref().to_path_buf());
+    let opt_level = Arc::new(opt_level.clone());
+    let version = Arc::new(version.clone());
     Timed::<RunExecutableResult>::run_with_timeout(
         timeout,
-        Box::new(move || run_program(&*input_file, &*output_file, running_gccrs)),
+        Box::new(move || run_program(&*input_file, &*output_file, running_gccrs, &*opt_level, &*version)),
     )
 }
 
@@ -559,6 +565,8 @@ fn run_program<P: AsRef<Path>, S: AsRef<Path>>(
     rust_file: P,
     executable: S,
     running_gccrs: bool,
+    opt_level: &OptLevel,
+    version: &RustVersion,
 ) -> RunExecutableResult {
     let rust_file = rust_file.as_ref();
     let executable = executable.as_ref();
@@ -574,6 +582,8 @@ fn run_program<P: AsRef<Path>, S: AsRef<Path>>(
         return Err(RunError::new(
             rust_file.to_path_buf(),
             executable.to_path_buf(),
+            opt_level.clone(),
+            version.clone(),
             &output,
         ));
     }

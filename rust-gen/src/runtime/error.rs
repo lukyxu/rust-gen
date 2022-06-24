@@ -10,16 +10,27 @@ use std::process::Output;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
+/// Errors related with the process of randomized differential testing.
 pub enum RunnerError {
+    /// Error in generation.
     GeneratorFailure(GeneratorError, RunOutput),
+    /// Generation exceeded timeout.
     GeneratorTimeout(GeneratorTimeoutError, RunOutput),
+    /// Error in compilation.
     CompilationFailure(Vec<CompilationError>, RunOutput),
+    /// Compilation exceeded timeout.
     CompilationTimeout(Vec<CompilationTimeoutError>, RunOutput),
+    /// Error in running executable.
     RunFailure(Vec<RunError>, RunOutput),
+    /// Running executable exceeded timeout.
     RunTimeout(Vec<RunTimeoutError>, RunOutput),
+    /// Sub-runs contained differing checksums.
     DifferingChecksum(DifferingChecksumError, RunOutput),
+    /// Sub-runs contains checksums which are different from the expected checksum.
     UnexpectedChecksum(UnexpectedChecksumError, RunOutput),
+    /// Error in running rustfmt.
     RustFmtFailure(RustFmtError, RunOutput),
+    /// Rustfmt exceeded timeout.
     RustFmtTimeout(RustFmtTimeoutError, RunOutput),
 }
 
@@ -91,6 +102,7 @@ impl Display for RunnerError {
 impl Error for GeneratorTimeoutError {}
 
 #[derive(Debug, Clone)]
+/// Generation exceeded timeout.
 pub struct GeneratorTimeoutError {
     pub duration: Duration,
 }
@@ -112,6 +124,7 @@ impl Display for GeneratorTimeoutError {
 }
 
 #[derive(Debug, Clone)]
+/// Error in compilation.
 pub struct CompilationError {
     pub rust_file_path: PathBuf,
     pub opt: OptLevel,
@@ -159,6 +172,7 @@ impl Display for CompilationError {
 impl Error for CompilationTimeoutError {}
 
 #[derive(Debug, Clone)]
+/// Compilation exceeded timeout.
 pub struct CompilationTimeoutError {
     pub opt: OptLevel,
     pub version: RustVersion,
@@ -188,18 +202,23 @@ impl Display for CompilationTimeoutError {
 }
 
 #[derive(Debug, Clone)]
+/// Error in running executable.
 pub struct RunError {
     pub rust_file_path: PathBuf,
     pub bin_file_path: PathBuf,
+    pub opt: OptLevel,
+    pub version: RustVersion,
     pub status_code: i32,
     pub std_err: String,
 }
 
 impl RunError {
-    pub fn new(rust_file_path: PathBuf, bin_file_path: PathBuf, output: &Output) -> RunError {
+    pub fn new(rust_file_path: PathBuf, bin_file_path: PathBuf, opt: OptLevel, version: RustVersion, output: &Output) -> RunError {
         return RunError {
             rust_file_path: rust_file_path.to_owned(),
             bin_file_path: bin_file_path.to_owned(),
+            opt,
+            version,
             status_code: output.status.code().unwrap_or(-1),
             std_err: String::from_utf8_lossy(output.stderr.as_ref())
                 .parse()
@@ -212,7 +231,7 @@ impl Error for RunError {}
 
 impl Display for RunError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Failed to run {}", self.rust_file_path.to_str().unwrap())?;
+        writeln!(f, "Failed to run {} for optimization {:?} and Rust version {:?}", self.rust_file_path.to_str().unwrap(), self.opt, self.version)?;
         writeln!(f, "Status code {}", self.status_code)?;
         writeln!(f, "Standard error")?;
         writeln!(f, "{}", self.std_err)
@@ -222,6 +241,7 @@ impl Display for RunError {
 impl Error for RunTimeoutError {}
 
 #[derive(Debug, Clone)]
+/// Running executable exceeded timeout.
 pub struct RunTimeoutError {
     pub opt: OptLevel,
     pub version: RustVersion,
@@ -251,6 +271,7 @@ impl Display for RunTimeoutError {
 }
 
 #[derive(Debug, Clone)]
+/// Sub-runs contained differing checksums.
 pub struct DifferingChecksumError {
     pub checksums: Vec<SubRunOutput>,
 }
@@ -265,6 +286,7 @@ impl Display for DifferingChecksumError {
 }
 
 #[derive(Debug, Clone)]
+/// Sub-runs contains checksums which are different from the expected checksum.
 pub struct UnexpectedChecksumError {
     pub expected_checksum: u128,
     pub checksums: Vec<SubRunOutput>,
@@ -281,6 +303,7 @@ impl Display for UnexpectedChecksumError {
 }
 
 #[derive(Debug, Clone)]
+/// Error in running rustfmt.
 pub struct RustFmtError {
     pub status_code: i32,
     pub std_err: String,
@@ -311,6 +334,7 @@ impl Display for RustFmtError {
 impl Error for RustFmtTimeoutError {}
 
 #[derive(Debug, Clone)]
+/// Rustfmt exceeded timeout.
 pub struct RustFmtTimeoutError {
     pub duration: Duration,
 }
