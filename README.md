@@ -26,7 +26,7 @@ Build and run RustGen Generate
 Build and run RustGen Runner for 100 programs and saving all outputs including generated code and binaries.
 
 ```bash
-  cargo run --bin rust-gen-runtime --release -- -n 100 -s
+  cargo run --bin rust-gen-runner --release -- -n 100 -s
 ```
 
 ## Running Tests

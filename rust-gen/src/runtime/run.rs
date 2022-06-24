@@ -572,7 +572,7 @@ fn run_program<P: AsRef<Path>, S: AsRef<Path>>(
     let executable = executable.as_ref();
     let output = Command::new(executable.to_str().unwrap())
         .output()
-        .expect("Failed to execute runtime process");
+        .expect("Failed to execute run process");
     if (!output.status.success() && (!running_gccrs || matches!(output.status.code(), Some(1))))
         || String::from_utf8(output.stdout.clone())
             .expect("Invalid stdout")
@@ -602,7 +602,7 @@ fn run_rustfmt<P: AsRef<Path>>(rust_file: P) -> RunRustfmtResult {
     let output = Command::new(format!("rustfmt"))
         .arg(rust_file.as_ref())
         .output()
-        .expect("Failed to execute runtime process");
+        .expect("Failed to execute run process");
     if !output.status.success() {
         return Err(RustFmtError::new(output));
     }

@@ -1,4 +1,4 @@
-//! Visitor for correcting compile/runtime errors.
+//! Visitor for correcting compile/run errors.
 
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,

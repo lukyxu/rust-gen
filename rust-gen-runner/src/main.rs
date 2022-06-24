@@ -20,7 +20,7 @@ struct Args {
     #[clap(
         short,
         long,
-        help = "Number of programs to be generated, compiled and runtime."
+        help = "Number of programs to be generated, compiled and run."
     )]
     num_runs: Option<u64>,
     #[clap(
@@ -72,12 +72,12 @@ struct Args {
     no_compile: bool,
     #[clap(
         long,
-        help = "Option to not runtime differential testing with different optimizations."
+        help = "Option to not run differential testing with different optimizations."
     )]
     no_opt: bool,
     #[clap(
         long,
-        help = "Option to not runtime differential testing with different versions."
+        help = "Option to not run differential testing with different versions."
     )]
     no_version: bool,
     #[clap(long, help = "Runs seed from 0..n")]

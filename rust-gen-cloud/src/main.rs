@@ -39,7 +39,7 @@ struct Args {
     #[clap(
         short,
         long,
-        help = "Number of programs to be generated, compiled and runtime."
+        help = "Number of programs to be generated, compiled and run."
     )]
     num_runs: Option<u64>,
     #[clap(long, help = "Include mrustc subruns.")]
