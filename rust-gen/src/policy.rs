@@ -148,7 +148,6 @@ impl Policy {
             Policy::structs(),
             Policy::composite(),
             Policy::functions(),
-            // Policy::lifetime()
             Policy::ownership_transfer(),
         ]
     }
