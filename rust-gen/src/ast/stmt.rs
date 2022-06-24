@@ -1,5 +1,8 @@
+//! Statement nodes.
+
 use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
+use crate::generate::eval_expr::EvalExpr;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -15,6 +18,17 @@ pub enum Stmt {
     Semi(SemiStmt),
     /// Other statements that can have custom behaviour such as `println`.
     Custom(CustomStmt), // TODO: Macros and empty statements
+}
+
+impl Stmt {
+    pub fn kind(&self) -> StmtKind {
+        match self {
+            Stmt::Local(_) => StmtKind::Local,
+            Stmt::Expr(_) => StmtKind::Expr,
+            Stmt::Semi(_) => StmtKind::Semi,
+            Stmt::Custom(_) => StmtKind::Custom,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -82,8 +96,39 @@ impl From<SemiStmt> for Stmt {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct CustomStmt {
-    pub stmt: String,
+pub enum CustomStmt {
+    Println(PrintlnStmt),
+    Assert(AssertStmt),
+}
+
+impl From<CustomStmt> for Stmt {
+    fn from(stmt: CustomStmt) -> Stmt {
+        Stmt::Custom(stmt)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct PrintlnStmt {
+    pub format: String,
+    pub args: Vec<String>,
+}
+
+impl From<PrintlnStmt> for Stmt {
+    fn from(stmt: PrintlnStmt) -> Stmt {
+        Stmt::Custom(CustomStmt::Println(stmt))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssertStmt {
+    pub lhs_expr: Expr,
+    pub rhs_expr: Option<EvalExpr>,
+}
+
+impl From<AssertStmt> for Stmt {
+    fn from(stmt: AssertStmt) -> Stmt {
+        Stmt::Custom(CustomStmt::Assert(stmt))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -92,6 +137,7 @@ pub enum StmtKind {
     Local,
     Semi,
     Expr,
+    Custom,
 }
 
 pub enum LocalStmtKind {

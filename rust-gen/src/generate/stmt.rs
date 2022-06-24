@@ -1,3 +1,5 @@
+//! Statement node generator.
+
 use crate::ast::expr::Expr;
 use crate::ast::stmt::{ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt, StmtKind};
 use crate::ast::ty::Ty;
@@ -29,6 +31,7 @@ impl Stmt {
             StmtKind::Local => LocalStmt::generate_stmt(ctx, res_type).map(From::from),
             StmtKind::Semi => SemiStmt::generate_stmt(ctx, res_type).map(From::from),
             StmtKind::Expr => panic!("Cannot generate expr stmt using generate_non_expr_stmt"),
+            StmtKind::Custom => panic!("Cannot generate custom stmt using generate_non_expr_stmt"),
         }
     }
 
@@ -71,6 +74,9 @@ impl LocalStmt {
             mutable,
         }));
         ctx.type_symbol_table.add_var(name, res_type, mutable);
+        if !ctx.generable_ident_type_map.contains(res_type) {
+            ctx.generable_ident_type_map = ctx.generable_ident_type_map.insert(res_type.clone());
+        }
         res
     }
 }

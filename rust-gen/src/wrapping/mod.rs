@@ -1,3 +1,5 @@
+//! Extention of num traits crate to support wrapping div and wrapping rem traits.
+
 use std::ops::{Div, Rem};
 macro_rules! wrapping_impl {
     ($trait_name:ident, $method:ident, $t:ty) => {

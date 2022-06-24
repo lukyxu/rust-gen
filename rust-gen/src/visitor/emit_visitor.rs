@@ -1,7 +1,9 @@
+//! Visitor for pretty printing abstract syntax tree.
+
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, PlaceExpr, ReferenceExpr,
-    TupleExpr, TupleStructExpr, UnaryExpr,
+    FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    PlaceExpr, ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 use crate::ast::function::Function;
@@ -66,6 +68,10 @@ impl Visitor for EmitVisitor {
 
     fn visit_function(&mut self, function: &mut Function) {
         self.output.push_str(&format!("fn {}() ", function.name));
+        if !function.return_ty.is_unit() {
+            self.output
+                .push_str(&format!("-> {} ", function.return_ty.to_string()));
+        }
         self.visit_block_expr(&mut function.block);
     }
 
@@ -144,7 +150,23 @@ impl Visitor for EmitVisitor {
 
     fn visit_custom_stmt(&mut self, stmt: &mut CustomStmt) {
         self.output.push_str(&" ".repeat(self.curr_indent));
-        self.output.push_str(stmt.stmt.as_str());
+        match stmt {
+            CustomStmt::Println(stmt) => self.output.push_str(
+                format!("println!(\"{}\", {})", stmt.format, stmt.args.join(", ")).as_str(),
+            ),
+            CustomStmt::Assert(stmt) => {
+                let lhs = &mut stmt.lhs_expr;
+                let rhs = &mut match &stmt.rhs_expr {
+                    None => lhs.clone(),
+                    Some(eval_expr) => eval_expr.clone().into(),
+                };
+                self.output.push_str("assert_eq!(");
+                self.visit_expr(lhs);
+                self.output.push_str(", ");
+                self.visit_expr(rhs);
+                self.output.push_str(");");
+            }
+        };
     }
 
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
@@ -335,6 +357,10 @@ impl Visitor for EmitVisitor {
         ));
         self.visit_expr(&mut expr.expr);
         self.output.push(')');
+    }
+
+    fn visit_function_call_expr(&mut self, expr: &mut FunctionCallExpr) {
+        self.output.push_str(&format!("{}()", expr.name))
     }
 
     fn visit_field(&mut self, field: &mut Field) {

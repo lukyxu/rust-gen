@@ -10,6 +10,8 @@ use rust_gen::utils::write_as_ron;
 use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
+use rand::Rng;
 use uuid::Uuid;
 
 #[derive(Parser, Debug)]
@@ -40,6 +42,32 @@ struct Args {
     save_passing_programs: bool,
     #[clap(short, long, help = "Include binaries from output.")]
     include_binaries: bool,
+
+    #[clap(
+        long,
+        help = "Timeout in seconds for generating programs.",
+        default_value = "30"
+    )]
+    generate_timeout: u64,
+    #[clap(
+        long,
+        help = "Timeout in seconds for compiling programs.",
+        default_value = "60"
+    )]
+    compile_timeout: u64,
+    #[clap(
+        long,
+        help = "Timeout in seconds for generating programs.",
+        default_value = "1"
+    )]
+    run_timeout: u64,
+    #[clap(
+        long,
+        help = "Timeout in seconds for running rustfmt.",
+        default_value = "120"
+    )]
+    rustfmt_timeout: u64,
+
     #[clap(long, help = "Option to not compile any of the generated programs")]
     no_compile: bool,
     #[clap(
@@ -52,10 +80,20 @@ struct Args {
         help = "Option to not runtime differential testing with different versions."
     )]
     no_version: bool,
+    #[clap(long, help = "Runs seed from 0..n")]
+    ascending_seed: bool,
+    #[clap(long, help = "Add assertions.")]
+    add_assertions: bool,
     #[clap(long, help = "Run rustfmt on generated output.")]
     rustfmt: bool,
     #[clap(long, help = "Removes unremoved temp output files in tmp directory.")]
     clean: bool,
+    #[clap(long, help = "Excludes rustc subruns.")]
+    exclude_rustc: bool,
+    #[clap(long, help = "Include mrustc subruns.")]
+    include_mrustc: bool,
+    #[clap(long, help = "Include gccrs subruns.")]
+    include_gccrs: bool,
 }
 
 pub fn main() {
@@ -66,37 +104,42 @@ pub fn main() {
     }
 
     let num_rums = args.num_runs.unwrap_or(u64::MAX);
-    let output_path = args.output_path;
-    let base_name = args.base_name;
+    let output_path = args.output_path.clone();
+    let base_name = args.base_name.clone();
     let progress_bar = ProgressBar::new(num_rums);
     progress_bar.set_style(ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{bar:50.cyan/blue}] Program {pos:>5}/{len:5} (ETA {eta})")
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:50.cyan/blue}] Program {pos:>5}/{len:5} (ETA {eta}) (Seed {msg})")
         .progress_chars("#>-"));
 
     if Path::exists(Path::new(&output_path)) {
         fs::remove_dir_all(&output_path).expect("Unable to remove directory");
     }
-    let opts = if args.no_opt {
-        vec![OptLevel::no_opt()]
-    } else {
-        OptLevel::all_opt_levels()
-    };
-    let versions = if args.no_version {
-        vec![RustVersion::stable()]
-    } else {
-        RustVersion::supported_rust_versions()
-    };
+    let opts = args
+        .no_opt
+        .then(|| vec![OptLevel::no_opt()])
+        .unwrap_or(OptLevel::all_opt_levels());
+    let versions = args
+        .no_version
+        .then(|| vec![RustVersion::stable()])
+        .unwrap_or(RustVersion::supported_rust_versions());
 
     let tmp_dir = std::env::temp_dir().join(format!("rust-gen-{}", Uuid::new_v4()));
-    std::fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
-    let mut runner = Runner {
-        policy: Policy::default(),
+    fs::create_dir(tmp_dir.as_path()).expect("Unable to create directory");
+    let runner = Runner {
         tmp_dir: tmp_dir.clone(),
+        add_assertions: args.add_assertions,
         no_compile: args.no_compile,
         base_name,
         opts,
         versions,
+        run_rustc: !args.exclude_rustc,
+        run_mrustc: args.include_mrustc,
+        run_gccrs: args.include_gccrs,
         rustfmt: args.rustfmt,
+        generate_timeout: Duration::from_secs(args.generate_timeout),
+        compile_timeout: Duration::from_secs(args.compile_timeout),
+        run_timeout: Duration::from_secs(args.run_timeout),
+        rustfmt_timeout: Duration::from_secs(args.rustfmt_timeout),
     };
 
     fs::create_dir_all(&output_path).expect("Unable to create directory");
@@ -106,28 +149,34 @@ pub fn main() {
     }
 
     for i in 0..num_rums {
-        runner.policy = Policy::parse_policy_args_or_random(&args.policy);
-        let output = runner.run(Some(i));
-        if let Err(err) = &output {
-            eprintln!("Failed seed {}", i);
-            eprintln!("{}", err);
-        }
-        let output_path = Runner::save_and_clean_up(
-            &output,
-            i,
-            &output_path,
-            args.save_passing_programs,
-            args.include_binaries,
-        );
-        if args.policy.is_none() {
-            fs::create_dir_all(&output_path).expect("Unable to create directory");
-            let file = File::create(output_path.as_path().join("policy.txt"))
-                .expect("Unable to create file");
-            write_as_ron(file, &runner.policy);
-        }
+        let seed = if args.ascending_seed { i } else { rand::thread_rng().gen() };
+        progress_bar.set_message(seed.to_string());
+        run(&runner, &args, seed);
         progress_bar.inc(1);
     }
-    std::fs::remove_dir_all(tmp_dir.as_path()).expect("Unable to delete directory");
+    fs::remove_dir_all(tmp_dir.as_path()).expect("Unable to delete directory");
+}
+
+fn run(runner: &Runner, args: &Args, seed: u64) {
+    let policy = Policy::parse_policy_args_or_random(&args.policy);
+    let output = runner.run(Some(seed), &policy);
+    if let Err(err) = &output {
+        eprintln!("Failed seed {}", seed);
+        eprintln!("{}", err);
+    }
+    let output_path = Runner::save_and_clean_up(
+        &output,
+        seed,
+        &args.output_path,
+        args.save_passing_programs,
+        args.include_binaries,
+    );
+    if args.policy.is_none() {
+        fs::create_dir_all(&output_path).expect("Unable to create directory");
+        let file =
+            File::create(output_path.as_path().join("policy.txt")).expect("Unable to create file");
+        write_as_ron(file, policy);
+    }
 }
 
 pub fn clean_tmp_files() {
@@ -143,7 +192,7 @@ pub fn clean_tmp_files() {
         if let Ok(dir_entry) = dir_entry {
             if let Some(str) = dir_entry.file_name().to_str() {
                 if str.contains("rust-gen") {
-                    std::fs::remove_dir_all(dir_entry.path()).expect("Unable to remove directory")
+                    fs::remove_dir_all(dir_entry.path()).expect("Unable to remove directory")
                 }
             }
         }

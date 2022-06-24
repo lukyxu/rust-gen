@@ -1,8 +1,11 @@
+//! Tracked type symbol table used for ownership tracking.
+
 use crate::ast::ty::{
     ArrayTy, FieldStructTy, GArrayTy, GFieldDef, GFieldStructTy, GReferenceTy, GStructTy,
     GTupleStructTy, GTupleTy, GTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty,
 };
 use serde::{Deserialize, Serialize};
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OwnershipState {
@@ -15,6 +18,10 @@ pub enum OwnershipState {
 impl OwnershipState {
     pub fn movable(self) -> bool {
         matches!(self, OwnershipState::NotApplicable | OwnershipState::Owned)
+    }
+
+    pub fn partially_movable(self) -> bool {
+        matches!(self, OwnershipState::NotApplicable | OwnershipState::Owned | OwnershipState::PartiallyOwned)
     }
 }
 
@@ -46,7 +53,7 @@ impl TrackedTy {
                     .iter()
                     .map(TrackedTy::ownership_state)
                     .any(|state| {
-                        state == OwnershipState::Owned || state == OwnershipState::PartiallyOwned
+                        state == OwnershipState::Moved || state == OwnershipState::PartiallyOwned
                     })
                 {
                     return OwnershipState::PartiallyOwned;
@@ -66,7 +73,7 @@ impl TrackedTy {
                         .iter()
                         .map(|field_def| field_def.ty.ownership_state())
                         .any(|state| {
-                            state == OwnershipState::Owned
+                            state == OwnershipState::Moved
                                 || state == OwnershipState::PartiallyOwned
                         })
                     {
@@ -210,6 +217,10 @@ impl TrackedTy {
     pub fn movable(&self) -> bool {
         self.ownership_state().movable()
     }
+
+    pub fn partially_movable(&self) -> bool {
+        self.ownership_state().partially_movable()
+    }
 }
 
 impl Ty {
@@ -242,6 +253,9 @@ pub type TrackedTupleTy = GTupleTy<OwnershipState>;
 
 impl TrackedTupleTy {
     pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        if self.is_copy() {
+            return
+        }
         self.assoc = state;
         self.tuple
             .iter_mut()
@@ -277,6 +291,9 @@ pub type TrackedArrayTy = GArrayTy<OwnershipState>;
 
 impl TrackedArrayTy {
     pub fn set_ownership_state(&mut self, state: OwnershipState) {
+        if self.is_copy() {
+            return
+        }
         self.assoc = state;
         self.base_ty.set_ownership_state(state);
     }

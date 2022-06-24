@@ -1,3 +1,5 @@
+//! Type symbol table used for type checking.
+
 use crate::ast::expr::{Expr, IdentExpr, Member, PlaceExpr};
 use crate::ast::ty::Ty;
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};
@@ -36,12 +38,11 @@ impl TypeSymbolTable {
     }
 
     // TODO: refactor
-    pub fn get_ident_exprs_by_type(&self, ty: &Ty) -> Vec<IdentExpr> {
+    pub fn get_names_by_type(&self, ty: &Ty) -> Vec<String> {
         self.var_type_mapping
             .iter()
             .filter_map(|(name, mapping)| {
-                (Ty::from(&mapping.ty) == *ty && mapping.ty.movable())
-                    .then(|| IdentExpr { name: name.clone() })
+                (Ty::from(&mapping.ty) == *ty).then(|| name.clone())
             })
             .collect()
     }
@@ -84,6 +85,23 @@ impl TypeSymbolTable {
         }
     }
 
+    pub fn all_movable(&mut self, expr: &Expr) -> bool {
+        match expr {
+            Expr::Field(expr) => {
+                let ty = self.get_tracked_ty(&expr.base);
+                match ty {
+                    None => return true,
+                    Some(ty) => ty.movable() && self.all_movable(&expr.base)
+                }
+            }
+            Expr::Ident(expr) => {
+                let mapping = self.var_type_mapping.get_mut(&expr.name).unwrap();
+                mapping.ty.movable()
+            }
+            _ => true,
+        }
+    }
+
     pub fn move_expr(&mut self, expr: &Expr) -> bool {
         match expr {
             Expr::Literal(_)
@@ -96,7 +114,8 @@ impl TypeSymbolTable {
             | Expr::Array(_)
             | Expr::Index(_)
             | Expr::Struct(_)
-            | Expr::Assign(_) => true,
+            | Expr::Assign(_)
+            | Expr::FunctionCall(_) => true,
             Expr::Ident(ident) => {
                 let mapping = self.var_type_mapping.get_mut(&ident.name).unwrap();
                 match mapping.ty.ownership_state() {
@@ -130,6 +149,7 @@ impl TypeSymbolTable {
             if matches!(ty.ownership_state(), OwnershipState::NotApplicable) {
                 return;
             }
+
             ty.set_ownership_state(OwnershipState::Owned);
         }
     }

@@ -1,22 +1,28 @@
-use crate::ast::expr::{ExprKind, IdentExpr};
+//! Context used in program generation.
+
+use crate::ast::expr::{ExprKind, FunctionCallExpr, IdentExpr};
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::StmtKind;
 use crate::ast::ty::{ArrayTy, Lifetime, PrimTy, StructTy, TupleTy, Ty, TyKind};
 use crate::policy::Policy;
-use crate::statistics::Statistics;
 use crate::symbol_table::ty::TypeSymbolTable;
 
 use crate::generate::expr::GENERABLE_EXPR_FNS;
+use crate::statistics::generation::GenerationStatistics;
 use rand::prelude::{SliceRandom, StdRng};
 use rand::{thread_rng, Rng, SeedableRng};
+use rpds::RedBlackTreeSet;
 use std::collections::BTreeSet;
 
 pub struct Context {
     pub policy: Policy,
     pub name_handler: NameHandler,
     pub type_symbol_table: TypeSymbolTable,
-    pub statistics: Statistics,
+    pub function_symbol_table: TypeSymbolTable,
+    pub generable_ident_type_map: RedBlackTreeSet<Ty>,
+    pub generable_function_call_type_map: RedBlackTreeSet<Ty>,
+    pub statistics: GenerationStatistics,
     pub rng: StdRng,
     pub gen_new_array_types: bool,
     pub gen_new_tuple_types: bool,
@@ -49,7 +55,10 @@ impl Context {
             policy: policy.clone(),
             name_handler: NameHandler::default(),
             type_symbol_table: TypeSymbolTable::default(),
-            statistics: Statistics::default(),
+            function_symbol_table: TypeSymbolTable::default(),
+            statistics: GenerationStatistics::default(),
+            generable_ident_type_map: RedBlackTreeSet::new(),
+            generable_function_call_type_map: RedBlackTreeSet::new(),
             rng,
             gen_new_array_types: true,
             gen_new_tuple_types: true,
@@ -102,7 +111,10 @@ impl Context {
         if let Some(elem_ty) = elem_ty {
             dist.retain(|(array_ty, _)| &*array_ty.base_ty == elem_ty);
         }
-        dist.retain(|(array_ty, _)| array_ty.array_depth() <= self.policy.max_array_depth);
+        dist.retain(|(array_ty, _)| {
+            array_ty.array_depth() <= self.policy.max_array_depth
+                && array_ty.composite_depth() <= self.policy.max_composite_depth
+        });
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(array_ty, _)| !array_ty.require_lifetime());
         }
@@ -121,7 +133,10 @@ impl Context {
         if let Some(elem_ty) = elem_ty {
             dist.retain(|(tuple_ty, _)| tuple_ty.tuple.contains(elem_ty));
         }
-        dist.retain(|(tuple_ty, _)| tuple_ty.tuple_depth() <= self.policy.max_tuple_depth);
+        dist.retain(|(tuple_ty, _)| {
+            tuple_ty.tuple_depth() <= self.policy.max_tuple_depth
+                && tuple_ty.composite_depth() <= self.policy.max_composite_depth
+        });
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(tuple_ty, _)| !tuple_ty.require_lifetime());
         }
@@ -146,7 +161,10 @@ impl Context {
                 StructTy::Tuple(tuple) => (&tuple.fields).into_iter().any(|ty| ty == elem_ty),
             });
         }
-        dist.retain(|(struct_ty, _)| struct_ty.struct_depth() <= self.policy.max_tuple_depth);
+        dist.retain(|(struct_ty, _)| {
+            struct_ty.struct_depth() <= self.policy.max_tuple_depth
+                && struct_ty.composite_depth() <= self.policy.max_composite_depth
+        });
         if self.policy.disable_lifetime && self.struct_ctx.is_some() {
             dist.retain(|(struct_ty, _)| !struct_ty.require_lifetime());
         }
@@ -272,8 +290,17 @@ impl Context {
     }
 
     pub fn choose_ident_expr_by_type(&mut self, ty: &Ty) -> Option<IdentExpr> {
-        let ident_exprs = self.type_symbol_table.get_ident_exprs_by_type(ty);
-        ident_exprs.choose(&mut self.rng).cloned()
+        let names = self.type_symbol_table.get_names_by_type(ty);
+        Some(IdentExpr {
+            name: names.choose(&mut self.rng).cloned()?,
+        })
+    }
+
+    pub fn choose_function_call_by_type(&mut self, ty: &Ty) -> Option<FunctionCallExpr> {
+        let names = self.function_symbol_table.get_names_by_type(ty);
+        Some(FunctionCallExpr {
+            name: names.choose(&mut self.rng).cloned()?,
+        })
     }
 
     pub fn choose_copy_tuple_struct(&mut self) -> bool {
@@ -289,6 +316,7 @@ impl Context {
 pub struct ContextSnapshot {
     name_handler: NameHandler,
     type_symbol_table: TypeSymbolTable,
+    generable_ident_type_map: RedBlackTreeSet<Ty>,
 }
 
 impl Context {
@@ -296,12 +324,14 @@ impl Context {
         ContextSnapshot {
             name_handler: self.name_handler.clone(),
             type_symbol_table: self.type_symbol_table.clone(),
+            generable_ident_type_map: self.generable_ident_type_map.clone(),
         }
     }
 
     pub fn restore_snapshot(&mut self, snapshot: ContextSnapshot) {
         self.name_handler = snapshot.name_handler;
         self.type_symbol_table = snapshot.type_symbol_table;
+        self.generable_ident_type_map = snapshot.generable_ident_type_map;
     }
 }
 

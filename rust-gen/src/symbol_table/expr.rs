@@ -1,3 +1,5 @@
+//! Expression symbol table used by expression visitor for value tracking.
+
 use crate::ast::ty::Ty;
 use crate::generate::eval_expr::EvalExpr;
 use std::collections::hash_map::Iter;

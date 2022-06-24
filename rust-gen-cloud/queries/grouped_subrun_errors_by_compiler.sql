@@ -1,0 +1,1 @@
+SELECT compiler_name, sr.error_kind, COUNT(*) FROM runs JOIN policies p on runs.policy_id = p.policy_id JOIN sub_runs sr on runs.run_id = sr.run_id WHERE opt = '0' AND (compiler_name != 'rustc' or sr.version = 'stable') GROUP BY compiler_name, sr.error_kind

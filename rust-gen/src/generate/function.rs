@@ -1,3 +1,5 @@
+//! Function node generator.
+
 use crate::ast::expr::BlockExpr;
 use crate::ast::function::Function;
 use crate::ast::ty::Ty;
@@ -19,18 +21,28 @@ impl Function {
 
     /// Attempts a single attempt to generate a valid main function.
     pub fn generate_main_fn(ctx: &mut Context) -> Option<Function> {
-        let block = BlockExpr::generate_expr(ctx, &Ty::unit_type())?;
-        ctx.statistics.main_fn_stmts = block.stmts.len();
+        let res_ty = Ty::unit_type();
+        let block = BlockExpr::generate_expr_internal(ctx, &res_ty)?;
         Some(Function {
             name: String::from("main"),
+            return_ty: res_ty,
             block,
         })
     }
 
     pub fn generate_fn(ctx: &mut Context) -> Option<Function> {
-        let block = BlockExpr::generate_expr(ctx, &Ty::unit_type())?;
+        let res_ty = Ty::fuzz_type(ctx)?;
+        let block = BlockExpr::generate_expr_internal(ctx, &res_ty)?;
+        let fn_name = ctx.create_function_name();
+        ctx.function_symbol_table
+            .add_var(fn_name.clone(), &res_ty, true);
+        if !ctx.generable_function_call_type_map.contains(&res_ty) {
+            ctx.generable_function_call_type_map =
+                ctx.generable_function_call_type_map.insert(res_ty.clone());
+        }
         Some(Function {
-            name: ctx.create_function_name(),
+            name: fn_name,
+            return_ty: res_ty,
             block,
         })
     }

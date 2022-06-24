@@ -1,27 +1,33 @@
+//! Visitor for correcting compile/runtime errors.
+
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
-    IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member, ReferenceExpr, TupleExpr,
-    TupleStructExpr, UnaryExpr,
+    FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    ReferenceExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
+
+use crate::ast::function::Function;
+
 use crate::generate::eval_expr::{
     EvalArrayExpr, EvalExpr, EvalField, EvalFieldStructExpr, EvalPlaceExpr, EvalReferenceExpr,
     EvalStructExpr, EvalTupleExpr, EvalTupleStructExpr,
 };
 
-use crate::ast::stmt::{DeclLocalStmt, InitLocalStmt, SemiStmt};
+use crate::ast::stmt::{CustomStmt, DeclLocalStmt, InitLocalStmt, SemiStmt};
 use crate::ast::ty::{Ty, UIntTy};
 use crate::symbol_table::expr::ExprSymbolTable;
 use crate::visitor::base_visitor;
-use crate::visitor::base_visitor::Visitor;
+use crate::visitor::base_visitor::{walk_function, Visitor};
 
 #[derive(Clone)]
 /// Visitor used to correct certain behaviours that would result in runtime errors.
 /// Any program generated using generate functions and passed through `ExprVisitor`
 /// should result in valid rust programs which are executable and do not crash.
 pub struct ExprVisitor {
-    expr: Option<EvalExpr>,
+    pub expr: Option<EvalExpr>,
     pub symbol_table: ExprSymbolTable,
     prev_symbol_tables: Vec<ExprSymbolTable>,
+    pub functions_mapping: ExprSymbolTable,
     max_attempt_fix: usize,
 }
 
@@ -31,7 +37,8 @@ impl Default for ExprVisitor {
             expr: None,
             symbol_table: ExprSymbolTable::default(),
             prev_symbol_tables: vec![],
-            max_attempt_fix: 2,
+            functions_mapping: ExprSymbolTable::default(),
+            max_attempt_fix: 1,
         }
     }
 }
@@ -46,6 +53,11 @@ impl ExprVisitor {
 
     fn add_expr(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
         self.symbol_table.add_expr(key, value.clone(), ty.clone());
+    }
+
+    pub fn add_function(&mut self, key: &str, value: &EvalExpr, ty: &Ty) {
+        self.functions_mapping
+            .add_expr(key, value.clone(), ty.clone());
     }
 
     fn symbol_table(&self) -> &ExprSymbolTable {
@@ -70,44 +82,70 @@ impl ExprVisitor {
         self.symbol_table.update(new_symbol_table);
     }
 
-    fn eval_place_expr(&mut self, expr: &mut Expr) -> Option<EvalPlaceExpr> {
-        match expr {
-            Expr::Field(expr) => Some(EvalPlaceExpr::Field(
-                Box::new(self.eval_place_expr(&mut expr.base)?),
-                expr.member.clone(),
-            )),
-            Expr::Index(expr) => {
-                let place = self.eval_place_expr(&mut expr.base);
-                let eval_expr = self.safe_expr_visit(&mut expr.index);
-                let value = if let EvalExpr::Literal(LitExpr::Int(LitIntExpr {
-                    value,
-                    ty: LitIntTy::Unsigned(UIntTy::USize),
-                })) = eval_expr
-                {
-                    value
-                } else {
-                    panic!("Unexpected index type")
-                };
-                let place = if let Some(place) = place {
-                    Box::new(place)
-                } else {
-                    return None;
-                };
-                Some(EvalPlaceExpr::Index(place, value as usize))
+    pub fn eval_field_expr(&mut self, base: EvalExpr, member: &Member) -> EvalExpr {
+        match (base, member) {
+            (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => exprs.tuple[*index].clone(),
+            (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
+                struct_expr.expr.tuple[*index].clone()
             }
-            Expr::Ident(expr) => Some(EvalPlaceExpr::Ident(expr.name.clone())),
-            _ => {
-                self.visit_expr(expr);
-                None
+            (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
+                struct_expr.get_field_by_name(field_name).unwrap().expr
             }
+            (_, _) => panic!(),
         }
     }
 
-    fn helper<'a>(prev_expr: &'a mut EvalExpr, place_expr: &EvalPlaceExpr) -> &'a mut EvalExpr {
+    pub fn eval_index(&mut self, index: EvalExpr) -> usize {
+        if let EvalExpr::Literal(LitExpr::Int(LitIntExpr {
+            value,
+            ty: LitIntTy::Unsigned(UIntTy::USize),
+        })) = index
+        {
+            value as usize
+        } else {
+            panic!("Unexpected index type")
+        }
+    }
+
+    pub fn eval_index_expr(&mut self, base: EvalExpr, index: usize) -> EvalExpr {
+        match base {
+            EvalExpr::Array(exprs) => exprs.array[index].clone(),
+            _ => panic!(),
+        }
+    }
+
+    fn eval_place_expr(&mut self, expr: &mut Expr) -> Result<EvalPlaceExpr, EvalExpr> {
+        match expr {
+            Expr::Field(expr) => {
+                let place = self.eval_place_expr(&mut expr.base);
+                match place {
+                    Ok(place) => Ok(EvalPlaceExpr::Field(Box::new(place), expr.member.clone())),
+                    Err(eval_expr) => Err(self.eval_field_expr(eval_expr, &expr.member)),
+                }
+            }
+            Expr::Index(expr) => {
+                let place = self.eval_place_expr(&mut expr.base);
+                let index = self.safe_expr_visit(&mut expr.index);
+                let index = self.eval_index(index);
+                match place {
+                    Ok(base) => Ok(EvalPlaceExpr::Index(Box::new(base), index)),
+                    Err(base) => Err(self.eval_index_expr(base, index)),
+                }
+            }
+            Expr::Ident(expr) => Ok(EvalPlaceExpr::Ident(expr.name.clone())),
+            _ => Err(self.safe_expr_visit(expr)),
+        }
+    }
+
+    fn get_expr_by_place<'a>(
+        prev_expr: &'a mut EvalExpr,
+        place_expr: &EvalPlaceExpr,
+    ) -> &'a mut EvalExpr {
         match place_expr {
             EvalPlaceExpr::Ident(_) => prev_expr,
             EvalPlaceExpr::Field(place_expr, member) => {
-                let prev_expr: &mut EvalExpr = ExprVisitor::helper(prev_expr, place_expr);
+                let prev_expr: &mut EvalExpr =
+                    ExprVisitor::get_expr_by_place(prev_expr, place_expr);
                 match (prev_expr, member) {
                     (EvalExpr::Tuple(tuple_expr), Member::Unnamed(index)) => {
                         &mut tuple_expr.tuple[*index]
@@ -123,7 +161,7 @@ impl ExprVisitor {
                 }
             }
             EvalPlaceExpr::Index(place_expr, index) => {
-                let prev_expr = ExprVisitor::helper(prev_expr, place_expr);
+                let prev_expr = ExprVisitor::get_expr_by_place(prev_expr, place_expr);
                 match prev_expr {
                     EvalExpr::Array(array_expr) => &mut array_expr.array[*index],
                     _ => panic!(),
@@ -142,6 +180,15 @@ impl Visitor for ExprVisitor {
         self.symbol_table = self.prev_symbol_tables.pop().unwrap();
     }
 
+    fn visit_function(&mut self, function: &mut Function) {
+        walk_function(self, function);
+        self.add_function(
+            &function.name,
+            self.expr.clone().as_ref().unwrap(),
+            &function.return_ty,
+        );
+    }
+
     // TODO: Implement local decl stmt
     fn visit_local_decl_stmt(&mut self, _stmt: &mut DeclLocalStmt) {
         todo!();
@@ -158,6 +205,15 @@ impl Visitor for ExprVisitor {
         self.expr = Some(EvalExpr::unit_expr());
     }
 
+    fn visit_custom_stmt(&mut self, stmt: &mut CustomStmt) {
+        match stmt {
+            CustomStmt::Println(_stmt) => {}
+            CustomStmt::Assert(stmt) => {
+                stmt.rhs_expr = Some(self.safe_expr_visit(&mut stmt.lhs_expr));
+            }
+        }
+    }
+
     fn visit_expr(&mut self, expr: &mut Expr) {
         if let Expr::Unary(_) = expr {
             // visit_unary_expr can modify the expr to some other expr variant
@@ -170,7 +226,6 @@ impl Visitor for ExprVisitor {
     fn visit_literal_expr(&mut self, expr: &mut LitExpr) {
         self.expr = Some(EvalExpr::Literal(expr.clone()));
     }
-
     fn visit_binary_expr(&mut self, expr: &mut BinaryExpr) {
         let lhs = self.safe_expr_visit(&mut expr.lhs);
         if expr.op.short_circuit_rhs(&lhs) {
@@ -193,6 +248,7 @@ impl Visitor for ExprVisitor {
         }
         self.expr = Some(res.unwrap());
     }
+
     fn visit_unary_expr(&mut self, _expr: &mut UnaryExpr) {
         unreachable!()
     }
@@ -293,37 +349,15 @@ impl Visitor for ExprVisitor {
 
         expr.place = place_expr.try_into().unwrap();
 
-        if let Some(eval_expr) = eval_expr {
+        if let Ok(eval_expr) = eval_expr {
             // (var2.1)[1] = 5
             // ver2 = ((),[1,2])
             // eval_expr Index(Field(Ident))
             // prev_expr Tuple([Tuple([]), Array([1,2]))
             let name = eval_expr.name();
             let prev_expr = self.mut_symbol_table().get_expr_ref_by_name(&name).unwrap();
-            let prev_expr = ExprVisitor::helper(prev_expr, &eval_expr);
+            let prev_expr = ExprVisitor::get_expr_by_place(prev_expr, &eval_expr);
             *prev_expr = res_expr;
-            // self.update_place_expr(prev_expr, eval_expr, res_expr)
-            // let prev_expr = prev_expr.unwrap();
-
-            // self.add_expr(&name, &new_expr, &self.symbol_table().get_ty_by_name(&name).unwrap())
-            // match eval_expr {
-            //     EvalPlaceExpr::Ident(name) => {
-            //         // If eval place is ident expression then add
-            //         // otherwise get expression and
-            //         self.add_expr(
-            //             &name,
-            //             &res_expr,
-            //             &self.symbol_table().get_ty_by_name(&name).unwrap(),
-            //         );
-            //     }
-            //
-            //     EvalPlaceExpr::Field(eval_expr, member) => {
-            //         let mut visitor = EmitVisitor::default();
-            //         visitor.visit_assign_expr(expr);
-            //         println!("{}", visitor.output())
-            //     },
-            //     EvalPlaceExpr::Index(expr, index) => println!("haha"),
-            // }
         }
 
         self.expr = Some(EvalExpr::unit_expr());
@@ -331,18 +365,7 @@ impl Visitor for ExprVisitor {
 
     fn visit_field_expr(&mut self, expr: &mut FieldExpr) {
         let base = self.safe_expr_visit(&mut expr.base);
-        match (base, &expr.member) {
-            (EvalExpr::Tuple(exprs), Member::Unnamed(index)) => {
-                self.expr = Some(exprs.tuple[*index].clone());
-            }
-            (EvalExpr::Struct(EvalStructExpr::Tuple(struct_expr)), Member::Unnamed(index)) => {
-                self.expr = Some(struct_expr.expr.tuple[*index].clone());
-            }
-            (EvalExpr::Struct(EvalStructExpr::Field(struct_expr)), Member::Named(field_name)) => {
-                self.expr = Some(struct_expr.get_field_by_name(field_name).unwrap().expr);
-            }
-            (_, _) => panic!(),
-        }
+        self.expr = Some(self.eval_field_expr(base, &expr.member))
     }
 
     fn visit_array_expr(&mut self, expr: &mut ArrayExpr) {
@@ -366,20 +389,18 @@ impl Visitor for ExprVisitor {
     }
 
     fn visit_index_expr(&mut self, expr: &mut IndexExpr) {
-        let base = self.safe_expr_visit(&mut expr.base);
+        let base: Result<EvalPlaceExpr, EvalExpr> = self.eval_place_expr(&mut expr.base);
         let index = self.safe_expr_visit(&mut expr.index);
-        match (base, index) {
-            (
-                EvalExpr::Array(exprs),
-                EvalExpr::Literal(LitExpr::Int(LitIntExpr {
-                    value: index,
-                    ty: LitIntTy::Unsigned(UIntTy::USize),
-                })),
-            ) => {
-                self.expr = Some(exprs.array[index as usize].clone());
+        let index = self.eval_index(index);
+        let base = match base {
+            Ok(base) => {
+                let name = base.name();
+                let prev_expr = self.mut_symbol_table().get_expr_ref_by_name(&name).unwrap();
+                ExprVisitor::get_expr_by_place(prev_expr, &base).clone()
             }
-            _ => panic!(),
+            Err(base) => base,
         };
+        self.expr = Some(self.eval_index_expr(base, index))
     }
 
     fn visit_field_struct_expr(&mut self, expr: &mut FieldStructExpr) {
@@ -392,16 +413,20 @@ impl Visitor for ExprVisitor {
             });
         }
         self.expr = Some(EvalExpr::Struct(EvalStructExpr::Field(
-            EvalFieldStructExpr { fields },
+            EvalFieldStructExpr {
+                struct_name: expr.struct_name.clone(),
+                fields,
+            },
         )));
     }
 
     fn visit_tuple_struct_expr(&mut self, expr: &mut TupleStructExpr) {
+        let struct_name = expr.struct_name.clone();
         self.visit_tuple_expr(&mut expr.fields);
-        let tuple_expr = self.expr.clone().unwrap();
-        if let EvalExpr::Tuple(expr) = tuple_expr {
+        let expr = self.expr.clone().unwrap();
+        if let EvalExpr::Tuple(expr) = expr {
             self.expr = Some(EvalExpr::Struct(EvalStructExpr::Tuple(
-                EvalTupleStructExpr { expr },
+                EvalTupleStructExpr { struct_name, expr },
             )));
         } else {
             panic!()
@@ -411,6 +436,17 @@ impl Visitor for ExprVisitor {
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         let expr = Box::new(self.safe_expr_visit(&mut expr.expr));
         self.expr = Some(EvalExpr::Reference(EvalReferenceExpr { expr }));
+    }
+
+    fn visit_function_call_expr(&mut self, expr: &mut FunctionCallExpr) {
+        if let Some(expr) = self.functions_mapping.get_expr_by_name(&expr.name) {
+            self.expr = Some(expr.clone());
+            // Should never evaluated to unknown value
+            assert_ne!(expr, EvalExpr::Unknown);
+        } else {
+            dbg!(&self.functions_mapping);
+            panic!("Unexpected function call expression")
+        }
     }
 }
 
@@ -548,6 +584,7 @@ mod tests {
     fn assign_scope_test() {
         let mut func = Function {
             name: "main".to_owned(),
+            return_ty: Ty::unit_type(),
             block: BlockExpr {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
@@ -606,6 +643,7 @@ mod tests {
     fn assign_if_true_test() {
         let mut func = Function {
             name: "main".to_owned(),
+            return_ty: Ty::unit_type(),
             block: BlockExpr {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {
@@ -677,6 +715,7 @@ mod tests {
     fn assign_if_false_test() {
         let mut func = Function {
             name: "main".to_owned(),
+            return_ty: Ty::unit_type(),
             block: BlockExpr {
                 stmts: vec![
                     Stmt::Local(LocalStmt::Init(InitLocalStmt {

@@ -1,5 +1,10 @@
+//! Evaluated expression representation and calculations.
+
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
-use crate::ast::expr::{BinaryExpr, Expr, LitExpr, LitIntExpr, LitIntTy, Member};
+use crate::ast::expr::{
+    ArrayExpr, BinaryExpr, Expr, Field, FieldStructExpr, LitExpr, LitIntExpr, LitIntTy, Member,
+    StructExpr, TupleExpr, TupleStructExpr,
+};
 use crate::ast::op::{BinaryOp, UnaryOp};
 #[cfg(test)]
 use crate::ast::ty::IntTy;
@@ -65,6 +70,19 @@ impl EvalExpr {
     }
 }
 
+impl From<EvalExpr> for Expr {
+    fn from(expr: EvalExpr) -> Self {
+        match expr {
+            EvalExpr::Literal(expr) => Expr::Literal(expr),
+            EvalExpr::Tuple(expr) => Expr::Tuple(expr.into()),
+            EvalExpr::Array(expr) => Expr::Array(expr.into()),
+            EvalExpr::Struct(expr) => Expr::Struct(expr.into()),
+            EvalExpr::Reference(_expr) => unimplemented!(),
+            EvalExpr::Unknown => panic!(),
+        }
+    }
+}
+
 impl From<LitExpr> for EvalExpr {
     fn from(expr: LitExpr) -> EvalExpr {
         EvalExpr::Literal(expr)
@@ -108,6 +126,14 @@ pub struct EvalTupleExpr {
     pub tuple: Vec<EvalExpr>,
 }
 
+impl From<EvalTupleExpr> for TupleExpr {
+    fn from(expr: EvalTupleExpr) -> TupleExpr {
+        TupleExpr {
+            tuple: expr.tuple.into_iter().map(|expr| expr.into()).collect(),
+        }
+    }
+}
+
 impl From<EvalTupleExpr> for EvalExpr {
     fn from(expr: EvalTupleExpr) -> EvalExpr {
         EvalExpr::Tuple(expr)
@@ -117,6 +143,14 @@ impl From<EvalTupleExpr> for EvalExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalArrayExpr {
     pub array: Vec<EvalExpr>,
+}
+
+impl From<EvalArrayExpr> for ArrayExpr {
+    fn from(expr: EvalArrayExpr) -> ArrayExpr {
+        ArrayExpr {
+            array: expr.array.into_iter().map(|expr| expr.into()).collect(),
+        }
+    }
 }
 
 impl From<EvalArrayExpr> for EvalExpr {
@@ -131,6 +165,15 @@ pub enum EvalStructExpr {
     Field(EvalFieldStructExpr),
 }
 
+impl From<EvalStructExpr> for StructExpr {
+    fn from(expr: EvalStructExpr) -> StructExpr {
+        match expr {
+            EvalStructExpr::Tuple(expr) => StructExpr::Tuple(expr.into()),
+            EvalStructExpr::Field(expr) => StructExpr::Field(expr.into()),
+        }
+    }
+}
+
 impl From<EvalStructExpr> for EvalExpr {
     fn from(expr: EvalStructExpr) -> EvalExpr {
         EvalExpr::Struct(expr)
@@ -139,7 +182,17 @@ impl From<EvalStructExpr> for EvalExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalTupleStructExpr {
+    pub struct_name: String,
     pub expr: EvalTupleExpr,
+}
+
+impl From<EvalTupleStructExpr> for TupleStructExpr {
+    fn from(expr: EvalTupleStructExpr) -> TupleStructExpr {
+        TupleStructExpr {
+            struct_name: expr.struct_name,
+            fields: expr.expr.into(),
+        }
+    }
 }
 
 impl From<EvalTupleStructExpr> for EvalStructExpr {
@@ -150,7 +203,17 @@ impl From<EvalTupleStructExpr> for EvalStructExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EvalFieldStructExpr {
+    pub struct_name: String,
     pub fields: Vec<EvalField>,
+}
+
+impl From<EvalFieldStructExpr> for FieldStructExpr {
+    fn from(expr: EvalFieldStructExpr) -> FieldStructExpr {
+        FieldStructExpr {
+            struct_name: expr.struct_name,
+            fields: expr.fields.into_iter().map(|field| field.into()).collect(),
+        }
+    }
 }
 
 impl From<EvalFieldStructExpr> for EvalStructExpr {
@@ -170,6 +233,21 @@ impl EvalFieldStructExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct EvalField {
+    pub name: String,
+    pub expr: EvalExpr,
+}
+
+impl From<EvalField> for Field {
+    fn from(expr: EvalField) -> Field {
+        Field {
+            name: expr.name,
+            expr: expr.expr.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct EvalReferenceExpr {
     pub expr: Box<EvalExpr>,
 }
@@ -178,12 +256,6 @@ impl From<EvalReferenceExpr> for EvalExpr {
     fn from(expr: EvalReferenceExpr) -> EvalExpr {
         EvalExpr::Reference(expr)
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct EvalField {
-    pub name: String,
-    pub expr: EvalExpr,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -227,7 +299,11 @@ impl BinaryExpr {
 
     pub fn replacement_op(&self, error: EvalExprError) -> BinaryOp {
         match self.op {
-            BinaryOp::Add => BinaryOp::Sub,
+            BinaryOp::Add => match error {
+                SignedOverflow => BinaryOp::Sub,
+                UnsignedOverflow => BinaryOp::WrappingAdd,
+                _ => panic!(),
+            },
             BinaryOp::Sub => match error {
                 SignedOverflow => BinaryOp::Add,
                 UnsignedOverflow => BinaryOp::WrappingSub,
@@ -372,6 +448,9 @@ impl BinaryOp {
     apply_int!(apply_mul, expr_mul);
     apply_int!(apply_div, expr_div);
     apply_int!(apply_rem, expr_rem);
+    apply_int!(apply_bit_xor, expr_bit_xor);
+    apply_int!(apply_bit_and, expr_bit_and);
+    apply_int!(apply_bit_or, expr_bit_or);
     apply_int!(apply_eq, expr_eq);
     apply_int!(apply_ne, expr_ne);
     apply_int!(apply_lq, expr_lq);
@@ -392,6 +471,9 @@ impl BinaryOp {
             BinaryOp::Mul => self.apply_mul(lhs, rhs),
             BinaryOp::Div => self.apply_div(lhs, rhs),
             BinaryOp::Rem => self.apply_rem(lhs, rhs),
+            BinaryOp::BitXor => self.apply_bit_xor(lhs, rhs),
+            BinaryOp::BitAnd => self.apply_bit_and(lhs, rhs),
+            BinaryOp::BitOr => self.apply_bit_or(lhs, rhs),
             BinaryOp::Eq => self.apply_eq(lhs, rhs),
             BinaryOp::Ne => self.apply_ne(lhs, rhs),
             BinaryOp::Lq => self.apply_lq(lhs, rhs),
@@ -436,6 +518,9 @@ trait Literal<
     fn expr_mul(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_div(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_rem(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_bit_xor(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_bit_and(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
+    fn expr_bit_or(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_ne(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
     fn expr_lq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError>;
@@ -533,6 +618,18 @@ impl<
             assert!(T::min_value() < T::zero());
             Err(SignedOverflow)
         }
+    }
+
+    fn expr_bit_xor(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.bitxor(rhs).as_(), T::by_lit_expr_type()).into())
+    }
+
+    fn expr_bit_and(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.bitand(rhs).as_(), T::by_lit_expr_type()).into())
+    }
+
+    fn expr_bit_or(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {
+        Ok(LitIntExpr::new(lhs.bitor(rhs).as_(), T::by_lit_expr_type()).into())
     }
 
     fn expr_eq(lhs: T, rhs: T) -> Result<LitExpr, EvalExprError> {

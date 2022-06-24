@@ -1,3 +1,5 @@
+//! Abstract syntax tree representing a Rust program.
+
 pub mod expr;
 pub mod file;
 pub mod function;

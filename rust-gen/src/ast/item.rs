@@ -1,3 +1,5 @@
+//! Item nodes.
+
 use crate::ast::function::Function;
 use crate::ast::ty::StructTy;
 use serde::{Deserialize, Serialize};
@@ -7,6 +9,15 @@ use serde::{Deserialize, Serialize};
 pub enum Item {
     Struct(StructItem),
     Function(FunctionItem),
+}
+
+impl Item {
+    pub fn kind(&self) -> ItemKind {
+        match self {
+            Item::Struct(_) => ItemKind::Struct,
+            Item::Function(_) => ItemKind::Function,
+        }
+    }
 }
 
 impl From<StructItem> for Item {

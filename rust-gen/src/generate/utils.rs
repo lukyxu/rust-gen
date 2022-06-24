@@ -1,3 +1,5 @@
+//! Utility functions for node generation.
+
 use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;
@@ -28,7 +30,7 @@ macro_rules! limit_function {
             f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
         ) -> Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>> {
             Box::new(|ctx, res_type| -> Option<T> {
-                if ctx.$curr_depth > ctx.policy.$max_depth {
+                if ctx.$curr_depth + 1 > ctx.policy.$max_depth {
                     return None;
                 }
                 ctx.$curr_depth += 1;
@@ -92,11 +94,14 @@ macro_rules! apply_limit_ty_depth_function {
             ctx: &mut Context,
             res_type: &S,
         ) -> Option<T> {
+            let prev_max_composite_depth = ctx.policy.max_composite_depth;
             let prev_max_depth = ctx.policy.$max_depth;
             let prev_gen_new_ty = ctx.$gen_new_ty;
+            ctx.policy.max_composite_depth = ctx.policy.max_composite_depth.saturating_sub(1);
             ctx.policy.$max_depth = ctx.policy.$max_depth.saturating_sub(1);
             ctx.$gen_new_ty = false;
             let res = f(ctx, res_type);
+            ctx.policy.max_composite_depth = prev_max_composite_depth;
             ctx.policy.$max_depth = prev_max_depth;
             ctx.$gen_new_ty = prev_gen_new_ty;
             res
@@ -122,7 +127,7 @@ pub fn increment_counter<T, K: Eq + Hash + Ord>(
 }
 
 macro_rules! track_function_with_ty {
-    ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
+    ($function_name: ident, $kind: ident, $counter: ident) => {
         pub fn $function_name<T: 'static>(
             kind: $kind,
             f: Box<dyn FnOnce(&mut Context, &Ty) -> Option<T>>,
@@ -132,8 +137,8 @@ macro_rules! track_function_with_ty {
                 increment_counter(
                     &res,
                     kind,
-                    &mut ctx.statistics.$success_counter,
-                    &mut ctx.statistics.$failed_counter,
+                    &mut ctx.statistics.successful_mapping.$counter,
+                    &mut ctx.statistics.failed_mapping.$counter,
                 );
                 res
             })
@@ -142,7 +147,7 @@ macro_rules! track_function_with_ty {
 }
 
 macro_rules! track_function {
-    ($function_name: ident, $kind: ident, $success_counter: ident, $failed_counter: ident) => {
+    ($function_name: ident, $kind: ident, $counter: ident) => {
         /// Adds statistic counter calculations.
         pub fn $function_name<T: 'static>(
             kind: $kind,
@@ -153,8 +158,8 @@ macro_rules! track_function {
                 increment_counter(
                     &res,
                     kind,
-                    &mut ctx.statistics.$success_counter,
-                    &mut ctx.statistics.$failed_counter,
+                    &mut ctx.statistics.successful_mapping.$counter,
+                    &mut ctx.statistics.failed_mapping.$counter,
                 );
                 res
             })
@@ -162,22 +167,9 @@ macro_rules! track_function {
     };
 }
 
-track_function_with_ty!(
-    track_expr,
-    ExprKind,
-    successful_expr_counter,
-    failed_expr_counter
-);
-track_function_with_ty!(
-    track_stmt,
-    StmtKind,
-    successful_stmt_counter,
-    failed_stmt_counter
-);
-track_function!(
-    track_item,
-    ItemKind,
-    successful_item_counter,
-    failed_item_counter
-);
-track_function!(track_type, TyKind, successful_ty_counter, failed_ty_counter);
+track_function_with_ty!(track_expr, ExprKind, expr_counter);
+
+track_function_with_ty!(track_stmt, StmtKind, stmt_counter);
+
+track_function!(track_item, ItemKind, item_counter);
+track_function!(track_type, TyKind, ty_counter);

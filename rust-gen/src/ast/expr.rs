@@ -1,12 +1,15 @@
+//! Expression nodes.
+
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::{FloatTy, IntTy, Ty, UIntTy};
 
 use crate::ast::op::{BinaryOp, UnaryOp};
 use serde::{Deserialize, Serialize};
 
+
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
-/// Rust expression
+/// Rust expression.
 pub enum Expr {
     /// Literal such as `1_u32`, `"foo"`
     Literal(LitExpr),
@@ -37,6 +40,8 @@ pub enum Expr {
     Struct(StructExpr),
     /// Reference expression such as `&a` or `&mut a`.
     Reference(ReferenceExpr), // TODO: Path, Box
+    /// Function call expression such as `f()`.
+    FunctionCall(FunctionCallExpr),
 }
 
 impl Expr {
@@ -59,9 +64,30 @@ impl Expr {
     pub fn u128(u: u128) -> Expr {
         LitIntExpr::new(u, UIntTy::U128.into()).into()
     }
+
+    pub fn kind(&self) -> ExprKind {
+        match self {
+            Expr::Literal(_) => ExprKind::Literal,
+            Expr::Binary(_) => ExprKind::Binary,
+            Expr::Unary(_) => ExprKind::Unary,
+            Expr::Cast(_) => ExprKind::Cast,
+            Expr::If(_) => ExprKind::If,
+            Expr::Block(_) => ExprKind::Block,
+            Expr::Ident(_) => ExprKind::Ident,
+            Expr::Tuple(_) => ExprKind::Literal,
+            Expr::Assign(_) => ExprKind::Assign,
+            Expr::Array(_) => ExprKind::Literal,
+            Expr::Index(_) => ExprKind::Index,
+            Expr::Field(_) => ExprKind::Field,
+            Expr::Struct(_) => ExprKind::Literal,
+            Expr::Reference(_) => ExprKind::Reference,
+            Expr::FunctionCall(_) => ExprKind::FunctionCall,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Rust literal expression.
 pub enum LitExpr {
     // TODO: Support different styles of Strings such as raw strings `r##"foo"##`
     #[allow(dead_code)]
@@ -89,13 +115,14 @@ impl From<LitExpr> for Expr {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+/// Literal integer type representing a signed or unsigned integer.
 pub enum LitIntTy {
     Signed(IntTy),
     Unsigned(UIntTy),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-/// Literal integer expression of a `LitIntTy` type.
+/// Literal integer expression of `LitIntTy` type.
 /// The actual value of the integer is represented as the u128 value casted with respect to the type.
 pub struct LitIntExpr {
     pub value: u128,
@@ -129,6 +156,7 @@ impl LitIntExpr {
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
+/// Literal float type.
 pub enum LitFloatTy {
     /// Float literal with suffix such as `1f32`, `1E10f32`.
     Suffixed(FloatTy),
@@ -137,6 +165,7 @@ pub enum LitFloatTy {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Binary operation such as `a + b`, `a * b`
 pub struct BinaryExpr {
     pub lhs: Box<Expr>,
     pub rhs: Box<Expr>,
@@ -150,6 +179,7 @@ impl From<BinaryExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Unary operation such as `!x`
 pub struct UnaryExpr {
     pub expr: Box<Expr>,
     pub op: UnaryOp,
@@ -162,6 +192,7 @@ impl From<UnaryExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Cast expression such as `x as u64`
 pub struct CastExpr {
     pub expr: Box<Expr>,
     pub ty: Ty,
@@ -174,6 +205,8 @@ impl From<CastExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// If expression with optional `else` block
+/// `if expr { block } else { expr }`
 pub struct IfExpr {
     pub condition: Box<Expr>,
     pub then: Box<BlockExpr>,
@@ -187,6 +220,7 @@ impl From<IfExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Block expression
 pub struct BlockExpr {
     pub stmts: Vec<Stmt>,
 }
@@ -198,6 +232,7 @@ impl From<BlockExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A variable access such as `x` (Similar to Rust Path in Rust compiler).
 pub struct IdentExpr {
     pub name: String,
 }
@@ -215,6 +250,7 @@ impl From<IdentExpr> for PlaceExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Tuple literal expression such as `(1_u32, "hello")`.
 pub struct TupleExpr {
     pub tuple: Vec<Expr>,
 }
@@ -226,6 +262,7 @@ impl From<TupleExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A place expression which represents a memory location.
 pub enum PlaceExpr {
     Field(FieldExpr),
     Index(IndexExpr),
@@ -256,6 +293,7 @@ impl TryFrom<Expr> for PlaceExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Assignment expression such as `(1_u32, "hello")`.
 pub struct AssignExpr {
     pub place: PlaceExpr,
     pub rhs: Box<Expr>,
@@ -268,6 +306,7 @@ impl From<AssignExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Array literal expression such as `[1_u32, 2_u32, 3_u32]`.
 pub struct ArrayExpr {
     pub array: Vec<Expr>,
 }
@@ -279,12 +318,14 @@ impl From<ArrayExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A named or unnamed member used for accessing a field.
 pub enum Member {
     Named(String),
     Unnamed(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Field expression representing access to structs and tuples such as `struct.field`.
 pub struct FieldExpr {
     pub base: Box<Expr>,
     pub member: Member,
@@ -303,6 +344,7 @@ impl From<FieldExpr> for PlaceExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Index expression with squared brackets such as `array[5]`.
 pub struct IndexExpr {
     pub base: Box<Expr>,
     pub index: Box<Expr>,
@@ -321,6 +363,7 @@ impl From<IndexExpr> for PlaceExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Struct literal expression such as `S { field1: value1, field2: value2 }` and `S(5_u32, "hello")`.
 pub enum StructExpr {
     /// Tuple struct such as `S { field1: value1, field2: value2 }`.
     Tuple(TupleStructExpr),
@@ -335,6 +378,7 @@ impl From<StructExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A tuple struct expression such as `S(5_u32, "hello")`
 pub struct TupleStructExpr {
     pub struct_name: String,
     pub fields: TupleExpr,
@@ -353,6 +397,7 @@ impl From<TupleStructExpr> for Expr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A field struct expression such as `S { field1: value1, field2: value2 }`
 pub struct FieldStructExpr {
     pub struct_name: String,
     pub fields: Vec<Field>,
@@ -365,12 +410,14 @@ impl From<FieldStructExpr> for StructExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// A single field mapping for a field struct.
 pub struct Field {
     pub name: String,
     pub expr: Expr,
 }
 
 #[derive(Debug, Clone, PartialEq)]
+/// Reference expression such as `&a` or `&mut a`.
 pub struct ReferenceExpr {
     pub mutability: bool,
     pub expr: Box<Expr>,
@@ -382,8 +429,21 @@ impl From<ReferenceExpr> for Expr {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+/// Function call expression such as `f()`.
+pub struct FunctionCallExpr {
+    pub name: String,
+}
+
+impl From<FunctionCallExpr> for Expr {
+    fn from(expr: FunctionCallExpr) -> Expr {
+        Expr::FunctionCall(expr)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
+/// Rust expression kind.
 pub enum ExprKind {
     Literal,
     Binary,
@@ -395,5 +455,7 @@ pub enum ExprKind {
     Assign,
     Index,
     Field,
+    Reference,
+    FunctionCall,
     __Nonexhaustive,
 }

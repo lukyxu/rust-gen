@@ -1,12 +1,13 @@
 [package]
 name = "rust-gen-runner"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
 rust-gen = { path="../rust-gen" }
 clap = { version = "3.1.8", features = ["derive"] }
 indicatif = "0.16.2"
+rand = "0.8.5"
 
 [dependencies.uuid]
 version = "1.1.1"

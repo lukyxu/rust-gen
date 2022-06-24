@@ -1,7 +1,9 @@
+//! Base visitor.
+
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr, ReferenceExpr,
-    StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+    FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr,
+    ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
 use crate::ast::file::RustFile;
 
@@ -112,6 +114,9 @@ pub trait Visitor: Sized {
     fn visit_reference_expr(&mut self, expr: &mut ReferenceExpr) {
         walk_reference_expr(self, expr);
     }
+    fn visit_function_call_expr(&mut self, expr: &mut FunctionCallExpr) {
+        walk_function_call_expr(self, expr);
+    }
 
     fn visit_field(&mut self, field: &mut Field) {
         walk_field(self, field);
@@ -122,32 +127,32 @@ pub trait Visitor: Sized {
     fn visit_binary_op(&mut self, _op: &mut BinaryOp) {}
 }
 
-fn walk_file<V: Visitor>(visitor: &mut V, file: &mut RustFile) {
+pub fn walk_file<V: Visitor>(visitor: &mut V, file: &mut RustFile) {
     for item in &mut file.items {
         visitor.visit_item(item);
     }
 }
 
-fn walk_function<V: Visitor>(visitor: &mut V, function: &mut Function) {
+pub fn walk_function<V: Visitor>(visitor: &mut V, function: &mut Function) {
     visitor.visit_block_expr(&mut function.block);
 }
 
-fn walk_item<V: Visitor>(visitor: &mut V, item: &mut Item) {
+pub fn walk_item<V: Visitor>(visitor: &mut V, item: &mut Item) {
     match item {
         Item::Struct(item) => visitor.visit_struct_item(item),
         Item::Function(item) => visitor.visit_function_item(item),
     }
 }
 
-fn walk_struct_item<V: Visitor>(visitor: &mut V, item: &mut StructItem) {
+pub fn walk_struct_item<V: Visitor>(visitor: &mut V, item: &mut StructItem) {
     visitor.visit_type(&GTy::Struct(item.struct_ty.clone()));
 }
 
-fn walk_function_item<V: Visitor>(visitor: &mut V, item: &mut FunctionItem) {
+pub fn walk_function_item<V: Visitor>(visitor: &mut V, item: &mut FunctionItem) {
     visitor.visit_function(&mut item.function);
 }
 
-fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
+pub fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
     match stmt {
         Stmt::Local(LocalStmt::Decl(local_decl_stmt)) => {
             visitor.visit_local_decl_stmt(local_decl_stmt);
@@ -161,12 +166,15 @@ fn walk_stmt<V: Visitor>(visitor: &mut V, stmt: &mut Stmt) {
     }
 }
 
-fn walk_decl_local_stmt<V: Visitor>(visitor: &mut V, DeclLocalStmt { name, ty }: &DeclLocalStmt) {
+pub fn walk_decl_local_stmt<V: Visitor>(
+    visitor: &mut V,
+    DeclLocalStmt { name, ty }: &DeclLocalStmt,
+) {
     visitor.visit_name(name);
     visitor.visit_type(ty);
 }
 
-fn walk_init_local_stmt<V: Visitor>(
+pub fn walk_init_local_stmt<V: Visitor>(
     visitor: &mut V,
     InitLocalStmt { name, ty, rhs, .. }: &mut InitLocalStmt,
 ) {
@@ -175,11 +183,11 @@ fn walk_init_local_stmt<V: Visitor>(
     visitor.visit_expr(rhs);
 }
 
-fn walk_expr_stmt<V: Visitor>(visitor: &mut V, ExprStmt { expr }: &mut ExprStmt) {
+pub fn walk_expr_stmt<V: Visitor>(visitor: &mut V, ExprStmt { expr }: &mut ExprStmt) {
     visitor.visit_expr(expr);
 }
 
-fn walk_semi_stmt<V: Visitor>(visitor: &mut V, SemiStmt { expr }: &mut SemiStmt) {
+pub fn walk_semi_stmt<V: Visitor>(visitor: &mut V, SemiStmt { expr }: &mut SemiStmt) {
     visitor.visit_expr(expr);
 }
 
@@ -199,6 +207,9 @@ pub fn walk_expr<V: Visitor>(visitor: &mut V, expr: &mut Expr) {
         Expr::Index(index_expr) => visitor.visit_index_expr(index_expr),
         Expr::Struct(struct_expr) => visitor.visit_struct_expr(struct_expr),
         Expr::Reference(reference_expr) => visitor.visit_reference_expr(reference_expr),
+        Expr::FunctionCall(function_call_expr) => {
+            visitor.visit_function_call_expr(function_call_expr)
+        }
     }
 }
 
@@ -210,23 +221,23 @@ pub fn walk_place_expr<V: Visitor>(visitor: &mut V, expr: &mut PlaceExpr) {
     }
 }
 
-fn walk_binary_expr<V: Visitor>(visitor: &mut V, BinaryExpr { lhs, rhs, op }: &mut BinaryExpr) {
+pub fn walk_binary_expr<V: Visitor>(visitor: &mut V, BinaryExpr { lhs, rhs, op }: &mut BinaryExpr) {
     visitor.visit_expr(lhs);
     visitor.visit_expr(rhs);
     visitor.visit_binary_op(op);
 }
 
-fn walk_unary_expr<V: Visitor>(visitor: &mut V, UnaryExpr { expr, op }: &mut UnaryExpr) {
+pub fn walk_unary_expr<V: Visitor>(visitor: &mut V, UnaryExpr { expr, op }: &mut UnaryExpr) {
     visitor.visit_expr(expr);
     visitor.visit_unary_op(op);
 }
 
-fn walk_cast_expr<V: Visitor>(visitor: &mut V, CastExpr { expr, ty }: &mut CastExpr) {
+pub fn walk_cast_expr<V: Visitor>(visitor: &mut V, CastExpr { expr, ty }: &mut CastExpr) {
     visitor.visit_expr(expr);
     visitor.visit_type(ty);
 }
 
-fn walk_if_expr<V: Visitor>(
+pub fn walk_if_expr<V: Visitor>(
     visitor: &mut V,
     IfExpr {
         condition,
@@ -241,7 +252,7 @@ fn walk_if_expr<V: Visitor>(
     };
 }
 
-fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockExpr) {
+pub fn walk_block_expr<V: Visitor>(visitor: &mut V, BlockExpr { stmts }: &mut BlockExpr) {
     visitor.enter_scope();
     for stmt in stmts {
         visitor.visit_stmt(stmt);
@@ -319,6 +330,13 @@ pub fn walk_reference_expr<V: Visitor>(
     ReferenceExpr { expr, .. }: &mut ReferenceExpr,
 ) {
     visitor.visit_expr(expr);
+}
+
+pub fn walk_function_call_expr<V: Visitor>(
+    visitor: &mut V,
+    FunctionCallExpr { name }: &mut FunctionCallExpr,
+) {
+    visitor.visit_name(name);
 }
 
 pub fn walk_field<V: Visitor>(visitor: &mut V, Field { name, expr }: &mut Field) {

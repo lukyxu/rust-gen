@@ -1,3 +1,5 @@
+//! Type nodes.
+
 use crate::ast::expr::LitIntTy;
 use crate::context::Context;
 
@@ -9,7 +11,7 @@ use std::fmt::Debug;
 
 pub type Ty = GTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum GTy<A> {
     Unit,
     Prim(PrimTy),
@@ -32,14 +34,6 @@ impl<A> GTy<A> {
         self.is_primitive_number() && target_type.is_primitive_number()
     }
 
-    /// Returns the array depth of a type.
-    pub fn array_depth(&self) -> usize {
-        match self {
-            GTy::Array(array_ty) => 1 + array_ty.base_ty.array_depth(),
-            _ => 0,
-        }
-    }
-
     pub fn unit_type() -> Ty {
         GTy::Unit
     }
@@ -51,6 +45,24 @@ impl<A> GTy<A> {
             GTy::Unit => true,
             GTy::Tuple(tuple_ty) => tuple_ty.tuple.is_empty(),
             _ => false,
+        }
+    }
+
+    /// Returns the composite depth of a type.
+    pub fn composite_depth(&self) -> usize {
+        match self {
+            GTy::Array(array_ty) => array_ty.composite_depth(),
+            GTy::Tuple(tuple_ty) => tuple_ty.composite_depth(),
+            GTy::Struct(struct_ty) => struct_ty.composite_depth(),
+            _ => 0,
+        }
+    }
+
+    /// Returns the array depth of a type.
+    pub fn array_depth(&self) -> usize {
+        match self {
+            GTy::Array(array_ty) => array_ty.array_depth(),
+            _ => 0,
         }
     }
 
@@ -121,7 +133,7 @@ impl ToString for Ty {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum PrimTy {
     Bool,
     #[allow(dead_code)]
@@ -204,14 +216,14 @@ impl PrimTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[allow(dead_code)]
 pub enum FloatTy {
     F32,
     F64,
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum IntTy {
     ISize,
     I8,
@@ -278,7 +290,7 @@ impl IntTy {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum UIntTy {
     USize,
     U8,
@@ -345,13 +357,22 @@ impl UIntTy {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GTupleTy<A> {
     pub tuple: Vec<GTy<A>>,
     pub assoc: A,
 }
 
 impl<A> GTupleTy<A> {
+    pub fn composite_depth(&self) -> usize {
+        1 + self
+            .tuple
+            .iter()
+            .map(GTy::composite_depth)
+            .max()
+            .unwrap_or_default()
+    }
+
     /// Returns the depth of a tuple.
     pub fn tuple_depth(&self) -> usize {
         1 + self
@@ -413,7 +434,7 @@ impl ToString for TupleTy {
 
 pub type ArrayTy = GArrayTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GArrayTy<A> {
     pub base_ty: Box<GTy<A>>,
     pub len: usize,
@@ -427,6 +448,10 @@ impl<A: Clone> GArrayTy<A> {
 }
 
 impl<A> GArrayTy<A> {
+    pub fn composite_depth(&self) -> usize {
+        1 + self.base_ty.composite_depth()
+    }
+
     pub fn array_depth(&self) -> usize {
         1 + self.base_ty.array_depth()
     }
@@ -468,13 +493,31 @@ impl ArrayTy {
 
 pub type StructTy = GStructTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum GStructTy<A> {
     Field(GFieldStructTy<A>),
     Tuple(GTupleStructTy<A>),
 }
 
 impl<A> GStructTy<A> {
+    pub fn composite_depth(&self) -> usize {
+        1 + match self {
+            GStructTy::Field(field_struct) => field_struct
+                .fields
+                .iter()
+                .map(|f| f.ty.composite_depth())
+                .max()
+                .unwrap_or_default(),
+            GStructTy::Tuple(tuple_struct) => tuple_struct
+                .fields
+                .tuple
+                .iter()
+                .map(GTy::composite_depth)
+                .max()
+                .unwrap_or_default(),
+        }
+    }
+
     pub fn struct_depth(&self) -> usize {
         1 + match self {
             GStructTy::Field(field_struct) => field_struct
@@ -539,7 +582,7 @@ impl ToString for StructTy {
 
 pub type FieldStructTy = GFieldStructTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GFieldStructTy<A> {
     pub name: String,
     pub is_copy: bool,
@@ -575,7 +618,7 @@ impl From<FieldStructTy> for StructTy {
 
 pub type FieldDef = GFieldDef<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GFieldDef<A> {
     pub name: String,
     pub ty: Box<GTy<A>>,
@@ -589,7 +632,7 @@ impl ToString for FieldDef {
 
 pub type TupleStructTy = GTupleStructTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GTupleStructTy<A> {
     pub name: String,
     pub is_copy: bool,
@@ -634,7 +677,7 @@ impl ToString for Lifetime {
 
 pub type ReferenceTy = GReferenceTy<()>;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct GReferenceTy<A> {
     pub elem: Box<GTy<A>>,
     pub mutability: bool,

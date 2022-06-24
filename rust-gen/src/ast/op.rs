@@ -1,3 +1,5 @@
+//! Unary and binary operation nodes.
+
 use crate::ast::ty::{GTy, PrimTy, ReferenceTy, Ty, UIntTy};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};
@@ -13,9 +15,9 @@ pub enum BinaryOp {
     Rem,
     And,
     Or,
-    // BitXor,
-    // BitAnd,
-    // BitOr,
+    BitXor,
+    BitAnd,
+    BitOr,
     // Shl,
     // Shr,
     Eq,
@@ -42,6 +44,9 @@ impl ToString for BinaryOp {
             BinaryOp::Mul => "*",
             BinaryOp::Div => "/",
             BinaryOp::Rem => "%",
+            BinaryOp::BitXor => "^",
+            BinaryOp::BitAnd => "&",
+            BinaryOp::BitOr => "|",
             BinaryOp::And => "&&",
             BinaryOp::Or => "||",
             BinaryOp::Eq => "==",
@@ -83,6 +88,9 @@ impl BinaryOp {
             | BinaryOp::Mul
             | BinaryOp::Div
             | BinaryOp::Rem
+            | BinaryOp::BitXor
+            | BinaryOp::BitAnd
+            | BinaryOp::BitOr
             | BinaryOp::WrappingAdd
             | BinaryOp::WrappingSub
             | BinaryOp::WrappingMul
@@ -112,6 +120,9 @@ impl BinaryOp {
             | BinaryOp::Mul
             | BinaryOp::Div
             | BinaryOp::Rem
+            | BinaryOp::BitXor
+            | BinaryOp::BitAnd
+            | BinaryOp::BitOr
             | BinaryOp::WrappingAdd
             | BinaryOp::WrappingSub
             | BinaryOp::WrappingMul

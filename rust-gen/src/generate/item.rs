@@ -1,3 +1,5 @@
+//! Item node generator.
+
 use crate::ast::function::Function;
 use crate::ast::item::{FunctionItem, Item, ItemKind, StructItem};
 use crate::ast::ty::StructTy;

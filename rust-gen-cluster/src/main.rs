@@ -41,7 +41,7 @@ impl Command {
                 vec![
                     "source ~/.profile".to_owned(),
                     "cd ~/rust-gen/rust-gen-cloud".to_owned(),
-                    "(nohup cargo run --release &> logs.txt &)".to_owned(),
+                    "(nohup cargo run --release > logs.txt 2>&1 &)".to_owned(),
                 ]
             }
             Command::Restart => Command::Stop
@@ -61,10 +61,7 @@ impl Command {
                 "git stash".to_owned(),
                 format!("git checkout {}", branch).to_owned(),
                 "git pull".to_owned(),
-            ]
-            .into_iter()
-            .chain(Command::Restart.commands().into_iter())
-            .collect(),
+            ],
         }
     }
 }
@@ -81,6 +78,8 @@ fn main() {
         "cloud-vm-42-116.doc.ic.ac.uk",
         "cloud-vm-42-125.doc.ic.ac.uk",
         "cloud-vm-42-197.doc.ic.ac.uk",
+        "cloud-vm-43-224.doc.ic.ac.uk",
+        "cloud-vm-43-235.doc.ic.ac.uk",
     ];
     if let Some(index) = args.machine_index {
         if index >= machines.len() {

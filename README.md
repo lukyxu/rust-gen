@@ -56,14 +56,14 @@ Rust Gen creates programs with the following features:
 
 <details><summary>Composite types</summary>
 
-| Feature      | Status |
-| -----------  | -------|
-| Tuple        | 🟢    |
-| Array        | 🟢    |
-| Box          | 🔴    |
-| Pointer      | 🔴    |
-| Enum         | 🔴    |
-| Struct       | 🔴    |
+| Feature   | Status |
+|-----------| -------|
+| Tuple     | 🟢    |
+| Array     | 🟢    |
+| Box       | 🔴    |
+| Reference | 🟢    |
+| Enum      | 🔴    |
+| Struct    | 🔴    |
 
 </details>
 
@@ -84,15 +84,15 @@ Rust Gen creates programs with the following features:
 | Feature               | Status |
 | ----------------------| -------|
 | Literal               | 🟢    |
-| Binary                | 🟡    |
-| Unary                 | 🟡    |
-| Cast                  | 🟡    |
+| Binary                | 🟢    |
+| Unary                 | 🟢    |
+| Cast                  | 🟢    |
 | If                    | 🟢    |
 | Block                 | 🟢    |
-| Ident                 | 🟡    |
+| Ident                 | 🟢    |
 | Tuple                 | 🟢    |
 | Assign                | 🟢    |
-| Call (Function)       | 🔴    |
+| Call (Function)       | 🟢    |
 | Call (Method)         | 🔴    |
 | Type (Ascription)     | 🔴    |
 | While                 | 🔴    |
@@ -101,7 +101,7 @@ Rust Gen creates programs with the following features:
 | Match                 | 🔴    |
 | Field                 | 🟢    |
 | Index                 | 🟢    |
-| Address Of            | 🔴    |
+| Address Of            | 🟢    |
 | Repeat (Array)        | 🔴    |
 | Struct                | 🟢    |
 
@@ -118,16 +118,16 @@ Rust Gen creates programs with the following features:
 | Rem         | 🟢    |
 | And         | 🟢    |
 | Or          | 🟢    |
-| BitXor      | 🔴    |
-| BitAnd      | 🔴    |
-| BitOr       | 🔴    |
+| BitXor      | 🟢    |
+| BitAnd      | 🟢    |
+| BitOr       | 🟢    |
 | Shl         | 🔴    |
 | Shr         | 🔴    |
 | Eq          | 🟢    |
-| Lq          | 🔴    |
+| Lq          | 🟢    |
 | Ne          | 🟢    |
-| Ge          | 🔴    |
-| Gt          | 🔴    |
+| Ge          | 🟢    |
+| Gt          | 🟢    |
 
 </details>
 
@@ -135,7 +135,7 @@ Rust Gen creates programs with the following features:
 
 | Feature     | Status |
 | ----------- | -------|
-| Deref       | 🔴    |
+| Deref       | 🟢    |
 | Not         | 🟢    |
 | Neg         | 🟢    |
 

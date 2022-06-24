@@ -1,3 +1,5 @@
+//! Expression node generator.
+
 use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;
 use std::cmp::max;
@@ -5,10 +7,10 @@ use std::collections::HashMap;
 
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, ExprKind, Field, FieldExpr,
-    FieldStructExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, Member, PlaceExpr,
-    ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
+    FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, Member,
+    PlaceExpr, ReferenceExpr, StructExpr, TupleExpr, TupleStructExpr, UnaryExpr,
 };
-use crate::ast::op::BinaryOp;
+use crate::ast::op::{BinaryOp, UnaryOp};
 use crate::ast::stmt::Stmt;
 use crate::ast::ty::{
     ArrayTy, FieldDef, FieldStructTy, GTy, PrimTy, ReferenceTy, StructTy, TupleStructTy, TupleTy,
@@ -17,8 +19,8 @@ use crate::ast::ty::{
 use crate::context::Context;
 use crate::generate::utils::{
     apply_limit_expr_depth_in_array, apply_limit_expr_depth_in_struct,
-    apply_limit_expr_depth_in_tuple, limit_arith_depth, limit_block_depth, limit_expr_depth,
-    limit_if_else_depth, revert_ctx_on_failure, track_expr,
+    apply_limit_expr_depth_in_tuple, increment_counter, limit_arith_depth, limit_block_depth,
+    limit_expr_depth, limit_if_else_depth, revert_ctx_on_failure, track_expr,
 };
 use crate::symbol_table::ty::TypeSymbolTable;
 
@@ -52,6 +54,9 @@ impl Expr {
             ExprKind::Cast => CastExpr::generate_expr(ctx, res_type).map(From::from),
             ExprKind::Index => IndexExpr::generate_expr(ctx, res_type).map(From::from),
             ExprKind::Field => FieldExpr::generate_expr(ctx, res_type).map(From::from),
+            ExprKind::FunctionCall => {
+                FunctionCallExpr::generate_expr(ctx, res_type).map(From::from)
+            }
             _ => panic!("ExprKind {:?} not supported yet", expr_kind),
         }
     }
@@ -137,6 +142,17 @@ impl BinaryExpr {
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BinaryExpr> {
         let op = ctx.choose_binary_op(res_type)?;
+        let expr = BinaryExpr::generate_expr_for_op(ctx, res_type, op);
+        increment_counter(
+            &expr,
+            op,
+            &mut ctx.statistics.successful_mapping.bin_op_counter,
+            &mut ctx.statistics.failed_mapping.bin_op_counter,
+        );
+        expr
+    }
+
+    fn generate_expr_for_op(ctx: &mut Context, res_type: &Ty, op: BinaryOp) -> Option<BinaryExpr> {
         let lhs_arg_ty = op
             .get_compatible_lhs_arg_types(res_type, ctx)
             .choose(&mut ctx.rng)
@@ -158,13 +174,13 @@ impl BinaryExpr {
         } else {
             Box::new(Expr::fuzz_move_expr(ctx, &rhs_arg_ty)?)
         };
-
-        *ctx.statistics.bin_op_counter.entry(op).or_insert(0) += 1;
         Some(BinaryExpr { lhs, rhs, op })
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth && matches!(res_type, Ty::Prim(_))
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
+            && matches!(res_type, Ty::Prim(_))
     }
 }
 
@@ -180,18 +196,29 @@ impl UnaryExpr {
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<UnaryExpr> {
         let op = ctx.choose_unary_op(res_type)?;
+        let expr = UnaryExpr::generate_expr_for_op(ctx, res_type, op);
+        increment_counter(
+            &expr,
+            op,
+            &mut ctx.statistics.successful_mapping.un_op_counter,
+            &mut ctx.statistics.failed_mapping.un_op_counter,
+        );
+        expr
+    }
+
+    fn generate_expr_for_op(ctx: &mut Context, res_type: &Ty, op: UnaryOp) -> Option<UnaryExpr> {
         let args_type = op
             .get_compatible_arg_types(res_type)
             .choose(&mut ctx.rng)
             .cloned()
             .unwrap();
         let expr = Box::new(Expr::fuzz_move_expr(ctx, &args_type)?);
-        *ctx.statistics.un_op_counter.entry(op).or_insert(0) += 1;
         Some(UnaryExpr { expr, op })
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
             && matches!(res_type, Ty::Prim(PrimTy::Bool | PrimTy::Int(_)))
     }
 }
@@ -219,7 +246,8 @@ impl CastExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
             && matches!(res_type, Ty::Prim(PrimTy::Int(_) | PrimTy::UInt(_)))
     }
 }
@@ -235,7 +263,6 @@ impl IfExpr {
     }
 
     pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IfExpr> {
-        // let outer_symbol_table = ctx.type_symbol_table.clone();
         let cond = Expr::fuzz_expr(ctx, &PrimTy::Bool.into());
         (|| match cond {
             None => None,
@@ -261,7 +288,9 @@ impl IfExpr {
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.block_depth <= ctx.policy.max_block_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.if_else_depth + 1 <= ctx.policy.max_if_else_depth
+            && ctx.block_depth <= ctx.policy.max_block_depth
     }
 }
 
@@ -275,7 +304,7 @@ impl BlockExpr {
         )(ctx, res_type)
     }
 
-    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
+    pub fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<BlockExpr> {
         let (block, sym_table) = BlockExpr::generate_block_expr_internal(ctx, res_type)?;
         ctx.type_symbol_table.update(&sym_table);
         Some(block)
@@ -287,6 +316,7 @@ impl BlockExpr {
     ) -> Option<(BlockExpr, TypeSymbolTable)> {
         let mut stmts: Vec<Stmt> = Vec::new();
         let mut outer_symbol_table = ctx.type_symbol_table.clone();
+        let mut generable_ident_type_map = ctx.generable_ident_type_map.clone();
         let mut num_stmts = ctx.choose_num_stmts();
         if !res_type.is_unit() {
             num_stmts -= 1;
@@ -302,11 +332,17 @@ impl BlockExpr {
             Some(BlockExpr { stmts })
         })();
         std::mem::swap(&mut outer_symbol_table, &mut ctx.type_symbol_table);
+        std::mem::swap(
+            &mut generable_ident_type_map,
+            &mut ctx.generable_ident_type_map,
+        );
         block_expr.map(|block_expr| (block_expr, outer_symbol_table))
     }
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.block_depth <= ctx.policy.max_block_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.block_depth + 1 <= ctx.policy.max_block_depth
+            && ctx.block_depth <= ctx.policy.max_block_depth
     }
 }
 
@@ -332,16 +368,12 @@ impl IdentExpr {
 
     fn generate_place_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IdentExpr> {
         let mut_ident_exprs = ctx.type_symbol_table.get_mut_ident_exprs_by_type(res_type);
-        mut_ident_exprs.choose(&mut ctx.rng).cloned()
+        let ident = mut_ident_exprs.choose(&mut ctx.rng).cloned()?;
+        Some(ident)
     }
 
-    pub fn can_generate(_ctx: &mut Context, _res_type: &Ty) -> bool {
-        // Time tradeoff
-        // TODO: Manual search is slow
-        // !ctx.type_symbol_table
-        //     .get_ident_exprs_by_type(res_type)
-        //     .is_empty()
-        true
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.generable_ident_type_map.contains(res_type)
     }
 }
 
@@ -380,8 +412,8 @@ impl AssignExpr {
         Some(AssignExpr { place, rhs })
     }
 
-    pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
-        ctx.expr_depth <= ctx.policy.max_expr_depth
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth && res_type.is_unit()
     }
 }
 
@@ -436,9 +468,20 @@ impl FieldExpr {
     }
 
     pub fn generate_tuple_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
+        if res_type.tuple_depth() + 1 > ctx.policy.max_tuple_depth
+            || res_type.composite_depth() + 1 > ctx.policy.max_composite_depth
+        {
+            return None;
+        }
         let tuple = TupleTy::generate_type(ctx, &Some(res_type.clone()))?;
 
         let base = Box::new(Expr::fuzz_expr(ctx, &tuple.clone().into())?);
+
+        let tracked_ty = ctx.type_symbol_table.get_tracked_ty(&base);
+        if tracked_ty.is_some() && !tracked_ty.unwrap().partially_movable() {
+            return None;
+        }
+
         let indexes: Vec<usize> = (&tuple)
             .into_iter()
             .enumerate()
@@ -452,6 +495,12 @@ impl FieldExpr {
     pub fn generate_struct_field_expr(ctx: &mut Context, res_type: &Ty) -> Option<FieldExpr> {
         let struct_ty = StructTy::generate_type(ctx, &Some(res_type.clone()))?;
         let base = Box::new(Expr::fuzz_expr(ctx, &struct_ty.clone().into())?);
+
+        let tracked_ty = ctx.type_symbol_table.get_tracked_ty(&base);
+        if tracked_ty.is_some() && !tracked_ty.unwrap().partially_movable() {
+            return None;
+        }
+
         let member = match struct_ty {
             StructTy::Field(field_struct) => Member::Named(
                 field_struct
@@ -479,7 +528,8 @@ impl FieldExpr {
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
         // TODO: Can improve this
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.arith_depth <= ctx.policy.max_arith_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
     }
 }
 
@@ -494,7 +544,9 @@ impl IndexExpr {
     }
 
     fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<IndexExpr> {
-        if res_type.array_depth() + 1 > ctx.policy.max_array_depth {
+        if res_type.array_depth() + 1 > ctx.policy.max_array_depth
+            || res_type.composite_depth() + 1 > ctx.policy.max_composite_depth
+        {
             return None;
         }
         // [Struct1(5), Struct1(5), Struct1(5)][0] is invalid if Struct1 is not copy
@@ -508,8 +560,16 @@ impl IndexExpr {
         }
 
         let array_type: ArrayTy = ArrayTy::generate_type(ctx, &Some(res_type.clone()))?;
+        // let base = Box::new(Expr::fuzz_expr(ctx, &array_type.clone().into())?);
         let base = Box::new(Expr::fuzz_move_expr(ctx, &array_type.clone().into())?);
         let index = Box::new(Expr::fuzz_expr(ctx, &PrimTy::UInt(UIntTy::USize).into())?);
+
+        let tracked_ty = ctx.type_symbol_table.get_tracked_ty(&base);
+        if tracked_ty.is_some() && !ctx.type_symbol_table.all_movable(&base) {
+            // Ident needs to be movable
+            return None;
+        }
+
         let inbound_index = Box::new(Expr::Binary(BinaryExpr {
             lhs: index,
             rhs: Box::new(LitIntExpr::new(array_type.len as u128, UIntTy::USize.into()).into()),
@@ -524,7 +584,8 @@ impl IndexExpr {
 
     pub fn can_generate(ctx: &mut Context, _res_type: &Ty) -> bool {
         // TODO: Can improve this
-        ctx.expr_depth <= ctx.policy.max_expr_depth && ctx.arith_depth <= ctx.policy.max_arith_depth
+        ctx.expr_depth + 1 <= ctx.policy.max_expr_depth
+            && ctx.arith_depth + 1 <= ctx.policy.max_arith_depth
     }
 }
 
@@ -585,6 +646,24 @@ impl ReferenceExpr {
     }
 }
 
+impl FunctionCallExpr {
+    pub fn generate_expr(ctx: &mut Context, res_type: &Ty) -> Option<FunctionCallExpr> {
+        track_expr(
+            ExprKind::FunctionCall,
+            revert_ctx_on_failure(Box::new(FunctionCallExpr::generate_expr_internal)),
+        )(ctx, res_type)
+    }
+
+    fn generate_expr_internal(ctx: &mut Context, res_type: &Ty) -> Option<FunctionCallExpr> {
+        let ident = ctx.choose_function_call_by_type(res_type)?;
+        Some(FunctionCallExpr { name: ident.name })
+    }
+
+    pub fn can_generate(ctx: &mut Context, res_type: &Ty) -> bool {
+        ctx.generable_function_call_type_map.contains(res_type)
+    }
+}
+
 lazy_static! {
     pub static ref GENERABLE_EXPR_FNS: HashMap<ExprKind, fn(&mut Context, &Ty) -> bool> = {
         let mut map: HashMap<ExprKind, fn(&mut Context, &Ty) -> bool> = HashMap::new();
@@ -598,6 +677,7 @@ lazy_static! {
         map.insert(ExprKind::Assign, AssignExpr::can_generate);
         map.insert(ExprKind::Index, IndexExpr::can_generate);
         map.insert(ExprKind::Field, FieldExpr::can_generate);
+        map.insert(ExprKind::FunctionCall, FunctionCallExpr::can_generate);
         map
     };
 }

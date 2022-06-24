@@ -1,3 +1,5 @@
+//! Type node generator.
+
 use crate::ast::ty::{
     ArrayTy, FieldDef, FieldStructTy, GReferenceTy, GTy, Lifetime, PrimTy, ReferenceTy, StructTy,
     TupleStructTy, TupleTy, Ty, TyKind,
@@ -67,15 +69,17 @@ impl TupleTy {
         increment_counter(
             &res,
             TyKind::Tuple,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }
 
     fn generate_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleTy> {
         if let Some(ty) = ty {
-            if ty.tuple_depth() + 1 > ctx.policy.max_tuple_depth {
+            if ty.tuple_depth() + 1 > ctx.policy.max_tuple_depth
+                || ty.composite_depth() + 1 > ctx.policy.max_composite_depth
+            {
                 return None;
             }
         }
@@ -118,17 +122,22 @@ impl ArrayTy {
         increment_counter(
             &res,
             TyKind::Array,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }
 
     fn generate_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<ArrayTy> {
         if let Some(ty) = ty {
-            if ty.array_depth() + 1 > ctx.policy.max_array_depth {
+            if ty.array_depth() + 1 > ctx.policy.max_array_depth
+                || ty.composite_depth() + 1 > ctx.policy.max_composite_depth
+            {
                 return None;
             }
+        }
+        if ctx.policy.max_array_depth == 0 || ctx.policy.max_composite_depth == 0 {
+            return None;
         }
         let mut res: Option<ArrayTy> = None;
         if !ctx.choose_new_array_type() {
@@ -162,18 +171,23 @@ impl StructTy {
         increment_counter(
             &res,
             TyKind::Struct,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }
 
     fn generate_type_internal(ctx: &mut Context, ty: &Option<Ty>) -> Option<StructTy> {
         if let Some(ty) = ty {
-            if ty.struct_depth() + 1 > ctx.policy.max_struct_depth {
+            if ty.struct_depth() + 1 > ctx.policy.max_struct_depth
+                || ty.composite_depth() + 1 > ctx.policy.max_composite_depth
+            {
                 return None;
             }
         };
+        if ctx.policy.max_struct_depth == 0 || ctx.policy.max_composite_depth == 0 {
+            return None;
+        }
         ctx.choose_struct_type(ty)
     }
 
@@ -189,11 +203,14 @@ impl StructTy {
 impl FieldStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<FieldStructTy> {
         let prev_max_struct_depth = ctx.policy.max_struct_depth;
+        let prev_max_composite_depth = ctx.policy.max_composite_depth;
         ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
+        ctx.policy.max_composite_depth = ctx.policy.max_composite_depth.saturating_sub(1);
         ctx.struct_ctx = Some(StructContext::new(ctx.choose_copy_field_struct()));
         let res = FieldStructTy::generate_new_type_internal(ctx, ty);
         ctx.struct_ctx = None;
         ctx.policy.max_struct_depth = prev_max_struct_depth;
+        ctx.policy.max_composite_depth = prev_max_composite_depth;
         res
     }
 
@@ -240,11 +257,14 @@ impl FieldDef {
 impl TupleStructTy {
     pub fn generate_new_type(ctx: &mut Context, ty: &Option<Ty>) -> Option<TupleStructTy> {
         let prev_max_struct_depth = ctx.policy.max_struct_depth;
+        let prev_max_composite_depth = ctx.policy.max_composite_depth;
         ctx.policy.max_struct_depth = ctx.policy.max_struct_depth.saturating_sub(1);
+        ctx.policy.max_composite_depth = ctx.policy.max_composite_depth.saturating_sub(1);
         ctx.struct_ctx = Some(StructContext::new(ctx.choose_copy_tuple_struct()));
         let res = TupleStructTy::generate_new_type_internal(ctx, ty);
         ctx.struct_ctx = None;
         ctx.policy.max_struct_depth = prev_max_struct_depth;
+        ctx.policy.max_composite_depth = prev_max_composite_depth;
         res
     }
 
@@ -252,7 +272,7 @@ impl TupleStructTy {
         let fields = TupleTy::generate_type(ctx, ty)?;
         let struct_ty = TupleStructTy {
             name: ctx.create_struct_name(),
-            is_copy: fields.is_copy(),
+            is_copy: ctx.struct_ctx.as_ref().unwrap().generate_copy_struct,
             is_clone: fields.is_clone(),
             fields,
             lifetimes: ctx
@@ -284,8 +304,8 @@ impl ReferenceTy {
         increment_counter(
             &res,
             TyKind::Reference,
-            &mut ctx.statistics.successful_ty_counter,
-            &mut ctx.statistics.failed_ty_counter,
+            &mut ctx.statistics.successful_mapping.ty_counter,
+            &mut ctx.statistics.failed_mapping.ty_counter,
         );
         res
     }

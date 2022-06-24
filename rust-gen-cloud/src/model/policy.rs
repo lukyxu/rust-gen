@@ -1,76 +1,11 @@
 use crate::schema::policies;
-use crate::schema::runs;
 use chrono::NaiveDateTime;
 use diesel::result::Error;
-use diesel::{
-    insert_into, ExpressionMethods, MysqlConnection, QueryDsl, QueryResult, Queryable, RunQueryDsl,
-};
+use diesel::MysqlConnection;
+use diesel::{insert_into, ExpressionMethods, QueryDsl, QueryResult, Queryable, RunQueryDsl};
 use rust_gen::policy::Policy;
-use rust_gen::runtime::error::RunnerError;
-use rust_gen::runtime::run::RunResult;
 use rust_gen::utils::{from_ron_string, to_ron_string};
 use sha2::{Digest, Sha256};
-
-#[derive(Insertable, Queryable)]
-#[diesel(primary_key(run_id))]
-#[table_name = "runs"]
-pub struct RunInfo {
-    #[diesel(deserialize_as = "i32")]
-    pub run_id: Option<i32>,
-    pub git_hash: String,
-    pub version: String,
-    pub hostname: String,
-    pub seed: u64,
-    pub success: bool,
-    pub policy_id: i32,
-    pub statistics: Option<String>,
-    pub error: Option<String>,
-    #[diesel(deserialize_as = "NaiveDateTime")]
-    pub created_at: Option<NaiveDateTime>,
-    #[diesel(deserialize_as = "NaiveDateTime")]
-    pub updated_at: Option<NaiveDateTime>,
-}
-
-impl RunInfo {
-    pub fn new(seed: u64, run_output: RunResult, policy_id: i32) -> RunInfo {
-        let files = match &run_output {
-            Ok(files) => files.clone(),
-            Err(error) => error.files(),
-        };
-        RunInfo {
-            run_id: None,
-            git_hash: env!("GIT_HASH").to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            hostname: env!("HOSTNAME").to_string(),
-            seed,
-            success: run_output.is_ok(),
-            policy_id,
-            statistics: files
-                .iter()
-                .filter_map(|path| {
-                    let path = path.to_string_lossy().to_string();
-                    path.contains("statistics.txt").then(|| {
-                        String::from_utf8(
-                            std::fs::read(path).expect("Unable to read statistics.txt"),
-                        )
-                        .expect("Unable to read utf-8")
-                    })
-                })
-                .next(),
-            error: run_output.err().as_ref().map(RunnerError::to_string),
-            created_at: None,
-            updated_at: None,
-        }
-    }
-
-    pub fn insert_new(&self, connection: &MysqlConnection) {
-        use crate::schema::runs::dsl::runs;
-        insert_into(runs)
-            .values(self.clone())
-            .execute(connection)
-            .unwrap();
-    }
-}
 
 #[derive(Insertable, Queryable, Debug, Clone, PartialEq)]
 #[diesel(primary_key(policy_id))]
@@ -79,7 +14,7 @@ pub struct PolicyInfo {
     #[diesel(deserialize_as = "i32")]
     pub policy_id: Option<i32>,
     pub policy_sha256: String,
-    pub name: String,
+    pub policy_name: String,
     pub max_file_attempts: u64,
     pub max_item_attempts: u64,
     pub max_fn_attempts: u64,
@@ -100,6 +35,7 @@ pub struct PolicyInfo {
     pub max_block_depth: u64,
     pub max_arith_depth: u64,
     pub max_expr_depth: u64,
+    pub max_composite_depth: u64,
     pub array_length_dist: String,
     pub default_array_type_dist: String,
     pub new_array_prob: f64,
@@ -131,7 +67,7 @@ impl PolicyInfo {
     pub fn insert_new(&self, connection: &MysqlConnection) {
         use crate::schema::policies::dsl::policies;
         insert_into(policies)
-            .values(self.clone())
+            .values(self)
             .execute(connection)
             .unwrap();
     }
@@ -160,7 +96,7 @@ impl From<Policy> for PolicyInfo {
         PolicyInfo {
             policy_id: None,
             policy_sha256: format!("{:X}", Sha256::digest(to_ron_string(&policy))),
-            name: policy.name,
+            policy_name: policy.name,
             max_file_attempts: policy.max_file_attempts as u64,
             max_item_attempts: policy.max_item_attempts as u64,
             max_fn_attempts: policy.max_fn_attempts as u64,
@@ -181,6 +117,7 @@ impl From<Policy> for PolicyInfo {
             max_block_depth: policy.max_block_depth as u64,
             max_arith_depth: policy.max_arith_depth as u64,
             max_expr_depth: policy.max_expr_depth as u64,
+            max_composite_depth: policy.max_composite_depth as u64,
             array_length_dist: to_ron_string(policy.array_length_dist),
             default_array_type_dist: to_ron_string(policy.default_array_type_dist),
             new_array_prob: policy.new_array_prob,
@@ -211,13 +148,14 @@ impl From<Policy> for PolicyInfo {
 impl From<PolicyInfo> for Policy {
     fn from(policy: PolicyInfo) -> Policy {
         Policy {
-            name: policy.name.to_string(),
+            name: policy.policy_name.to_string(),
             max_file_attempts: policy.max_file_attempts as usize,
             max_item_attempts: policy.max_item_attempts as usize,
             max_fn_attempts: policy.max_fn_attempts as usize,
             max_ty_attempts: policy.max_ty_attempts as usize,
             max_stmt_attempts: policy.max_stmt_attempts as usize,
             max_expr_attempts: policy.max_expr_attempts as usize,
+            max_composite_depth: policy.max_composite_depth as usize,
             num_item_dist: from_ron_string(&policy.num_item_dist),
             item_dist: from_ron_string(&policy.item_dist),
             type_dist: from_ron_string(&policy.type_dist),
@@ -259,9 +197,8 @@ impl From<PolicyInfo> for Policy {
 
 #[cfg(test)]
 mod tests {
-    use crate::PolicyInfo;
+    use crate::model::policy::PolicyInfo;
     use rust_gen::policy::Policy;
-
     #[test]
     fn convert_between_policies() {
         let original_policy = Policy::default();
