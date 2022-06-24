@@ -1,0 +1,44 @@
+pass statistics:
+  method pass_clex :: rm-toks-7 worked 1 times and failed 4195 times
+  method pass_clex :: rm-toks-11 worked 1 times and failed 4041 times
+  method pass_indent :: final worked 1 times and failed 0 times
+  method pass_clex :: rm-toks-15 worked 1 times and failed 3906 times
+  method pass_clex :: rm-toks-12 worked 2 times and failed 4017 times
+  method pass_clex :: rm-toks-13 worked 2 times and failed 3991 times
+  method pass_blank :: 0 worked 2 times and failed 0 times
+  method pass_balanced :: curly-inside worked 4 times and failed 263 times
+  method pass_clex :: rm-toks-9 worked 4 times and failed 4102 times
+  method pass_clex :: rm-toks-6 worked 5 times and failed 4202 times
+  method pass_clex :: rm-toks-10 worked 5 times and failed 4052 times
+  method pass_clex :: rm-toks-14 worked 5 times and failed 3921 times
+  method pass_clex :: rm-toks-16 worked 6 times and failed 3810 times
+  method pass_indent :: regular worked 6 times and failed 0 times
+  method pass_balanced :: square worked 7 times and failed 623 times
+  method pass_clex :: rm-toks-8 worked 7 times and failed 4138 times
+  method pass_lines :: 0 worked 7 times and failed 42 times
+  method pass_clex :: rm-toks-5 worked 8 times and failed 4232 times
+  method pass_lines :: 1 worked 9 times and failed 258 times
+  method pass_balanced :: curly worked 12 times and failed 2209 times
+  method pass_clex :: rm-toks-4 worked 12 times and failed 4272 times
+  method pass_peep :: a worked 13 times and failed 1199 times
+  method pass_balanced :: curly3 worked 13 times and failed 23 times
+  method pass_balanced :: parens worked 14 times and failed 1903 times
+  method pass_clex :: rm-toks-3 worked 23 times and failed 4320 times
+  method pass_clex :: rename-toks worked 27 times and failed 31 times
+  method pass_balanced :: curly-only worked 39 times and failed 178 times
+  method pass_lines :: 8 worked 45 times and failed 10621 times
+  method pass_balanced :: square-inside worked 48 times and failed 291 times
+  method pass_balanced :: parens-inside worked 49 times and failed 1148 times
+  method pass_lines :: 10 worked 57 times and failed 10362 times
+  method pass_lines :: 2 worked 65 times and failed 1176 times
+  method pass_balanced :: parens-only worked 65 times and failed 273 times
+  method pass_clex :: rm-tok-pattern-4 worked 88 times and failed 29040 times
+  method pass_clex :: rm-toks-2 worked 91 times and failed 4389 times
+  method pass_lines :: 6 worked 154 times and failed 10706 times
+  method pass_clex :: rm-toks-1 worked 328 times and failed 4571 times
+  method pass_ints :: a worked 822 times and failed 0 times
+  method pass_balanced :: parens-to-zero worked 935 times and failed 2145 times
+  method pass_lines :: 3 worked 998 times and failed 7531 times
+  method pass_lines :: 4 worked 6625 times and failed 19613 times
+
+          ******** /tmp/tmp.oSLLCincGB/ownership.rs ********

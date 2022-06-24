@@ -1,0 +1,94 @@
+(FullGenerationStatistics(
+    successful_mapping: FullStatisticsMap(
+        total_items: 0,
+        total_stmts: 100,
+        total_exprs: 681,
+        total_tys: 100,
+        total_binary_ops: 252,
+        total_unary_ops: 77,
+        statistics_mapping: StatisticsMap(
+            item_counter: {},
+            stmt_counter: {
+                Local: 61,
+                Semi: 39,
+            },
+            expr_counter: {
+                Literal: 183,
+                Binary: 252,
+                Unary: 77,
+                Ident: 169,
+            },
+            ty_counter: {
+                Prim: 100,
+            },
+            bin_op_counter: {
+                Add: 61,
+                Sub: 52,
+                Mul: 41,
+                Div: 43,
+                Rem: 55,
+            },
+            un_op_counter: {
+                Neg: 77,
+            },
+        ),
+    ),
+    failed_mapping: FullStatisticsMap(
+        total_items: 0,
+        total_stmts: 0,
+        total_exprs: 0,
+        total_tys: 0,
+        total_binary_ops: 0,
+        total_unary_ops: 0,
+        statistics_mapping: StatisticsMap(
+            item_counter: {},
+            stmt_counter: {},
+            expr_counter: {},
+            ty_counter: {},
+            bin_op_counter: {},
+            un_op_counter: {},
+        ),
+    ),
+    max_failed_item_depth: 0,
+    max_failed_stmt_depth: 0,
+    max_failed_expr_depth: 0,
+    max_failed_ty_depth: 0,
+), Some(FullProgramStatistics(
+    mapping: FullStatisticsMap(
+        total_items: 1,
+        total_stmts: 100,
+        total_exprs: 681,
+        total_tys: 183,
+        total_binary_ops: 252,
+        total_unary_ops: 77,
+        statistics_mapping: StatisticsMap(
+            item_counter: {
+                Function: 1,
+            },
+            stmt_counter: {
+                Local: 61,
+                Semi: 39,
+            },
+            expr_counter: {
+                Literal: 183,
+                Binary: 252,
+                Unary: 77,
+                Ident: 169,
+            },
+            ty_counter: {
+                Prim: 183,
+            },
+            bin_op_counter: {
+                Add: 56,
+                Sub: 43,
+                Mul: 34,
+                Div: 58,
+                Rem: 47,
+                WrappingSub: 14,
+            },
+            un_op_counter: {
+                Neg: 77,
+            },
+        ),
+    ),
+)))

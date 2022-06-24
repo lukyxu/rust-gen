@@ -25,6 +25,7 @@ pub struct GeneratorOutput {
 }
 
 #[derive(Debug, Clone)]
+/// Error in generation.
 pub struct GeneratorError {
     pub statistics: Box<GenerationStatistics>,
     pub error_message: String,
