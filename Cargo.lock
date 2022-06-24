@@ -660,7 +660,7 @@ dependencies = [
 
 [[package]]
 name = "rust-gen"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "archery",
  "derive_builder",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "rust-gen-cloud"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "bigdecimal",
  "chrono",
@@ -690,7 +690,7 @@ dependencies = [
 
 [[package]]
 name = "rust-gen-cluster"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "dotenv",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "rust-gen-generate"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "rust-gen",
@@ -707,14 +707,14 @@ dependencies = [
 
 [[package]]
 name = "rust-gen-installer"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "rust-gen",
 ]
 
 [[package]]
 name = "rust-gen-runner"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "indicatif",
