@@ -1,3 +1,5 @@
+//! Visitor for adding checksum into the program.
+
 use crate::ast::expr::{
     AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, IdentExpr, IndexExpr, LitIntExpr,
     LitIntTy, Member,

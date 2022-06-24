@@ -1,3 +1,5 @@
+//! Function node generator.
+
 use crate::ast::expr::BlockExpr;
 use crate::ast::function::Function;
 use crate::ast::ty::Ty;

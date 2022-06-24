@@ -1,3 +1,5 @@
+//! Runner.
+
 use crate::generator::{run_generator, GeneratorOutput, GeneratorResult};
 use crate::policy::Policy;
 use crate::runtime::config::{OptLevel, RustCompiler, RustVersion};

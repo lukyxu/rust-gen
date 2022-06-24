@@ -1,3 +1,5 @@
+//! Utility functions for node generation.
+
 use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
 use crate::ast::stmt::StmtKind;

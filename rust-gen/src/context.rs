@@ -1,3 +1,5 @@
+//! Context used in program generation.
+
 use crate::ast::expr::{ExprKind, FunctionCallExpr, IdentExpr};
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};

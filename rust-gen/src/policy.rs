@@ -1,3 +1,5 @@
+//! Policy used as an input of program generation to determine the characteristics of a program.
+
 use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};

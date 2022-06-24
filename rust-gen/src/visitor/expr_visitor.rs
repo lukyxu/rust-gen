@@ -1,3 +1,5 @@
+//! Visitor for correcting compile/runtime errors.
+
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, FieldExpr, FieldStructExpr,
     FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,

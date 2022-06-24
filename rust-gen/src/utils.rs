@@ -1,3 +1,5 @@
+//! Utility functions for serializing and deserializing objects.
+
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use std::io;

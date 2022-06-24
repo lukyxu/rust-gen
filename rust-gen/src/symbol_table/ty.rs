@@ -1,3 +1,5 @@
+//! Type symbol table used for type checking.
+
 use crate::ast::expr::{Expr, IdentExpr, Member, PlaceExpr};
 use crate::ast::ty::Ty;
 use crate::symbol_table::tracked_ty::{OwnershipState, TrackedStructTy, TrackedTy};

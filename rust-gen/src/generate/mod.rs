@@ -1,3 +1,5 @@
+//! Generator for individual nbdes of the abstract syntax tree.
+
 pub mod eval_expr;
 pub mod expr;
 pub mod file;

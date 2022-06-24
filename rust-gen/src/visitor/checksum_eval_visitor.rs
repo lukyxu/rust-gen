@@ -1,3 +1,5 @@
+//! Visitor for evaluating checksum.
+
 use crate::ast::expr::{LitExpr, LitIntExpr, LitIntTy};
 use crate::ast::function::Function;
 use crate::generate::eval_expr::EvalExpr;

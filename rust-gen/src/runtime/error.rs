@@ -1,3 +1,5 @@
+//! Runner errors.
+
 use crate::generator::GeneratorError;
 use crate::runtime::config::{OptLevel, RustVersion};
 use crate::runtime::run::{RunOutput, SubRunOutput};

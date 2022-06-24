@@ -1,3 +1,5 @@
+//! Unary and binary operation nodes.
+
 use crate::ast::ty::{GTy, PrimTy, ReferenceTy, Ty, UIntTy};
 use crate::context::Context;
 use serde::{Deserialize, Serialize};

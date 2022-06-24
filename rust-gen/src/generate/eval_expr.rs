@@ -1,3 +1,5 @@
+//! Evaluated expression representation and calculations.
+
 use crate::ast::expr::LitIntTy::{Signed, Unsigned};
 use crate::ast::expr::{
     ArrayExpr, BinaryExpr, Expr, Field, FieldStructExpr, LitExpr, LitIntExpr, LitIntTy, Member,

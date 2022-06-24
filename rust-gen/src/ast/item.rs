@@ -1,3 +1,5 @@
+//! Item nodes.
+
 use crate::ast::function::Function;
 use crate::ast::ty::StructTy;
 use serde::{Deserialize, Serialize};

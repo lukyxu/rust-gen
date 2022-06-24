@@ -1,3 +1,5 @@
+//! Statistics map.
+
 use crate::ast::expr::ExprKind;
 use crate::ast::item::ItemKind;
 use crate::ast::op::{BinaryOp, UnaryOp};

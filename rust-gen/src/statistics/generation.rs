@@ -1,3 +1,5 @@
+//! Generation statistics.
+
 use crate::statistics::map::{FullStatisticsMap, StatisticsMap};
 use serde::{Deserialize, Serialize};
 

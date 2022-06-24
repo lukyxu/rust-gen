@@ -1,3 +1,5 @@
+//! File node generator.
+
 use crate::ast::file::RustFile;
 use crate::ast::item::{FunctionItem, Item};
 use crate::context::Context;

@@ -1,7 +1,7 @@
+//! Visitor for adding assertions into the program.
+
 use crate::ast::expr::BlockExpr;
-
 use crate::ast::stmt::{AssertStmt, CustomStmt, Stmt};
-
 use crate::symbol_table::ty::TypeSymbolTable;
 use crate::visitor::checksum_gen_visitor::exprs_from_ident;
 use crate::visitor::validation_gen_visitor::{ValidationGen, ValidationGenVisitor};

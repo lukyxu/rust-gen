@@ -1,3 +1,5 @@
+//! Type node generator.
+
 use crate::ast::ty::{
     ArrayTy, FieldDef, FieldStructTy, GReferenceTy, GTy, Lifetime, PrimTy, ReferenceTy, StructTy,
     TupleStructTy, TupleTy, Ty, TyKind,

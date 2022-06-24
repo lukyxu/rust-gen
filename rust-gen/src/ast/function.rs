@@ -1,3 +1,5 @@
+//! Function nodes.
+
 use crate::ast::expr::BlockExpr;
 use crate::ast::ty::Ty;
 

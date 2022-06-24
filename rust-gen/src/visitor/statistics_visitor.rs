@@ -1,3 +1,5 @@
+//! Visitor for calculating program statistics.
+
 use crate::ast::expr::Expr;
 use crate::ast::item::Item;
 use crate::ast::op::{BinaryOp, UnaryOp};

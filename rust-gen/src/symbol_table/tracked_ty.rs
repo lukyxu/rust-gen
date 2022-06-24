@@ -1,3 +1,5 @@
+//! Tracked type symbol table used for ownership tracking.
+
 use crate::ast::ty::{
     ArrayTy, FieldStructTy, GArrayTy, GFieldDef, GFieldStructTy, GReferenceTy, GStructTy,
     GTupleStructTy, GTupleTy, GTy, ReferenceTy, StructTy, TupleStructTy, TupleTy, Ty,

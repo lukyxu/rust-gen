@@ -1,3 +1,5 @@
+//! Program generator.
+
 use crate::ast::file::RustFile;
 use crate::context::Context;
 use crate::policy::Policy;

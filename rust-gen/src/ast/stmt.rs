@@ -1,3 +1,5 @@
+//! Statement nodes.
+
 use crate::ast::expr::Expr;
 use crate::ast::ty::Ty;
 use crate::generate::eval_expr::EvalExpr;

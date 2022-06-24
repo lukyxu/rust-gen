@@ -1,3 +1,5 @@
+//! Type nodes.
+
 use crate::ast::expr::LitIntTy;
 use crate::context::Context;
 

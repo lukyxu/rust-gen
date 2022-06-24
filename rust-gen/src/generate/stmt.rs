@@ -1,3 +1,5 @@
+//! Statement node generator.
+
 use crate::ast::expr::Expr;
 use crate::ast::stmt::{ExprStmt, InitLocalStmt, LocalStmt, SemiStmt, Stmt, StmtKind};
 use crate::ast::ty::Ty;

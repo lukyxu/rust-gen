@@ -1,3 +1,5 @@
+//! Base visitor for implementing validation generation.
+
 use crate::ast::expr::LitIntTy::Unsigned;
 use crate::ast::expr::{AssignExpr, BinaryExpr, BlockExpr, Expr, IfExpr, LitIntExpr, PlaceExpr};
 

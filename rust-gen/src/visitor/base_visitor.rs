@@ -1,3 +1,5 @@
+//! Base visitor.
+
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Expr, Field, FieldExpr,
     FieldStructExpr, FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, Member, PlaceExpr,

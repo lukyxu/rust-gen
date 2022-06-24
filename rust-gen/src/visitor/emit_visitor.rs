@@ -1,3 +1,5 @@
+//! Visitor for pretty printing abstract syntax tree.
+
 use crate::ast::expr::{
     ArrayExpr, AssignExpr, BinaryExpr, BlockExpr, CastExpr, Field, FieldExpr, FieldStructExpr,
     FunctionCallExpr, IdentExpr, IfExpr, IndexExpr, LitExpr, LitIntExpr, LitIntTy, Member,

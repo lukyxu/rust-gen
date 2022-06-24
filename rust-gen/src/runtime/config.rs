@@ -1,3 +1,5 @@
+//! Sub-run configuration.
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OptLevel(char);
 impl OptLevel {
