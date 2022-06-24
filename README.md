@@ -17,16 +17,16 @@ Go to the project directory
   cd rust-gen
 ```
 
-Build and run rustgen generator
+Build and run RustGen Generate
 
 ```bash
-  cargo runtime
+  cargo run --bin --release rust-gen-generate
 ```
 
-Build and run rustgen runner for 100 programs and saving all outputs including generated code and binaries.
+Build and run RustGen Runner for 100 programs and saving all outputs including generated code and binaries.
 
 ```bash
-  cargo runtime --bin runtime -- -n 100 -s
+  cargo run --bin rust-gen-runtime --release -- -n 100 -s
 ```
 
 ## Running Tests
@@ -34,7 +34,7 @@ Build and run rustgen runner for 100 programs and saving all outputs including g
 To run tests, run the following command
 
 ```bash
-  npm runtime test
+  cargo test
 ```
 
 ## Features
